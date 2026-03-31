@@ -2,7 +2,7 @@
 
 ## 🎯 Problem & Motivation
 
-**Bài toán:** Bạn cần **kiểm soát access** đến một object — nhưng không muốn client biết object thực sự là gì. Hoặc cần thêm logic **trước/sau** khi gọi object mà không sửa object gốc.
+**Bài toán thực tế:** Bạn cần **kiểm soát access** đến một object — nhưng không muốn client biết object thực sự là gì. Hoặc cần thêm logic **trước/sau** khi gọi object mà không sửa object gốc.
 
 **Ví dụ thực tế:**
 - **Credit Card** → Proxy cho cash (access control)
@@ -10,6 +10,22 @@
 - **Lazy loading** → Proxy load ảnh nặng (chỉ load khi cần)
 - **Caching** → Proxy lưu response để không gọi lại API
 - **Authentication** → Proxy kiểm tra token trước khi gọi service
+
+```typescript
+// ❌ Client gọi trực tiếp object thật — không kiểm soát được
+class ExpensiveService {
+  loadData(): string {
+    console.log('💾 Loading heavy data from disk...');
+    return '...large data...';
+  }
+}
+
+// Mỗi lần gọi đều load lại — không caching
+// Không access control, không logging
+// Client phụ thuộc vào object thật
+```
+
+→ **Hậu quả:** Mọi cross-cutting concerns (caching, auth, logging) phải implement trong Client hoặc Service → violate Single Responsibility.
 
 **Proxy giải quyết:** Tạo một object **thay thế** (proxy) cho object thật. Client gọi Proxy, Proxy kiểm soát access, sau đó delegate sang RealSubject.
 
@@ -29,27 +45,36 @@
 ## ❌ Before (Không dùng Proxy)
 
 ```typescript
-// ❌ Client phải biết và gọi trực tiếp object thật
-class ExpensiveService {
-  loadData(): string {
-    console.log('💾 Loading heavy data from disk...');
-    return '...large data...';
-  }
-}
+// ❌ Client phải tự xử lý tất cả cross-cutting concerns
+class UserService {
+  async getUser(id: string) {
+    // ⚠️ Access control? Thêm vào đây?
+    if (!this.isAuthenticated()) {
+      throw new Error('Unauthorized');
+    }
 
-class Client {
-  fetchData() {
-    const service = new ExpensiveService();
-    // ❌ Mỗi lần gọi đều load lại — không caching
-    // ❌ Không access control
-    // ❌ Không logging
-    // ❌ Client phải biết ExpensiveService là gì
-    return service.loadData();
+    // ⚠️ Logging? Thêm vào đây?
+    console.log(`📝 GET /api/users/${id}`);
+
+    // ⚠️ Caching? Thêm vào đây?
+    if (this.cache.has(id)) {
+      return this.cache.get(id);
+    }
+
+    // ⚠️ Rate limiting? Thêm vào đây?
+    if (this.rateLimiter.isExceeded()) {
+      throw new Error('Rate limit exceeded');
+    }
+
+    const result = await this.database.query(`SELECT * FROM users WHERE id = ?`, [id]);
+    this.cache.set(id, result);
+    return result;
   }
 }
+// ⚠️ Một method làm quá nhiều thứ!
 ```
 
-→ **Vấn đề:** Client phụ thuộc vào object thật. Mọi cross-cutting concerns (caching, auth, logging) phải implement trong Client hoặc Service.
+→ **Hậu quả:** Single Responsibility vi phạm. Logic trùng lặp ở mọi method. Khó test từng concern riêng.
 
 ---
 
@@ -68,17 +93,13 @@ interface DataService {
 // 2. RealSubject — Object thật, heavy
 // ─────────────────────────────────────────
 class RealDataService implements DataService {
-  private data: Map<string, string> = new Map();
-
   getData(key: string): string {
-    console.log(`💾 [RealService] Loading data for key: "${key}"`);
-    // Heavy operation: DB call, disk read, API call...
-    return `Data for ${key}`;
+    console.log(`💾 [RealService] Loading data for: "${key}"`);
+    return `Data for ${key} (loaded from DB)`;
   }
 
   saveData(key: string, value: string): void {
-    console.log(`💾 [RealService] Saving data: ${key} = ${value}`);
-    this.data.set(key, value);
+    console.log(`💾 [RealService] Saving: ${key} = ${value}`);
   }
 }
 
@@ -89,7 +110,7 @@ class RealDataService implements DataService {
 // 3a. Protection Proxy — Access Control
 class AccessControlProxy implements DataService {
   constructor(
-    private realService: RealDataService,
+    private realService: DataService,
     private userRole: string
   ) {}
 
@@ -104,7 +125,7 @@ class AccessControlProxy implements DataService {
 
   saveData(key: string, value: string): void {
     if (this.userRole !== 'admin') {
-      console.log('❌ [AccessProxy] Write permission denied!');
+      console.log('❌ [AccessProxy] Write denied!');
       return;
     }
     this.realService.saveData(key, value);
@@ -113,7 +134,7 @@ class AccessControlProxy implements DataService {
 
 // 3b. Caching Proxy — Tránh gọi lại
 class CachingProxy implements DataService {
-  constructor(private realService: RealDataService) {}
+  constructor(private realService: DataService) {}
 
   private cache = new Map<string, string>();
   private cacheTime = new Map<string, number>();
@@ -141,15 +162,14 @@ class CachingProxy implements DataService {
 
   saveData(key: string, value: string): void {
     this.realService.saveData(key, value);
-    // Invalidate cache
-    this.cache.delete(key);
+    this.cache.delete(key); // Invalidate cache on write
     this.cacheTime.delete(key);
   }
 }
 
 // 3c. Logging Proxy — Monitor calls
 class LoggingProxy implements DataService {
-  constructor(private realService: RealDataService) {}
+  constructor(private realService: DataService) {}
 
   getData(key: string): string {
     const start = Date.now();
@@ -175,14 +195,15 @@ class LoggingProxy implements DataService {
 
 // Case 1: Access control
 console.log('=== Access Control ===');
-const accessProxy = new AccessControlProxy(new RealDataService(), 'user');
-console.log(accessProxy.getData('public_data'));
+const userProxy = new AccessControlProxy(new RealDataService(), 'user');
+console.log(userProxy.getData('public_data'));
 // 🔐 User role: user
-// 💾 Loading... → Access Denied cho admin_* keys
+// 💾 [RealService] Loading...
 
-console.log('---');
 const adminProxy = new AccessControlProxy(new RealDataService(), 'admin');
 console.log(adminProxy.getData('admin_config'));
+// 🔐 User role: admin
+// 💾 [RealService] Loading...
 
 // Case 2: Caching
 console.log('\n=== Caching ===');
@@ -190,9 +211,9 @@ const cachedProxy = new CachingProxy(new RealDataService());
 console.log(cachedProxy.getData('user_profile'));
 // 💾 [RealService] Loading... → MISS
 console.log(cachedProxy.getData('user_profile'));
-// ⚡ [CacheProxy] HIT (age: 2ms) → không gọi RealService!
+// ⚡ [CacheProxy] HIT (age: 50ms) → RealService không được gọi!
 
-// Case 3: Chain proxies
+// Case 3: Chain proxies — Logging → Caching → Access → Real
 console.log('\n=== Chained Proxies ===');
 const chained = new LoggingProxy(
   new CachingProxy(
@@ -202,8 +223,6 @@ const chained = new LoggingProxy(
 chained.getData('config');
 ```
 
-→ **Cải thiện:** Client gọi Proxy mà không biết RealSubject. Caching, Access Control, Logging hoàn toàn tách biệt. Có thể chain proxies.
-
 ---
 
 ## 🏗️ UML Diagram
@@ -212,27 +231,34 @@ chained.getData('config');
 ┌─────────────┐
 │   Client    │
 └──────┬──────┘
-       │ uses
+       │ calls
        ▼
-┌──────────────────────┐         ┌────────────────────────┐
-│  <<interface>>       │         │   RealSubject          │
-│    Subject           │         │ (RealDataService)      │
-├──────────────────────┤         ├────────────────────────┤
-│ +request()           │         │ +request()             │
-└──────────┬───────────┘         └────────────────────────┘
-           │ implements                    ▲
-           │                               │
-           │              ┌─────────────────┘
-           ▼              │ (stores reference)
-┌──────────────────────┐  │
-│        Proxy         │──┘
-│  (Caching/Protection/│
+┌──────────────────────┐
+│  <<interface>>      │
+│    Subject           │
+├──────────────────────┤
+│ +getData()            │
+│ +saveData()            │
+└──────────┬───────────┘
+           │ implements
+           │               ┌────────────────────────┐
+           │               │   RealSubject          │
+           │               │  (RealDataService)      │
+           │               ├────────────────────────┤
+           │               │ +getData()              │
+           │               │ +saveData()              │
+           │               └────────────────────────┘
+           │                         ▲
+           │               ┌──────────┴──────────┐
+           ▼               │ (stores reference)
+┌──────────────────────┐ │
+│        Proxy           │ │
+│ (Caching/Protection/ │─┘
 │   LoggingProxy)      │
 ├──────────────────────┤
-│ +request()           │
-│   → control (cache, │
-│     auth, log...)    │
-│   → real.request()  │
+│ +getData()            │
+│   → control logic    │
+│   → real.getData()   │
 └──────────────────────┘
 ```
 
@@ -249,23 +275,23 @@ Bước 1: cachedProxy.getData('user')
 Bước 2: Kiểm tra cache
   → cache.has('user')? YES
   → cacheTime.get('user') = T1
-  → age = now - T1 < 5000ms?
-  → TRUE → HIT!
+  → age = now - T1 = 50ms < 5000ms? → TRUE
+  → ✅ HIT!
 
 Bước 3: Return cached value
-  → ⚡ [CacheProxy] HIT for "user" (age: 50ms)
-  → return "Data for user"
+  → ⚡ [CacheProxy] HIT (age: 50ms)
+  → return "Data for user (loaded from DB)"
   → RealService.getData() KHÔNG được gọi!
 
-→ Performance: O(1) hash lookup thay vì heavy operation
+Kết quả: O(1) hash lookup thay vì heavy operation
 ```
 
 ---
 
 ## 🌍 Real-world Examples
 
-| Thư viện/Framework | Cách dùng Proxy |
-|--------------------|-----------------|
+| Thư viện/Framework | Chi tiết implementation |
+|--------------------|------------------------|
 | **Hibernate Lazy Loading** | Proxy trả về object placeholder, load thực khi accessed |
 | **Spring AOP** | `@Transactional`, `@Cacheable` dùng proxy |
 | **Prisma ORM** | Generated client = proxy cho database |
@@ -289,19 +315,16 @@ Bước 3: Return cached value
 
 ## 💻 TypeScript Implementation
 
-```typescript
-// ─────────────────────────────────────────
-// Example: Image Lazy Loading Proxy
-// ─────────────────────────────────────────
+### Version 1: Image Lazy Loading Proxy
 
+```typescript
 interface Image {
   display(): void;
 }
 
 class RealImage implements Image {
   constructor(private filename: string) {
-    // Heavy: load from disk/network
-    console.log(`💾 [RealImage] Loading "${filename}"...`);
+    console.log(`💾 [RealImage] Loading "${filename}" from disk...`);
   }
 
   display(): void {
@@ -313,8 +336,8 @@ class ImageProxy implements Image {
   private realImage: RealImage | null = null;
 
   constructor(private filename: string) {
-    // Lightweight: chỉ lưu filename, chưa load gì cả!
-    console.log(`📦 [Proxy] Image placeholder created for "${filename}"`);
+    // Lightweight: chỉ lưu filename, chưa load gì!
+    console.log(`📦 [Proxy] Placeholder created for "${filename}"`);
   }
 
   display(): void {
@@ -328,103 +351,151 @@ class ImageProxy implements Image {
 
 // Usage
 console.log('Creating proxy (no loading yet)...');
-const img1 = new ImageProxy('photo_1.jpg');
+const img = new ImageProxy('photo_1.jpg');
+// 📦 [Proxy] Placeholder created
 
 console.log('\nDisplaying first time (loads now)...');
-img1.display();
+img.display();
+// 💾 [RealImage] Loading "photo_1.jpg" from disk...
+// 🖼️  [RealImage] Displaying "photo_1.jpg"
 
 console.log('\nDisplaying second time (cached!)...');
-img1.display();
+img.display();
+// 🖼️  [RealImage] Displaying "photo_1.jpg" (RealImage đã load rồi)
 ```
 
 ---
 
-## 📝 LeetCode Problems áp dụng
+## ⚖️ Trade-offs & Common Mistakes
 
-- [Design HashMap](https://leetcode.com/problems/design-hashmap/) — Caching Proxy: lưu key→value
-- [Design Add and Search Words Data Structure](https://leetcode.com/problems/design-add-and-search-words-data-structure/) — Proxy wrapper
-- [LRU Cache](https://leetcode.com/problems/lru-cache/) — Cache = Proxy
+### ✅ Khi nào nên dùng
 
----
-
-## ✅ Pros / ❌ Cons
-
-**Ưu điểm:**
-- ✅ **Access control** — kiểm soát ai được gọi, bao nhiêu lần
-- ✅ **Lazy loading** — load resource nặng chỉ khi cần
-- ✅ **Caching** — tránh gọi lại, tăng performance
-- ✅ **Cross-cutting concerns** — logging, auth, metrics — không cần sửa object gốc
-- ✅ **Client tách biệt** — không biết RealSubject
-
-**Nhược điểm:**
-- ❌ **Overkill** — nếu không cần access control, proxy thừa
-- ❌ **Response latency** — thêm layer → thêm độ trễ nhỏ
-- ❌ **Complexity** — nhiều proxy layers → khó debug
-
----
-
-## ⚠️ Khi nào nên / không nên dùng
-
-**Nên dùng khi:**
 - ✅ Cần **access control** (auth, rate limit)
 - ✅ Cần **lazy loading** resource nặng
 - ✅ Cần **caching** response
 - ✅ Cần **logging/metrics** cho object mà không sửa object
 
-**Không nên dùng khi:**
+### ❌ Khi nào không nên dùng
+
 - ❌ Không cần kiểm soát access — dùng object trực tiếp
 - ❌ Proxy quá nhiều layers — complexity tăng
 - ❌ Cần thêm behavior mới — dùng **Decorator**
 
+### 🚫 Common Mistakes
+
+**1. Proxy thêm behavior thay vì kiểm soát access**
+```typescript
+// ❌ Sai: Proxy thêm business logic
+class BadProxy implements Service {
+  doSomething() {
+    this.processBusinessLogic(); // ❌ Đây là Decorator, không phải Proxy!
+    this.realService.doSomething();
+  }
+}
+
+// ✅ Đúng: Proxy chỉ kiểm soát access (auth, cache, log)
+class GoodProxy implements Service {
+  doSomething() {
+    if (!this.isAuthorized()) return; // ✅ Access control
+    if (this.cache.has()) return;   // ✅ Caching
+    this.realService.doSomething();   // ✅ Delegate
+  }
+}
+```
+
+**2. Quên cache invalidation on write**
+```typescript
+// ❌ Sai: save() không invalidate cache
+saveData(key, value) {
+  this.realService.saveData(key, value);
+  // ❌ Cache vẫn chứa stale data!
+}
+
+// ✅ Đúng: Save → invalidate cache
+saveData(key, value) {
+  this.realService.saveData(key, value);
+  this.cache.delete(key); // ✅ Invalidate
+}
+```
+
 ---
 
-## 🚫 Common Mistakes / Pitfalls
+## 🧪 Testing Strategies
 
-1. **Proxy thay đổi behavior — không phải kiểm soát access**
-   ```typescript
-   // ❌ Sai: Proxy thêm logic nghiệp vụ thay vì kiểm soát access
-   class BadProxy implements Service {
-     doSomething() {
-       // ❌ Thêm business logic! Đây là Decorator, không phải Proxy!
-       this.processBusinessLogic();
-       this.realService.doSomething();
-     }
-   }
+```typescript
+describe('Proxy Pattern', () => {
+  it('should cache repeated calls', () => {
+    let callCount = 0;
+    const mockService = {
+      getData: jest.fn(() => { callCount++; return 'result'; })
+    };
 
-   // ✅ Đúng: Proxy chỉ kiểm soát access (auth, cache, log)
-   class GoodProxy implements Service {
-     doSomething() {
-       if (!this.isAuthorized()) return;  // Access control ✅
-       if (this.cache.has()) return;      // Caching ✅
-       this.realService.doSomething();     // Delegate
-     }
-   }
-   ```
+    const cached = new CachingProxy(mockService as any);
 
-2. **Quên cache invalidation**
-   ```typescript
-   // ❌ Sai: Caching nhưng save() không invalidate cache
-   saveData(key, value) {
-     this.realService.saveData(key, value);
-     // ❌ Cache vẫn chứa stale data!
-   }
+    cached.getData('key');
+    cached.getData('key');
+    cached.getData('key');
 
-   // ✅ Đúng: Save → invalidate cache
-   saveData(key, value) {
-     this.realService.saveData(key, value);
-     this.cache.delete(key); // ✅ Invalidate
-   }
-   ```
+    expect(callCount).toBe(1); // Chỉ gọi 1 lần!
+  });
+
+  it('should deny access for non-admin', () => {
+    const proxy = new AccessControlProxy(new RealDataService(), 'user');
+    const result = proxy.getData('admin_secret');
+    expect(result).toBe('Access Denied');
+  });
+
+  it('should allow access for admin', () => {
+    const proxy = new AccessControlProxy(new RealDataService(), 'admin');
+    const result = proxy.getData('admin_secret');
+    expect(result).not.toBe('Access Denied');
+  });
+});
+```
+
+---
+
+## 🔄 Refactoring Path
+
+**Từ Mixed Concerns → Proxy:**
+
+```typescript
+// ❌ Before: UserService làm mọi thứ
+class BadUserService {
+  async getUser(id: string) {
+    if (!this.auth()) throw new Error('Auth');
+    if (this.cache.has(id)) return this.cache.get(id);
+    const result = await this.db.query(id);
+    this.cache.set(id, result);
+    this.log(id);
+    return result;
+  }
+}
+
+// ✅ After: Proxy xử lý cross-cutting concerns
+class GoodUserService implements DataService {
+  getData(id: string) {
+    return this.realService.getData(id);
+  }
+}
+
+// Cross-cutting concerns ở proxy
+const proxy = new LoggingProxy(
+  new CachingProxy(
+    new AccessControlProxy(new GoodUserService(), role)
+  )
+);
+```
 
 ---
 
 ## 🎤 Interview Q&A
 
 **Q: Proxy Pattern là gì? Khi nào dùng?**
-> A: Proxy là object thay thế cho object thật, kiểm soát access trước khi delegate. Client gọi Proxy như gọi RealSubject. Có 4 loại: (1) Remote Proxy — gọi remote service như local. (2) Virtual/Lazy Proxy — load resource nặng khi cần. (3) Protection Proxy — kiểm tra quyền truy cập. (4) Caching Proxy — lưu response để tránh gọi lại.
+> A: Proxy là object thay thế cho object thật, kiểm soát access trước khi delegate. Client gọi Proxy như gọi RealSubject. Có 4 loại: (1) Remote Proxy — gọi remote service như local. (2) Virtual/Lazy Proxy — load resource nặng khi cần. (3) Protection Proxy — kiểm tra quyền truy cập. (4) Caching Proxy — lưu response để tránh gọi lại. Proxy chỉ kiểm soát access; Decorator thêm behavior.
 
 **Q: Proxy khác Decorator như thế nào?**
-> A: Proxy kiểm soát **access** — ai được gọi, bao nhiêu lần, có cache không. Decorator thêm **behavior** — thêm chức năng vào object. Về mặt structure giống nhau (cùng interface, wraps object), nhưng **mục đích** khác nhau.
+> A: Proxy kiểm soát **access** — ai được gọi, bao nhiêu lần, có cache không. Decorator thêm **behavior** — thêm chức năng vào object. Về mặt structure giống nhau (cùng interface, wraps object), nhưng **mục đích** khác nhau. Proxy giống "cửa ngõ kiểm soát vào"; Decorator giống "lắp thêm phụ kiện vào".
 
 **Q: Proxy có phải là man-in-the-middle không?**
-> A: Không. Proxy hoạt động **với sự cho phép** của cả client và service. Nó không偷窃 data mà kiểm soát access theo đúng business logic (auth, caching, logging). Man-in-the-middle là security attack, Proxy là design pattern có mục đích hợp lệ.
+> A: Không. Proxy hoạt động **với sự cho phép** của cả client và service. Nó không ăn cắp data mà kiểm soát access theo business logic (auth, caching, logging). Man-in-the-middle là security attack, Proxy là design pattern có mục đích hợp lệ.

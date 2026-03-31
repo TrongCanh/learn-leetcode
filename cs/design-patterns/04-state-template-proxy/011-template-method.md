@@ -2,31 +2,15 @@
 
 ## 🎯 Problem & Motivation
 
-**Bài tu toán:** Bạn có một **thuật toán với skeleton cố định**, nhưng một vài steps có **implementations khác nhau** tùy subclass.
+**Bài toán thực tế:** Bạn có một **thuật toán với skeleton cố định**, nhưng một vài steps có **implementations khác nhau** tùy subclass.
 
 **Ví dụ thực tế:** Quy trình mua hàng online:
-1. Select product (luôn giống nhau)
+1. Validate items (luôn giống nhau)
 2. Process payment (thay đổi: card, PayPal, COD)
 3. Ship (thay đổi: express, standard, pickup)
 4. Send confirmation (luôn giống nhau)
 
-Mà không muốn duplicate code ở bước 1, 3, 4.
-
-**Template Method giải quyết:** Định nghĩa **skeleton của thuật toán** trong base class, để subclass **override only specific steps**.
-
----
-
-## 💡 Use Cases
-
-1. **Data Processing Pipeline** — Read → Transform → Validate → Write (read/write thay đổi, validate luôn giống)
-2. **Test Framework** — Setup → Execute → Teardown (setup/teardown thay đổi, execute luôn giống)
-3. **Game AI** — Start → PlayTurn → CheckWin → End (Start/End giống, PlayTurn khác)
-4. **Document Export** — Validate → Format → Compress → Save (validate/save giống, format/compress thay đổi)
-5. **Build Pipeline** — Checkout → Install → Build → Test → Deploy (steps giống nhau, implementation khác)
-
----
-
-## ❌ Before (Không dùng Template Method)
+Bạn muốn viết skeleton **một lần**, và chỉ override steps thay đổi.
 
 ```typescript
 // ❌ Mỗi class duplicate skeleton
@@ -38,30 +22,67 @@ class CSVDataMiner {
     this.sendReport();       // Giống
     this.closeFile();        // Giống
   }
-  openFile(f: string) { console.log(`📂 Open ${f}`); }
-  closeFile() { console.log('📂 Close file'); }
-  sendReport() { console.log('📧 Send report via email'); }
-  extractData() { /* CSV specific */ }
-  parseData() { /* CSV specific */ }
+  // ⚠️ 5 steps, 3 cái giống nhau → duplicate!
 }
 
 class JSONDataMiner {
   analyze(file: string) {
-    this.openFile(file);     // Giống y hệt → DUPLICATE!
-    this.extractData();      // JSON specific
-    this.parseData();        // JSON specific
-    this.sendReport();       // Giống y hệt → DUPLICATE!
-    this.closeFile();        // Giống y hệt → DUPLICATE!
+    this.openFile(file);     // Giống → DUPLICATE!
+    this.extractData();      // Khác
+    this.parseData();        // Khác
+    this.sendReport();       // Giống → DUPLICATE!
+    this.closeFile();        // Giống → DUPLICATE!
   }
-  openFile(f: string) { console.log(`📂 Open ${f}`); }
-  closeFile() { console.log('📂 Close file'); }
-  sendReport() { console.log('📧 Send report via email'); }
-  extractData() { /* JSON specific */ }
-  parseData() { /* JSON specific */ }
 }
 ```
 
-→ **Vấn đề:** Code skeleton (openFile, closeFile, sendReport) trùng lặp trong mỗi class. Sửa logic → sửa tất cả.
+→ **Hậu quả:** Code skeleton (openFile, closeFile, sendReport) trùng lặp trong mỗi class. Sửa logic → sửa tất cả.
+
+**Template Method giải quyết:** Định nghĩa **skeleton của thuật toán** trong base class, để subclass **override only specific steps**.
+
+---
+
+## 💡 Use Cases
+
+1. **Data Processing Pipeline** — Read → Transform → Validate → Write (read/write thay đổi, validate luôn giống)
+2. **Test Framework** — Setup → Execute → Teardown (setup/teardown thay đổi, execute luôn giống)
+3. **Game AI** — Start → PlayTurn → CheckWin → End (Start/End giống, PlayTurn khác)
+4. **Document Export** — Validate → Format → Compress → Save (validate/save giống, format/compress thay đổi)
+5. **Build Pipeline** — Checkout → Install → Build → Test → Deploy (steps giống, implementation khác)
+
+---
+
+## ❌ Before (Không dùng Template Method)
+
+```typescript
+// ❌ Skeleton trùng lặp trong mỗi class
+abstract class DataMiner {
+  abstract extractData(): void;
+  abstract parseData(): void;
+
+  analyze(file: string) {
+    // ❌ Skeleton này lặp lại trong mọi subclass!
+    console.log(`📂 Open ${file}`);
+    this.extractData();
+    this.parseData();
+    console.log('📧 Send report');
+    console.log('📂 Close file');
+  }
+}
+
+class CSVDataMiner extends DataMiner {
+  extractData() { /* CSV */ }
+  parseData() { /* CSV */ }
+}
+
+class JSONDataMiner extends DataMiner {
+  extractData() { /* JSON */ }
+  parseData() { /* JSON */ }
+}
+// ⚠️ Sửa skeleton? Phải sửa CẢ BASE CLASS
+```
+
+→ **Hậu quả:** Skeleton gắn chặt với base class. Muốn thay đổi thứ tự? Sửa base class → ảnh hưởng tất cả subclasses.
 
 ---
 
@@ -73,9 +94,10 @@ class JSONDataMiner {
 // ─────────────────────────────────────────
 abstract class DataMiner {
   // 🎯 TEMPLATE METHOD — skeleton của thuật toán
-  // Không override được — subclasses phải chạy đúng thứ tự này
-  public analyze(file: string): void {
+  // Final — subclasses không được override thứ tự!
+  public final analyze(file: string): void {
     this.openFile(file);
+    this.validateData();
     this.extractData();
     this.parseData();
     this.sendReport();
@@ -91,15 +113,14 @@ abstract class DataMiner {
     console.log('📂 Closing file...');
   }
 
+  protected validateData(): void {
+    console.log('✅ Validating data format...');
+  }
+
   // ─── Abstract steps — subclasses phải override ───
   protected abstract openFile(file: string): void;
   protected abstract extractData(): void;
   protected abstract parseData(): void;
-
-  // ─── Hook — optional override ───
-  protected getFileType(): string {
-    return 'unknown';
-  }
 }
 
 // ─────────────────────────────────────────
@@ -131,11 +152,6 @@ class JSONDataMiner extends DataMiner {
   protected parseData(): void {
     console.log('🔢 [JSON] Parsing JSON structure...');
   }
-
-  // Override hook — customize behavior
-  protected getFileType(): string {
-    return 'json';
-  }
 }
 
 class XMLDataMiner extends DataMiner {
@@ -151,7 +167,7 @@ class XMLDataMiner extends DataMiner {
     console.log('🔢 [XML] Parsing DOM tree...');
   }
 
-  // Override the common step!
+  // Override common step!
   protected sendReport(): void {
     console.log('📧 [XML] Sending XML-formatted report via API...');
   }
@@ -161,63 +177,68 @@ class XMLDataMiner extends DataMiner {
 // 3. Client — gọi template method, không cần biết algorithm
 // ─────────────────────────────────────────
 function runAnalysis(miner: DataMiner, file: string) {
-  console.log(`\n🚀 Starting analysis for: ${file}`);
-  miner.analyze(file); // Template method — fixed order!
-  console.log('✅ Analysis complete\n');
+  console.log(`\n🚀 Starting: ${file}`);
+  miner.analyze(file); // Template Method — fixed order!
+  console.log('✅ Complete\n');
 }
 
 runAnalysis(new CSVDataMiner(), 'sales.csv');
-// 🚀 Starting analysis: sales.csv
+// 🚀 Starting: sales.csv
 // 📂 [CSV] Opening: sales.csv
+// ✅ Validating data format...
 // 📊 [CSV] Extracting rows...
-// 🔢 [CSV] Parsing comma-separated values...
+// 🔢 [CSV] Parsing...
 // 📧 Sending report via email...
 // 📂 Closing file...
-// ✅ Analysis complete
 
 runAnalysis(new JSONDataMiner(), 'users.json');
-// 🚀 Starting analysis: users.json
+// 🚀 Starting: users.json
 // 📂 [JSON] Opening: users.json
-// ...
+// ✅ Validating data format...
+// 📊 [JSON] Extracting...
+// 🔢 [JSON] Parsing...
+// 📧 Sending report...
+// 📂 Closing...
 
 runAnalysis(new XMLDataMiner(), 'config.xml');
-// 🚀 Starting analysis: config.xml
+// 🚀 Starting: config.xml
 // 📂 [XML] Opening: config.xml
-// 📊 [XML] Extracting XML elements...
-// 🔢 [XML] Parsing DOM tree...
-// 📧 [XML] Sending XML-formatted report via API... ← overridden!
-// 📂 Closing file...
+// ✅ Validating...
+// 📊 [XML] Extracting...
+// 🔢 [XML] Parsing...
+// 📧 [XML] Sending XML-formatted report... ← overridden!
+// 📂 Closing...
 ```
-
-→ **Cải thiện:** Skeleton (analyze) viết một lần trong base class. Subclasses chỉ override steps cần thiết. Thêm format mới? Tạo class extends `DataMiner`, override 3-4 methods.
 
 ---
 
 ## 🏗️ UML Diagram
 
 ```
-┌──────────────────────────────────────────────────┐
-│            AbstractClass (DataMiner)              │
-├──────────────────────────────────────────────────┤
-│ +analyze(file): void        ←─── TEMPLATE METHOD │
-│ #openFile(file)              (final, not override)│
-│ #extractData()              (abstract)            │
-│ #parseData()                (abstract)             │
-│ #sendReport()               (default)             │
-│ #closeFile()                (default)              │
-└──────────┬───────────────┬────────────────────────┘
-           │ extends        │ extends
-           ▼                ▼
-┌──────────────────┐  ┌──────────────────┐
-│  CSVDataMiner    │  │  JSONDataMiner   │
-├──────────────────┤  ├──────────────────┤
-│ #openFile() ✅   │  │ #openFile() ✅   │
-│ #extractData() ✅│  │ #extractData() ✅│
-│ #parseData() ✅  │  │ #parseData() ✅  │
-│ (uses default)   │  │ (uses default)   │
-│ sendReport()     │  │ sendReport()     │
-│ closeFile()      │  │ closeFile()      │
-└──────────────────┘  └──────────────────┘
+┌─────────────────────────────────────────────────────┐
+│           AbstractClass (DataMiner)                   │
+├─────────────────────────────────────────────────────┤
+│ +final analyze(file): void ←─── TEMPLATE METHOD     │
+│                                                       │
+│ #openFile()         ←─── abstract (must override)  │
+│ #validateData()     ←─── default                   │
+│ #extractData()      ←─── abstract                  │
+│ #parseData()        ←─── abstract                  │
+│ #sendReport()       ←─── default (can override)    │
+│ #closeFile()        ←─── default                   │
+└──────────┬──────────────────────────────────────────┘
+           │ extends
+           ▼
+┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
+│  CSVDataMiner     │  │  JSONDataMiner    │  │  XMLDataMiner     │
+├──────────────────┤  ├──────────────────┤  ├──────────────────┤
+│ #openFile() ✅   │  │ #openFile() ✅   │  │ #openFile() ✅   │
+│ #extractData() ✅│  │ #extractData() ✅│  │ #extractData() ✅│
+│ #parseData() ✅  │  │ #parseData() ✅  │  │ #parseData() ✅  │
+│ (uses default)   │  │ (uses default)   │  │ #sendReport() ✅ │
+│  sendReport()    │  │  sendReport()    │  │ (OVERRIDDEN!)  │
+│  closeFile()     │  │  closeFile()     │  │  closeFile()     │
+└──────────────────┘  └──────────────────┘  └──────────────────┘
 ```
 
 ---
@@ -228,38 +249,42 @@ runAnalysis(new XMLDataMiner(), 'config.xml');
 
 ```
 Bước 1: miner.analyze('sales.csv')
-  → DataMiner.analyze() (Template Method)
+  → DataMiner.analyze() (Template Method — final, không override được)
 
 Bước 2: this.openFile('sales.csv')
-  → CSVDataMiner.openFile() — override
+  → CSVDataMiner.openFile() — override ✅
   → 📂 [CSV] Opening: sales.csv
 
-Bước 3: this.extractData()
-  → CSVDataMiner.extractData() — override
-  → 📊 [CSV] Extracting rows...
+Bước 3: this.validateData()
+  → DataMiner.validateData() — default ✅
+  → ✅ Validating...
 
-Bước 4: this.parseData()
-  → CSVDataMiner.parseData() — override
+Bước 4: this.extractData()
+  → CSVDataMiner.extractData() — override ✅
+  → 📊 [CSV] Extracting...
+
+Bước 5: this.parseData()
+  → CSVDataMiner.parseData() — override ✅
   → 🔢 [CSV] Parsing...
 
-Bước 5: this.sendReport()
+Bước 6: this.sendReport()
   → DataMiner.sendReport() — default (không override)
-  → 📧 Sending report via email...
+  → 📧 Sending report...
 
-Bước 6: this.closeFile()
+Bước 7: this.closeFile()
   → DataMiner.closeFile() — default
-  → 📂 Closing file...
+  → 📂 Closing...
 
-→ Subclass chỉ implement 3 methods, không phải 5!
-→ Skeleton logic an toàn, không bị subclass override sai
+→ Subclass chỉ implement 3 methods, không phải 6!
+→ Skeleton an toàn, không bị subclass override sai
 ```
 
 ---
 
 ## 🌍 Real-world Examples
 
-| Thư viện/Framework | Cách dùng Template Method |
-|--------------------|-------------------------|
+| Thư viện/Framework | Chi tiết implementation |
+|--------------------|----------------------|
 | **JUnit Test** | `@Before → @Test → @After` — subclasses override steps |
 | **Spring `AbstractDao`** | Template method cho CRUD, override find/insert |
 | **Java `InputStream.read()`** | Template: open → read → close |
@@ -281,16 +306,14 @@ Bước 6: this.closeFile()
 
 ## 💻 TypeScript Implementation
 
-```typescript
-// ─────────────────────────────────────────
-// Example: Test Framework
-// ─────────────────────────────────────────
+### Version 1: Test Framework
 
+```typescript
 abstract class TestCase {
   // Template Method — fixed order
-  public run(): void {
-    this.setUp();
+  public final run(): void {
     try {
+      this.setUp();
       this.testBody();
       this.onSuccess();
     } catch (error) {
@@ -300,19 +323,19 @@ abstract class TestCase {
     }
   }
 
-  // Hooks (optional override)
+  // Hooks (can override)
   protected onSuccess(): void {
-    console.log(`✅ ${this.constructor.name}.testBody() passed`);
+    console.log(`✅ ${this.constructor.name} passed`);
   }
 
-  protected onFailure(error: any): void {
-    console.log(`❌ ${this.constructor.name}.testBody() failed: ${error}`);
+  protected onFailure(error: unknown): void {
+    console.log(`❌ ${this.constructor.name} FAILED: ${error}`);
   }
 
   // Abstract (must override)
   protected abstract testBody(): void;
 
-  // Default implementation (can override)
+  // Default (can override)
   protected setUp(): void {
     console.log(`🔧 [${this.constructor.name}] setUp()`);
   }
@@ -328,13 +351,11 @@ class CalculatorTest extends TestCase {
   protected setUp(): void {
     super.setUp();
     this.calc = new Calculator();
-    console.log(`   → Calculator instance created`);
   }
 
   protected testBody(): void {
     const result = this.calc.add(2, 3);
     if (result !== 5) throw new Error(`Expected 5, got ${result}`);
-    console.log(`   → add(2,3) = ${result}`);
   }
 
   protected tearDown(): void {
@@ -353,13 +374,8 @@ class Calculator {
   add(a: number, b: number) { return a + b; }
 }
 
-// Run tests
-const tests: TestCase[] = [
-  new CalculatorTest(),
-  new FailingTest(),
-];
-
-for (const test of tests) {
+// Run
+for (const test of [new CalculatorTest(), new FailingTest()]) {
   test.run();
   console.log('---');
 }
@@ -367,79 +383,77 @@ for (const test of tests) {
 
 ---
 
-## 📝 LeetCode Problems áp dụng
+## ⚖️ Trade-offs & Common Mistakes
 
-- Template Method ít xuất hiện trong LeetCode nhưng phổ biến trong **System Design**: thiết kế data pipeline, game engine, test framework.
+### ✅ Khi nào nên dùng
 
----
-
-## ✅ Pros / ❌ Cons
-
-**Ưu điểm:**
-- ✅ **Code reuse** — skeleton viết một lần, không duplicate
-- ✅ **Single Responsibility** — base class quản lý skeleton, subclasses quản lý steps
-- ✅ **Reverse inheritance** — có thể call parent methods từ subclass
-- ✅ **Hooks** — subclasses có thể override optional steps
-
-**Nhược điểm:**
-- ❌ **Tight coupling với inheritance** — khó thay đổi skeleton (đã compile)
-- ❌ **Liskov Substitution risk** — subclass override default step có thể break base contract
-- ❌ **Inheritance hierarchy** — có thể phức tạp với nhiều levels
-
----
-
-## ⚠️ Khi nào nên / không nên dùng
-
-**Nên dùng khi:**
 - ✅ Có skeleton algorithm cố định với steps thay đổi
 - ✅ Muốn reuse common code, chỉ override specific steps
 - ✅ Cần **hooks** — optional steps mà subclasses có thể override
 
-**Không nên dùng khi:**
+### ❌ Khi nào không nên dùng
+
 - ❌ Algorithm hoàn toàn khác nhau giữa subclasses — dùng **Strategy**
 - ❌ Cần **runtime flexibility** — Template Method cố định lúc compile
 
+### 🚫 Common Mistakes
+
+**1. Override template method — phá vỡ algorithm**
+```typescript
+// ❌ Sai: Subclass override analyze() — phá skeleton!
+class BadCSVDataMiner extends DataMiner {
+  public analyze(file: string): void { // ❌ KHÔNG NÊN override!
+    // Skip steps → logic inconsistent!
+  }
+}
+```
+
+**2. Không gọi super khi cần**
+```typescript
+// ❌ Sai: Override setUp nhưng quên gọi super
+protected setUp(): void {
+  this.calc = new Calculator(); // ❌ super.setUp() bị bỏ qua!
+}
+
+// ✅ Đúng: Gọi super khi cần chain
+protected setUp(): void {
+  super.setUp(); // ✅ Setup chain
+  this.calc = new Calculator();
+}
+```
+
 ---
 
-## 🚫 Common Mistakes / Pitfalls
+## 🧪 Testing Strategies
 
-1. **Override template method — phá vỡ algorithm**
-   ```typescript
-   // ❌ Sai: Subclass override analyze() — phá vỡ skeleton!
-   class BadCSVDataMiner extends DataMiner {
-     public analyze(file: string): void { // ❌ KHÔNG NÊN override!
-       // Skip steps → logic inconsistent!
-     }
-   }
+```typescript
+describe('DataMiner Template Method', () => {
+  it('should call steps in correct order', () => {
+    const calls: string[] = [];
 
-   // ✅ Đúng: Dùng final để ngăn override (trong Java/C++)
-   // public final analyze() { ... } ← Java syntax
-   ```
+    class TrackedMiner extends DataMiner {
+      protected openFile(f: string): void { calls.push('open'); }
+      protected extractData(): void { calls.push('extract'); }
+      protected parseData(): void { calls.push('parse'); }
+    }
 
-2. **Không gọi super method khi cần**
-   ```typescript
-   // ❌ Sai: Override setUp nhưng quên gọi super
-   protected setUp(): void {
-     // ❌ super.setUp() bị bỏ qua!
-     this.calc = new Calculator();
-   }
+    const miner = new TrackedMiner();
+    miner.analyze('test.csv');
 
-   // ✅ Đúng: Gọi super khi cần
-   protected setUp(): void {
-     super.setUp(); // ✅ Setup chain
-     this.calc = new Calculator();
-   }
-   ```
+    expect(calls).toEqual(['open', 'extract', 'parse']);
+  });
+});
+```
 
 ---
 
 ## 🎤 Interview Q&A
 
 **Q: Template Method là gì? Khi nào dùng?**
-> A: Template Method định nghĩa skeleton của algorithm trong base class, để subclasses override specific steps. Một method `analyze()` gọi theo thứ tự `openFile() → extract() → parse() → sendReport() → closeFile()`. Steps cố định (sendReport, closeFile) có default implementation; steps thay đổi (openFile, extract, parse) là abstract. Dùng khi có algorithm skeleton cố định nhưng implementations của steps khác nhau.
+> A: Template Method định nghĩa skeleton của algorithm trong base class, để subclasses override specific steps. Một method `analyze()` gọi theo thứ tự `openFile() → validate() → extract() → parse() → sendReport() → closeFile()`. Steps cố định (validate, sendReport, closeFile) có default implementation; steps thay đổi (openFile, extract, parse) là abstract. Dùng khi có algorithm skeleton cố định nhưng implementations của steps khác nhau.
 
 **Q: Template Method khác Strategy như thế nào?**
-> A: Template Method dùng **inheritance** — base class có method chính, subclasses override steps. Strategy dùng **composition** — object chứa algorithm được inject. Template Method cố định về cấu trúc (compile time), Strategy hoán đổi được hoàn toàn (runtime).
+> A: Template Method dùng **inheritance** — base class có method chính, subclasses override steps. Strategy dùng **composition** — object chứa algorithm được inject. Template Method cố định về cấu trúc (compile time), Strategy hoán đổi được hoàn toàn (runtime). Template Method dùng khi steps giống nhau; Strategy dùng khi algorithms hoàn toàn khác nhau.
 
 **Q: Hook trong Template Method là gì?**
-> A: Hook là method có **default implementation** mà subclasses có thể override nếu cần. Không bắt buộc override như abstract methods. Ví dụ: `onSuccess()` và `onFailure()` trong test framework — subclasses có thể override để customize logging.
+> A: Hook là method có **default implementation** mà subclasses có thể override nếu cần. Không bắt buộc override như abstract methods. Ví dụ: `onSuccess()` và `onFailure()` trong test framework — subclasses có thể override để customize logging, thay vì phải override toàn bộ test flow.

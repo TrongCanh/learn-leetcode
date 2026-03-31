@@ -2,51 +2,64 @@
 
 ## 🎯 Problem & Motivation
 
-**Bài toán:** Bạn cần tạo object nhưng **không muốn hard-code** class cụ thể cần tạo. Ví dụ: một hệ thống logistics cần tạo transport (Ship, Truck, Drone) — class nào được tạo phụ thuộc vào config hoặc user input.
+**Bài toán thực tế:** Bạn cần tạo object nhưng **không muốn hard-code** class cụ thể. Ví dụ: hệ thống thanh toán cần support Stripe, PayPal, VNPay — class nào được tạo phụ thuộc config hoặc user input.
 
-**Tại sao không dùng `new` trực tiếp?**
+**Tại sao `new` trực tiếp là vấn đề?**
 
 ```typescript
-// ❌ Code tồi: hard-coded, khó mở rộng
-const transport = new Truck(); // Nếu cần Ship thì sao? Sửa code?
-deliver(transport);
+// ❌ Hard-coded — thêm payment method mới phải sửa code
+async function checkout(paymentType: string, amount: number) {
+  if (paymentType === 'stripe') {
+    const payment = new StripeGateway(); // ❌ Client biết StripeGateway tồn tại
+    await payment.charge(amount);
+  } else if (paymentType === 'paypal') {
+    const payment = new PayPalGateway();
+    await payment.sendMoney(amount);
+  } else if (paymentType === 'vnpay') {
+    const payment = new VNPayGateway();
+    await payment.process(amount);
+  }
+  // ⚠️ Thêm method mới? Sửa function này!
+}
 ```
 
-**Factory Method giải quyết:** Đưa việc khởi tạo vào **subclass**, để client chỉ cần biết **interface** mà không cần biết concrete class.
+→ **Hậu quả:** Client phụ thuộc trực tiếp vào concrete classes. Thêm method mới → phải sửa client. Vi phạm **Open/Closed Principle** (open for extension, closed for modification).
+
+**Factory Method giải quyết:** Đưa việc khởi tạo vào **subclass**, để client chỉ cần biết **interface**, không biết concrete class.
 
 ---
 
 ## 💡 Use Cases
 
-1. **UI Framework** — Tạo button theo platform: `createButton()` trả về `WindowsButton` (Windows) hoặc `MacButton` (macOS) mà client không cần biết
-2. **Logistics App** — Tạo transport theo region hoặc config
-3. **Document App** — Tạo document: `createDocument()` trả về `PDFDocument`, `WordDocument` tùy loại project
-4. **Payment Gateway** — Tạo payment processor: Stripe, PayPal, VNPay — factory quyết định dựa trên config
+1. **Payment Gateways** — Tạo processor theo config/env: Stripe cho US, PayPal cho EU, VNPay cho Vietnam
+2. **UI Component Factory** — Tạo button theo platform: `WindowsButton` (Windows), `MacButton` (macOS), `LinuxButton` (Linux)
+3. **Document Parsers** — Tạo parser theo file type: `PDFParser`, `WordParser`, `MarkdownParser`
+4. **Database Drivers** — Tạo connection theo config: `MySQLConnection`, `PostgreSQLConnection`, `MongoDBConnection`
+5. **Notification Channels** — Tạo sender theo user preference: `EmailSender`, `SMSSender`, `PushSender`
+6. **Strategy Selector** — Chọn algorithm theo data size: small → quicksort, large → mergesort
 
 ---
 
 ## ❌ Before (Không dùng Factory Method)
 
 ```typescript
-// ❌ Mỗi lần thêm payment mới → sửa hàm này
-function createPaymentProcessor(type: string) {
-  if (type === 'stripe') {
-    return new StripeProcessor(); // Hard-coded
-  } else if (type === 'paypal') {
-    return new PayPalProcessor();
-  } else if (type === 'vnpay') {
-    return new VNPayProcessor();
+// ❌ Client phải biết tất cả concrete classes
+async function createReport(type: 'pdf' | 'csv' | 'excel') {
+  if (type === 'pdf') {
+    const generator = new PDFReportGenerator();
+    return generator.generate();
+  } else if (type === 'csv') {
+    const generator = new CSVReportGenerator();
+    return generator.generate();
+  } else if (type === 'excel') {
+    const generator = new ExcelReportGenerator();
+    return generator.generate();
   }
-  // ... thêm càng nhiều if/else → code càng rối
-  throw new Error('Unknown payment type');
+  // ⚠️ 3 concrete classes rải trong if/else → khó maintain
 }
-
-// Client
-const processor = createPaymentProcessor('stripe');
-processor.charge(100);
 ```
 
-→ **Vấn đề:** Thêm payment type mới → phải sửa `createPaymentProcessor`. Vi phạm **Open/Closed Principle** (open for extension, closed for modification).
+→ **Hậu quả:** Mỗi thay đổi (thêm format, đổi logic) đều phải sửa `createReport`. Test từng format khó vì phụ thuộc vào nhau.
 
 ---
 
@@ -54,59 +67,100 @@ processor.charge(100);
 
 ```typescript
 // ─────────────────────────────────────────
-// 1. Định nghĩa interface — client chỉ cần biết interface này
+// 1. Product Interface — Client chỉ biết interface này
 // ─────────────────────────────────────────
 interface PaymentProcessor {
-  charge(amount: number): Promise<void>;
-  refund(transactionId: string): Promise<void>;
+  charge(amount: number): Promise<ChargeResult>;
+  refund(transactionId: string): Promise<RefundResult>;
+}
+
+interface ChargeResult {
+  transactionId: string;
+  status: 'success' | 'failed';
+  amount: number;
+}
+
+interface RefundResult {
+  refundId: string;
+  status: 'success' | 'failed';
 }
 
 // ─────────────────────────────────────────
-// 2. Các concrete implementations
+// 2. Concrete Products — Implementation thực sự
 // ─────────────────────────────────────────
 class StripeProcessor implements PaymentProcessor {
-  async charge(amount: number): Promise<void> {
-    console.log(`💳 [Stripe] Charging $${amount}`);
-    // Stripe API call
+  async charge(amount: number): Promise<ChargeResult> {
+    console.log(`💳 [Stripe] Charging $${amount}...`);
+    return {
+      transactionId: `stripe_${Date.now()}`,
+      status: 'success',
+      amount
+    };
   }
-  async refund(transactionId: string): Promise<void> {
-    console.log(`💳 [Stripe] Refunding ${transactionId}`);
+
+  async refund(transactionId: string): Promise<RefundResult> {
+    console.log(`💳 [Stripe] Refunding ${transactionId}...`);
+    return { refundId: `stripe_refund_${Date.now()}`, status: 'success' };
   }
 }
 
 class PayPalProcessor implements PaymentProcessor {
-  async charge(amount: number): Promise<void> {
-    console.log(`🅿️ [PayPal] Charging $${amount}`);
+  async charge(amount: number): Promise<ChargeResult> {
+    console.log(`🅿️ [PayPal] Charging $${amount}...`);
+    return {
+      transactionId: `paypal_${Date.now()}`,
+      status: 'success',
+      amount
+    };
   }
-  async refund(transactionId: string): Promise<void> {
-    console.log(`🅿️ [PayPal] Refunding ${transactionId}`);
+
+  async refund(transactionId: string): Promise<RefundResult> {
+    console.log(`🅿️ [PayPal] Refunding ${transactionId}...`);
+    return { refundId: `paypal_refund_${Date.now()}`, status: 'success' };
   }
 }
 
 class VNPayProcessor implements PaymentProcessor {
-  async charge(amount: number): Promise<void> {
-    console.log(`🇻🇳 [VNPay] Charging $${amount}`);
+  async charge(amount: number): Promise<ChargeResult> {
+    console.log(`🇻🇳 [VNPay] Charging $${amount}...`);
+    return {
+      transactionId: `vnpay_${Date.now()}`,
+      status: 'success',
+      amount
+    };
   }
-  async refund(transactionId: string): Promise<void> {
-    console.log(`🇻🇳 [VNPay] Refunding ${transactionId}`);
+
+  async refund(transactionId: string): Promise<RefundResult> {
+    console.log(`🇻🇳 [VNPay] Refunding ${transactionId}...`);
+    return { refundId: `vnpay_refund_${Date.now()}`, status: 'success' };
   }
 }
 
 // ─────────────────────────────────────────
-// 3. Factory Method — mỗi factory tạo một loại
+// 3. Creator (abstract) — định nghĩa factory method
 // ─────────────────────────────────────────
 abstract class PaymentProcessorFactory {
-  // Factory Method — subclass quyết định tạo gì
+  // Factory Method — subclass quyết định tạo product gì
   protected abstract createProcessor(): PaymentProcessor;
 
-  // Template: business logic xung quanh việc tạo object
-  public processPayment(amount: number): void {
+  // Template operation — business logic xung quanh việc tạo object
+  public async processPayment(amount: number): Promise<void> {
     const processor = this.createProcessor();
-    console.log(`📋 Processing payment via ${processor.constructor.name}`);
-    processor.charge(amount);
+    console.log(`📋 Processing via ${processor.constructor.name}`);
+
+    const result = await processor.charge(amount);
+
+    if (result.status === 'success') {
+      console.log(`✅ Charged $${result.amount} → ${result.transactionId}`);
+    } else {
+      console.log(`❌ Charge failed`);
+    }
   }
 }
 
+// ─────────────────────────────────────────
+// 4. Concrete Creators — override factory method
+// ─────────────────────────────────────────
 class StripeFactory extends PaymentProcessorFactory {
   protected createProcessor(): PaymentProcessor {
     return new StripeProcessor();
@@ -126,98 +180,107 @@ class VNPayFactory extends PaymentProcessorFactory {
 }
 
 // ─────────────────────────────────────────
-// 4. Client — hoàn toàn tách biệt khỏi concrete class
+// 5. Client — hoàn toàn tách biệt khỏi concrete classes
 // ─────────────────────────────────────────
-function checkout(factory: PaymentProcessorFactory, amount: number) {
-  factory.processPayment(amount);
+class CheckoutService {
+  constructor(private factory: PaymentProcessorFactory) {}
+
+  async checkout(amount: number) {
+    // Client không biết Stripe, PayPal hay VNPay!
+    // Chỉ biết factory tạo ra PaymentProcessor
+    await this.factory.processPayment(amount);
+  }
 }
 
-// Thêm payment mới? Chỉ cần tạo class mới + factory mới, KHÔNG sửa code cũ
-checkout(new StripeFactory(), 100);
-checkout(new PayPalFactory(), 200);
+// Thêm Crypto? Chỉ cần tạo CryptoFactory — KHÔNG sửa code cũ!
+const stripeCheckout = new CheckoutService(new StripeFactory());
+const paypalCheckout = new CheckoutService(new PayPalFactory());
+stripeCheckout.checkout(99.99);
+paypalCheckout.checkout(49.99);
 ```
-
-→ **Cải thiện:** Thêm `CryptoProcessor`? Tạo `CryptoFactory extends PaymentProcessorFactory` — không sửa bất kỳ code nào hiện có!
 
 ---
 
 ## 🏗️ UML Diagram
 
 ```
-              ┌──────────────────────────┐
-              │   Creator (abstract)      │
-              ├──────────────────────────┤
-              │ + factoryMethod(): Product│
-              │ + someOperation()         │
-              └──────────┬───────────────┘
-                         │
-          ┌──────────────┴──────────────┐
-          │                              │
-          ▼                              ▼
-┌─────────────────────┐    ┌─────────────────────┐
-│  ConcreteCreatorA  │    │  ConcreteCreatorB  │
-├─────────────────────┤    ├─────────────────────┤
-│ + factoryMethod()   │    │ + factoryMethod()  │
-│   → ProductA        │    │   → ProductB      │
-└─────────────────────┘    └─────────────────────┘
+              ┌─────────────────────────────────┐
+              │     Creator (abstract)            │
+              ├─────────────────────────────────┤
+              │ + factoryMethod(): Product ← ABSTRACT│
+              │ + processPayment() (template)     │
+              └──────────┬────────────────────────┘
+                         │ extends
+       ┌─────────────────┴───────────────────────┐
+       ▼                                       ▼
+┌───────────────────┐              ┌───────────────────┐
+│  StripeFactory    │              │  PayPalFactory    │
+├───────────────────┤              ├───────────────────┤
+│ +createProcessor():│              │ +createProcessor():│
+│   StripeProcessor │              │   PayPalProcessor │
+└───────────────────┘              └───────────────────┘
 
-              ┌──────────────────────────┐
-              │      Product (interface)  │
-              ├──────────────────────────┤
-              │ + doSomething()          │
-              └──────────┬───────────────┘
-                         │
-          ┌──────────────┴──────────────┐
-          │                              │
-          ▼                              ▼
-┌─────────────────────┐    ┌─────────────────────┐
-│   ConcreteProductA  │    │   ConcreteProductB │
-└─────────────────────┘    └─────────────────────┘
+              ┌─────────────────────────────────┐
+              │   <<interface>> Product         │
+              ├─────────────────────────────────┤
+              │ + charge()                      │
+              │ + refund()                      │
+              └──────────┬──────────────────────┘
+                         │ implements
+       ┌─────────────────┴───────────────────────┐
+       ▼                                       ▼
+┌───────────────────┐              ┌───────────────────┐
+│ StripeProcessor   │              │ PayPalProcessor   │
+└───────────────────┘              └───────────────────┘
 ```
 
 ---
 
 ## 🔍 Step-by-step Trace
 
-**Scenario:** Client chọn thanh toán qua PayPal, amount = $150.
+**Scenario:** Client chọn thanh toán PayPal, amount = $150.
 
 ```
 Bước 1: Client gọi
-  checkout(new PayPalFactory(), 150)
+  checkoutService.checkout(150)
+  → CheckoutService.checkout(150)
 
-Bước 2: checkout() gọi
-  paypalFactory.processPayment(150)
+Bước 2: CheckoutService gọi factory template
+  factory.processPayment(150)
+  → PaymentProcessorFactory.processPayment(150)
 
-Bước 3: processPayment() gọi factory method
+Bước 3: Template gọi factory method
   const processor = this.createProcessor()
                     ↑
                     PayPalFactory.createProcessor()
 
-Bước 4: createProcessor() tạo
+Bước 4: createProcessor() trả về concrete product
   return new PayPalProcessor()
 
-Bước 5: processPayment() gọi
+Bước 5: Template gọi product method
   processor.charge(150)
         ↓
   PayPalProcessor.charge(150)
 
 Output: 🅿️ [PayPal] Charging $150
+        ✅ Charged $150 → paypal_...
 
-→ Client không biết PayPalProcessor tồn tại!
-→ Chỉ biết PaymentProcessor interface ✅
+→ Client hoàn toàn không biết PayPalProcessor tồn tại!
+→ Client chỉ biết PaymentProcessorFactory interface ✅
 ```
 
 ---
 
 ## 🌍 Real-world Examples
 
-| Thư viện/Framework | Cách dùng Factory Method |
+| Thư viện/Framework | Chi tiết implementation |
 |---------------------|------------------------|
-| **React `React.createElement()`** | Tạo React element (DOM, Native, Portal) tùy type |
-| **Java `java.util.Calendar.getInstance()`** | Factory method trả về Calendar instance theo locale |
-| **Java `java.net.URLStreamHandlerFactory`** | Tạo protocol handler động |
-| **TypeScript `Array.from()`** | Factory method tạo array từ iterable |
-| **React Router `createBrowserRouter()`** | Factory tạo router với config |
+| **React `React.createElement()`** | Factory tạo React element (DOM, Native, Portal) tùy type |
+| **Java `java.util.Calendar.getInstance()`** | Factory method trả về Calendar theo locale |
+| **Java `java.net.URLStreamHandlerFactory`** | Tạo protocol handler động theo scheme |
+| **TypeScript `Array.from()`** | Factory method tạo array từ iterable/array-like |
+| **Vue Router `createRouter()`** | Factory tạo router với config |
+| **Express `express()`** | Factory tạo app instance — không phải class, nhưng concept tương tự |
 
 ---
 
@@ -228,165 +291,241 @@ Output: 🅿️ [PayPal] Charging $150
 | Mục đích | Tạo **1 loại** product | Tạo **họ related products** | Tạo **1 product phức tạp**, step-by-step |
 | Hierarchy | 1 Creator → 1 Product | Nhiều Creators → Nhiều Products | 1 Director → 1 Builder → 1 Product |
 | Khi dùng | Cần tạo object nhưng để subclass quyết loại | Cần tạo **họ objects** liên quan | Object có nhiều tham số / cấu hình |
-| Ví dụ | Logistics transport | UI across platforms | HTTP request với nhiều headers |
+| Object tạo | Thường đơn giản | Thường phức tạp, có liên quan | Phức tạp với nhiều optional fields |
 
 ---
 
 ## 💻 TypeScript Implementation
 
-```typescript
-// ─────────────────────────────────────────
-// Framework-agnostic example: Document Creator
-// ─────────────────────────────────────────
+### Version 1: Framework-agnostic — Document Creator
 
+```typescript
 // Product Interface
 interface Document {
   open(): void;
-  save(): void;
+  save(filename: string): void;
   close(): void;
 }
 
 // Concrete Products
 class PDFDocument implements Document {
-  open() { console.log('📄 Opening PDF'); }
-  save() { console.log('💾 Saving PDF'); }
-  close() { console.log('🚪 Closing PDF'); }
+  constructor(private filename: string) {
+    console.log(`📄 [PDF] Opening "${filename}"`);
+  }
+  open() { console.log('📄 [PDF] Document ready'); }
+  save(filename: string) { console.log(`💾 [PDF] Saving as "${filename}"`); }
+  close() { console.log('🚪 [PDF] Closing document'); }
 }
 
 class WordDocument implements Document {
-  open() { console.log('📄 Opening Word'); }
-  save() { console.log('💾 Saving Word'); }
-  close() { console.log('🚪 Closing Word'); }
-}
-
-class MarkdownDocument implements Document {
-  open() { console.log('📄 Opening Markdown'); }
-  save() { console.log('💾 Saving Markdown'); }
-  close() { console.log('🚪 Closing Markdown'); }
+  constructor(private filename: string) {
+    console.log(`📄 [Word] Opening "${filename}"`);
+  }
+  open() { console.log('📄 [Word] Document ready'); }
+  save(filename: string) { console.log(`💾 [Word] Saving as "${filename}"`); }
+  close() { console.log('🚪 [Word] Closing document'); }
 }
 
 // Creator (abstract)
 abstract class DocumentCreator {
-  // Factory Method — subclasses override
-  protected abstract createDocument(): Document;
+  protected abstract createDocument(filename: string): Document;
 
-  // Template operation
-  public editDocument(filename: string): void {
-    const doc = this.createDocument();
+  // Template: mở → xử lý → lưu → đóng
+  public edit(filename: string, content: string): void {
+    const doc = this.createDocument(filename);
     doc.open();
-    console.log(`   Editing: ${filename}`);
-    doc.save();
+    console.log(`   ✏️  Editing: "${content}"`);
+    doc.save(filename);
     doc.close();
   }
 }
 
 // Concrete Creators
 class PDFCreator extends DocumentCreator {
-  protected createDocument(): Document {
-    return new PDFDocument();
+  protected createDocument(filename: string): Document {
+    return new PDFDocument(filename);
   }
 }
 
 class WordCreator extends DocumentCreator {
-  protected createDocument(): Document {
-    return new WordDocument();
+  protected createDocument(filename: string): Document {
+    return new WordDocument(filename);
   }
 }
 
-class MarkdownCreator extends DocumentCreator {
-  protected createDocument(): Document {
-    return new MarkdownDocument();
-  }
+// Client
+function exportDocument(creator: DocumentCreator, filename: string, content: string) {
+  creator.edit(filename, content);
 }
 
-// Client — chỉ biết abstract creator
-function openAndEdit(creator: DocumentCreator, filename: string): void {
-  creator.editDocument(filename);
-}
-
-openAndEdit(new PDFCreator(), 'report.pdf');
-openAndEdit(new MarkdownCreator(), 'readme.md');
+exportDocument(new PDFCreator(), 'report.pdf', 'Annual Report 2026');
 ```
 
 ---
 
-## 📝 LeetCode Problems áp dụng
+### Version 2: Map-based Factory (không cần subclass cho mỗi type)
 
-- [Serialize and Deserialize BST](https://leetcode.com/problems/serialize-and-deserialize-bst/) — Factory cho TreeNode construction
-- [Flatten Nested List Iterator](https://leetcode.com/problems/flatten-nested-list-iterator/) — Factory tạo iterator từ nested structure
-- [Design HashMap](https://leetcode.com/problems/design-hashmap/) — Factory tạo bucket strategy
+```typescript
+// Factory đơn giản hơn — dùng Map thay vì inheritance
+type ProductCreator<T> = () => T;
+
+class FactoryRegistry {
+  private static creators = new Map<string, ProductCreator<any>>();
+
+  static register<T>(name: string, creator: ProductCreator<T>): void {
+    FactoryRegistry.creators.set(name, creator);
+  }
+
+  static create<T>(name: string): T {
+    const creator = FactoryRegistry.creators.get(name);
+    if (!creator) {
+      throw new Error(`❌ Unknown product type: ${name}`);
+    }
+    return creator();
+  }
+}
+
+// Register products
+FactoryRegistry.register('pdf', () => new PDFDocument('report.pdf'));
+FactoryRegistry.register('word', () => new WordDocument('report.docx'));
+
+// Client: đăng ký ở config thay vì subclass
+const doc = FactoryRegistry.create<Document>('pdf');
+doc.open();
+```
 
 ---
 
-## ✅ Pros / ❌ Cons
+## ⚖️ Trade-offs & Common Mistakes
 
-**Ưu điểm:**
-- ✅ **Open/Closed Principle** — thêm product mới mà không sửa code cũ
-- ✅ **Single Responsibility** — code tạo object nằm ở một chỗ (factory)
-- ✅ **Loose coupling** — client chỉ phụ thuộc vào interface, không concrete class
-- ✅ Dễ test — có thể mock factory để test client
+### ✅ Khi nào nên dùng
 
-**Nhược điểm:**
-- ❌ Code phức tạp hơn — cần tạo nhiều subclass cho mỗi product
-- ❌ Đôi khi **over-engineering** — nếu chỉ có 1-2 loại product, dùng `new` cho nhanh
-- ❌ Factory con phải return đúng type — không compile-time type checking nếu dùng interface
-
----
-
-## ⚠️ Khi nào nên / không nên dùng
-
-**Nên dùng khi:**
 - ✅ Không biết trước loại object cần tạo (phụ thuộc config, input, env)
 - ✅ Muốn để subclass quyết định class cụ thể
 - ✅ Cần tách biệt code tạo object và code sử dụng object
 - ✅ Thêm loại product mới thường xuyên
 
-**Không nên dùng khi:**
-- ❌ Chỉ có 1-2 loại product cố định — dùng `new` cho đơn giản
-- ❌ Object creation đơn giản (chỉ `new Foo()` là đủ) — đừng over-engineer
+### ❌ Khi nào không nên dùng
+
+- ❌ Chỉ có 1-2 loại product cố định — dùng `new` cho nhanh
+- ❌ Object creation đơn giản (chỉ `new Foo()`) — đừng over-engineer
 - ❌ Cần tạo **họ related products** (nhiều families) — dùng **Abstract Factory**
+
+### 🚫 Common Mistakes
+
+**1. Factory Method gọi `new` trong base class**
+```typescript
+// ❌ Sai: Base class gọi new, không phải factory method!
+abstract class BadCreator {
+  public someOperation() {
+    // ❌ Base gọi new cụ thể, không gọi factory method!
+    const p = new ConcreteProduct();
+  }
+}
+
+// ✅ Đúng: Luôn dùng this.createProduct()
+public someOperation() {
+  const p = this.createProduct(); // ✅ Gọi polymorphic factory method
+}
+```
+
+**2. Overusing Factory cho objects đơn giản**
+```typescript
+// ❌ Thừa: class Point có 2 tham số, không cần factory
+class PointFactory {
+  static createCartesian(x: number, y: number) { return new Point(x, y); }
+  static createPolar(r: number, theta: number) { return new Point(r * Math.cos(theta), r * Math.sin(theta)); }
+}
+// ⚠️ Over-engineering cho 2 constructors thông thường
+```
+
+**3. Quên rằng factory method trả về interface**
+```typescript
+// ✅ Đúng: Return interface type, không concrete type
+protected abstract createProcessor(): PaymentProcessor; // ✅ Interface
+// protected abstract createProcessor(): StripeProcessor; // ❌ Concrete type
+```
 
 ---
 
-## 🚫 Common Mistakes / Pitfalls
+## 🧪 Testing Strategies
 
-1. **Factory Method dùng `new` thay vì override**
-   ```typescript
-   // ❌ Sai: Gọi new trong base class → vô hiệu hóa factory
-   abstract class Creator {
-     protected abstract createProduct(): Product;
+```typescript
+// Test client mà không cần biết concrete factory
+describe('CheckoutService', () => {
+  it('should process payment through factory', async () => {
+    // Mock factory — không cần biết Stripe hay PayPal
+    const mockFactory = {
+      processPayment: jest.fn().mockResolvedValue(undefined)
+    } as unknown as PaymentProcessorFactory;
 
-     public someOperation() {
-       // Base gọi new, không phải factory method!
-       const p = new ConcreteProduct(); // ❌
-     }
-   }
+    const service = new CheckoutService(mockFactory);
+    await service.checkout(100);
 
-   // ✅ Đúng: Luôn dùng this.createProduct()
-   public someOperation() {
-     const p = this.createProduct(); // ✅ Gọi polymorphic factory method
-   }
-   ```
+    expect(mockFactory.processPayment).toHaveBeenCalledWith(100);
+  });
+});
 
-2. **Overusing Factory cho objects đơn giản**
-   ```typescript
-   // ❌ Thừa: class Point có 2 tham số, không cần factory
-   class PointFactory {
-     static createCartesian(x: number, y: number) { return new Point(x, y); }
-     static createPolar(r: number, theta: number) { return new Point(r * Math.cos(theta), r * Math.sin(theta)); }
-   }
-   // ⚠️ Over-engineering cho 2 constructors thông thường
-   ```
+// Test concrete factory
+describe('StripeFactory', () => {
+  it('should create StripeProcessor', () => {
+    const factory = new StripeFactory();
+    const processor = factory.createProcessor();
+    expect(processor).toBeInstanceOf(StripeProcessor);
+  });
+});
+```
+
+---
+
+## 🔄 Refactoring Path
+
+**Từ if/else → Factory Method:**
+
+```typescript
+// ❌ Before: if/else
+function createParser(type: string) {
+  if (type === 'json') return new JSONParser();
+  if (type === 'xml') return new XMLParser();
+  throw new Error('Unknown');
+}
+
+// ✅ After: Factory Method
+abstract class ParserFactory {
+  abstract createParser(): Parser;
+}
+
+class JSONParserFactory extends ParserFactory {
+  createParser(): Parser { return new JSONParser(); }
+}
+
+class XMLParserFactory extends ParserFactory {
+  createParser(): Parser { return new XMLParser(); }
+}
+
+// ✅ Even better: Registry-based (không cần subclass)
+class ParserFactoryRegistry {
+  static parsers = new Map<string, () => Parser>();
+  static register(type: string, factory: () => Parser) {
+    this.parsers.set(type, factory);
+  }
+  static create(type: string): Parser {
+    const factory = this.parsers.get(type);
+    if (!factory) throw new Error(`Unknown type: ${type}`);
+    return factory();
+  }
+}
+```
 
 ---
 
 ## 🎤 Interview Q&A
 
 **Q: Factory Method là gì? Khác gì Abstract Factory?**
-> A: Factory Method dùng inheritance — một method được override bởi subclass để quyết định tạo object nào. Abstract Factory dùng composition — một object chứa nhiều factory methods để tạo **họ related products**. Dùng Factory Method khi có 1 product hierarchy; Abstract Factory khi có nhiều families of products.
+> A: Factory Method dùng **inheritance** — một method được override bởi subclass để quyết định tạo object nào. Client gọi `createProcessor()` trên factory, subclass quyết định tạo Stripe hay PayPal. Abstract Factory tạo **họ related products** — một factory có nhiều factory methods để tạo tất cả objects trong một product family (VD: UI factory tạo Button + Menu + Dialog cho mỗi platform).
 
 **Q: Khi nào dùng Factory Method thay vì `new`?**
-> A: Khi type của object phụ thuộc vào config, input, hoặc environment mà không biết trước lúc compile. Hoặc khi việc tạo object phức tạp và muốn tách ra khỏi business logic. Nếu chỉ có 1-2 concrete class cố định, `new` là đủ.
+> A: Khi type của object phụ thuộc vào config, input, hoặc environment mà không biết trước lúc compile. Khi việc tạo object phức tạp và muốn tách ra khỏi business logic. Khi cần thêm loại product mới thường xuyên. Nếu chỉ có 1-2 concrete class cố định, `new` là đủ.
 
-**Q: Factory Method liên quan gì đến Dependency Inversion?**
-> A: Factory Method tuân theo Dependency Inversion Principle (D trong SOLID) — high-level module (client) không phụ thuộc vào low-level module (concrete class), mà cả hai đều phụ thuộc vào abstraction (interface). Client dùng factory qua interface, không biết concrete class nào được tạo.
+**Q: Factory Method liên quan gì đến Dependency Inversion (SOLID)?**
+> A: Factory Method tuân theo Dependency Inversion Principle — high-level module (client) không phụ thuộc vào low-level module (concrete class), mà cả hai đều phụ thuộc vào abstraction (interface). Client dùng factory qua interface, không biết concrete class nào được tạo.

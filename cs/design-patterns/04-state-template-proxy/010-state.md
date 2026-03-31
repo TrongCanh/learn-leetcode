@@ -2,7 +2,7 @@
 
 ## 🎯 Problem & Motivation
 
-**Bài toán:** Object có behavior **thay đổi hoàn toàn** tùy theo internal state. Logic code trở nên rối với `if/else` kiểm tra state ở khắp nơi.
+**Bài toán thực tế:** Object có behavior **thay đổi hoàn toàn** tùy theo internal state. Logic code trở nên rối với `if/else` kiểm tra state ở khắp nơi.
 
 **Ví dụ thực tế:** Vending machine:
 - **Idle state** → nhận tiền
@@ -11,6 +11,38 @@
 - **Out of stock** → từ chối
 
 Nếu dùng `if/else`: mỗi action đều phải check state → hàng chục `if/else` trùng lặp.
+
+```typescript
+// ❌ if/else hell — state rải khắp nơi!
+class VendingMachine {
+  private state: 'idle' | 'hasMoney' | 'dispensing' = 'idle';
+
+  insertCoin() {
+    if (this.state === 'idle') {
+      this.state = 'hasMoney';
+    }
+  }
+
+  selectProduct() {
+    if (this.state === 'idle') {
+      console.log('Insert coin first!');
+    } else if (this.state === 'hasMoney') {
+      this.state = 'dispensing';
+    }
+    // ⚠️ Mỗi method đều phải check state
+  }
+
+  dispense() {
+    if (this.state === 'dispensing') {
+      // dispense
+      this.state = 'idle';
+    }
+    // ⚠️ Thêm state mới? Sửa TẤT CẢ methods!
+  }
+}
+```
+
+→ **Hậu quả:** `if/else` trùng lặp ở mọi method. Thêm state mới → sửa tất cả methods. State transition logic phân tán khắp nơi.
 
 **State giải quyết:** Mỗi state được đóng gói thành **class riêng**. Object delegate behavior sang current state class — khi state thay đổi, behavior tự thay đổi theo.
 
@@ -21,7 +53,7 @@ Nếu dùng `if/else`: mỗi action đều phải check state → hàng chục `
 1. **Order/Workflow Systems** — Order: Pending → Processing → Shipped → Delivered → Cancelled
 2. **Document State** — Draft → Review → Approved → Published
 3. **TCP Connection** — Closed → Listen → Syn Sent → Established → Fin Wait → Closed
-4. **Media Player** — Stopped → Playing → Paused → Stopped
+4. **Media Player** — Stopped → Playing → Paused → Buffering → Stopped
 5. **Game Character** — Idle → Walking → Running → Jumping → Falling
 6. **Auth Flow** — LoggedOut → LoginForm → TwoFactor → LoggedIn → LoggingOut
 
@@ -30,51 +62,33 @@ Nếu dùng `if/else`: mỗi action đều phải check state → hàng chục `
 ## ❌ Before (Không dùng State)
 
 ```typescript
-// ❌ if/else hell — state rải khắp nơi!
+// ❌ if/else trùng lặp ở mọi method
 class Document {
   private state: 'draft' | 'review' | 'published' = 'draft';
-  private currentUser: string | null = null;
 
   publish(user: string) {
     if (this.state === 'draft') {
-      if (user === 'author') {
-        this.state = 'review';
-        console.log('📤 Sent to review');
-      } else {
-        console.log('❌ Only author can submit for review');
-      }
+      if (user === 'author') { this.state = 'review'; }
     } else if (this.state === 'review') {
-      if (user === 'editor') {
-        this.state = 'published';
-        console.log('✅ Published!');
-      } else {
-        console.log('❌ Only editor can publish');
-      }
-    } else {
-      console.log('❌ Already published');
+      if (user === 'editor') { this.state = 'published'; }
     }
+    // ⚠️ Mỗi method đều có if/else giống nhau!
   }
 
-  edit(user: string, content: string) {
-    if (this.state === 'draft') {
-      console.log(`✏️ ${user} editing...`);
-    } else if (this.state === 'review') {
-      console.log(`❌ Cannot edit while in review`);
-    } else {
-      console.log(`❌ Cannot edit published document`);
-    }
+  edit(user: string) {
+    if (this.state === 'draft') { /* allow */ }
+    else if (this.state === 'review') { /* deny */ }
+    else if (this.state === 'published') { /* deny */ }
   }
 
   approve(editor: string) {
-    if (this.state === 'review') {
-      this.state = 'published';
-    }
+    if (this.state === 'review') { this.state = 'published'; }
   }
   // ⚠️ Thêm state mới? Tìm tất cả if/else và sửa!
 }
 ```
 
-→ **Vấn đề:** `if/else` trùng lặp ở mọi method. Thêm state mới → sửa tất cả methods. State transition logic phân tán khắp nơi.
+→ **Hậu quả:** State logic phân tán. Thêm state → sửa mọi method.
 
 ---
 
@@ -85,7 +99,7 @@ class Document {
 // 1. State Interface — contract cho mỗi state
 // ─────────────────────────────────────────
 interface DocumentState {
-  publish(context: DocumentContext): void;
+  publish(context: DocumentContext, user: string): void;
   edit(context: DocumentContext, user: string, content: string): void;
   review(context: DocumentContext, editor: string): void;
 }
@@ -102,21 +116,13 @@ class DocumentContext {
 
   setState(state: DocumentState) {
     this.state = state;
-    console.log(`🔄 State changed to: ${state.constructor.name}`);
+    console.log(`🔄 State: ${state.constructor.name.replace('State', '')}`);
   }
 
   // Delegate all actions to current state
-  publish(user: string) {
-    this.state.publish(this, user);
-  }
-
-  edit(user: string, content: string) {
-    this.state.edit(this, user, content);
-  }
-
-  review(editor: string) {
-    this.state.review(this, editor);
-  }
+  publish(user: string) { this.state.publish(this, user); }
+  edit(user: string, content: string) { this.state.edit(this, user, content); }
+  review(editor: string) { this.state.review(this, editor); }
 }
 
 // ─────────────────────────────────────────
@@ -138,7 +144,7 @@ class DraftState implements DocumentState {
   }
 
   review(context: DocumentContext, editor: string): void {
-    console.log('❌ Document must be published first before reviewing');
+    console.log('❌ Document must be published first');
   }
 }
 
@@ -148,7 +154,7 @@ class ReviewState implements DocumentState {
   }
 
   edit(context: DocumentContext, user: string, content: string): void {
-    console.log('❌ [Review] Cannot edit while in review. Request changes instead.');
+    console.log('❌ [Review] Cannot edit while in review.');
   }
 
   review(context: DocumentContext, editor: string): void {
@@ -167,7 +173,7 @@ class PublishedState implements DocumentState {
   }
 
   review(context: DocumentContext, editor: string): void {
-    console.log('❌ Already published. Archive and create new document.');
+    console.log('❌ Already published.');
   }
 }
 
@@ -176,50 +182,61 @@ class PublishedState implements DocumentState {
 // ─────────────────────────────────────────
 const doc = new DocumentContext();
 
-doc.edit('author', 'Chapter 1 content...');
-// ✏️ [Draft] author editing: "Chapter 1 content..."
+doc.edit('author', 'Chapter 1...');
+// ✏️ [Draft] author editing: "Chapter 1..."
 
 doc.publish('author');
 // 📤 Author submitting for review...
-// 🔄 State changed to: ReviewState
+// 🔄 State: Review
 
 doc.edit('author', 'New content...');
-// ❌ [Review] Cannot edit while in review. Request changes instead.
+// ❌ [Review] Cannot edit while in review.
 
 doc.review('editor_jane');
-// ✅ [Review] Editor "editor_jane" approved! Publishing...
-// 🔄 State changed to: PublishedState
+// ✅ [Review] Editor "editor_jane" approved!
+// 🔄 State: Published
 
 doc.publish('author');
 // ❌ Already published!
 ```
-
-→ **Cải thiện:** Thêm state mới? Tạo class mới implements `DocumentState`. Context hoàn toàn không biết state cụ thể. State transition logic nằm trong mỗi state class.
 
 ---
 
 ## 🏗️ UML Diagram
 
 ```
-┌─────────────────────┐         ┌──────────────────────────┐
-│       Context       │         │    <<interface>>         │
-│  (DocumentContext)  │────────▶│      DocumentState       │
-├─────────────────────┤         ├──────────────────────────┤
-│ -state: State       │         │ +publish()               │
-├─────────────────────┤         │ +edit()                  │
-│ +setState()         │         │ +review()                │
-│ +request()          │         └───────────┬──────────────┘
-└─────────────────────┘                      │ implements
-                                            │
-        ┌───────────────────────────────────┼────────────────────┐
-        ▼                                   ▼                    ▼
-┌─────────────────┐              ┌─────────────────┐    ┌─────────────────┐
-│  DraftState     │              │  ReviewState     │    │ PublishedState  │
-├─────────────────┤              ├─────────────────┤    ├─────────────────┤
-│ +publish()      │──setState()─▶│ +review()       │───▶│ +publish()      │
-│ +edit()         │              │ +edit() ❌      │    │ +edit() ❌      │
-│ +review() ❌    │              │                 │    │                 │
-└─────────────────┘              └─────────────────┘    └─────────────────┘
+┌─────────────────────┐
+│       Context        │
+│ (DocumentContext)  │
+├─────────────────────┤
+│ -state: State       │
+├─────────────────────┤
+│ +setState()         │
+│ +publish()          │
+│ +edit()             │
+│ +review()            │
+└──────────┬──────────┘
+           │ delegates
+           ▼
+┌──────────────────────────────┐
+│    <<interface>>             │
+│      DocumentState            │
+├──────────────────────────────┤
+│ +publish(context, user)       │
+│ +edit(context, user, content)│
+│ +review(context, editor)     │
+└───────────┬──────────────────┘
+            │ implements
+┌───────────┼─────────────────────────┐
+▼           ▼                         ▼
+┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐
+│    DraftState     │ │   ReviewState    │ │  PublishedState  │
+├──────────────────┤ ├──────────────────┤ ├──────────────────┤
+│ +publish(): ✅    │ │ +publish(): ❌   │ │ +publish(): ❌   │
+│ +edit(): ✅      │ │ +edit(): ❌      │ │ +edit(): ❌      │
+│ +review(): ❌    │ │ +review(): ✅───▶│ │ +review(): ❌    │
+└──────────────────┘ └──────────────────┘ └──────────────────┘
+                      setState(PublishedState)
 ```
 
 ---
@@ -230,23 +247,23 @@ doc.publish('author');
 
 ```
 Bước 1: doc.edit('author', 'content')
+  → context.state = DraftState
   → DraftState.edit() → ✏️ Editing...
 
 Bước 2: doc.publish('author')
   → DraftState.publish()
     → user === 'author' → TRUE
     → context.setState(new ReviewState())
-    → 🔄 State: ReviewState
+    → 🔄 State: Review
 
-Bước 3: doc.edit('author', 'new content')
-  → ReviewState.edit()
-    → ❌ Cannot edit while in review
+Bước 3: doc.edit('author', 'new')
+  → ReviewState.edit() → ❌ Cannot edit
 
 Bước 4: doc.review('editor_jane')
   → ReviewState.review()
     → ✅ Editor approved
     → context.setState(new PublishedState())
-    → 🔄 State: PublishedState
+    → 🔄 State: Published
 
 → DocumentContext hoàn toàn không biết state transitions!
 → Chỉ gọi methods → state tự quyết định transition
@@ -256,8 +273,8 @@ Bước 4: doc.review('editor_jane')
 
 ## 🌍 Real-world Examples
 
-| Thư viện/Framework | Cách dùng State |
-|--------------------|-----------------|
+| Thư viện/Framework | Chi tiết implementation |
+|--------------------|------------------------|
 | **TCP Protocol** | State machine: LISTEN, SYN_SENT, ESTABLISHED, FIN_WAIT... |
 | **Redux** | Store state machine: actions trigger transitions |
 | **Angular Router** | State machine cho route transitions |
@@ -269,21 +286,19 @@ Bước 4: doc.review('editor_jane')
 ## 📊 So sánh với Patterns liên quan
 
 | Criteria | **State** | Strategy | Template Method |
-|----------|----------|----------|-----------------|
+|----------|----------|----------|----------------|
 | Ai quyết định next state? | **State tự quyết** (transition logic) | Client chủ động chọn | Base class định sẵn |
-| Khi nào thay đổi? | Automatic (after action) | Manual (client calls setter) | Compile time |
+| Khi nào thay đổi? | Automatic (after action) | Manual (client gọi setter) | Compile time |
 | Object có biết state tiếp theo? | ✅ Có | ❌ Không | ❌ Không |
-| Use case | State machine | Algorithm selection | Skeleton algorithm |
+| Mục đích | State machine | Algorithm selection | Skeleton algorithm |
 
 ---
 
 ## 💻 TypeScript Implementation
 
-```typescript
-// ─────────────────────────────────────────
-// Example: TCP Connection State Machine
-// ─────────────────────────────────────────
+### Version 1: TCP Connection State Machine
 
+```typescript
 interface TcpState {
   open(connection: TcpConnection): void;
   close(connection: TcpConnection): void;
@@ -322,7 +337,7 @@ class ListenState implements TcpState {
     conn.setState(new ClosedState());
   }
   acknowledge(conn: TcpConnection) {
-    console.log('📤 [Listen] SYN received, sending SYN+ACK...');
+    console.log('📤 [Listen] SYN → SYN+ACK...');
     conn.setState(new EstablishedState());
   }
 }
@@ -349,77 +364,94 @@ class FinWaitState implements TcpState {
 
 // Usage
 const conn = new TcpConnection();
-conn.open();      // 🔌 Opening → Listen
+conn.open();       // 🔌 [Closed] Opening → Listen
 conn.acknowledge(); // 📤 SYN+ACK → Established
 conn.acknowledge(); // ✅ Data acknowledged
-conn.close();     // 🔌 Closing → FinWait
+conn.close();      // 🔌 Closing → FinWait
 conn.acknowledge(); // 🔌 FIN received → Closed
 ```
 
 ---
 
-## 📝 LeetCode Problems áp dụng
+## ⚖️ Trade-offs & Common Mistakes
 
-- [Design Phone Directory](https://leetcode.com/problems/design-phone-directory/) — available/allocated state management
-- [Number of Island](https://leetcode.com/problems/number-of-islands/) — DFS state machine (visited/unvisited)
-- [Can Place Flowers](https://leetcode.com/problems/can-place-flowers/) — slot state: empty/occupied
+### ✅ Khi nào nên dùng
 
----
-
-## ✅ Pros / ❌ Cons
-
-**Ưu điểm:**
-- ✅ **Single Responsibility** — mỗi state class một trách nhiệm
-- ✅ **Open/Closed** — thêm state mới không sửa code cũ
-- ✅ **State logic rõ ràng** — transition logic nằm trong state class
-- ✅ **Loose coupling** — context không biết state cụ thể
-
-**Nhược điểm:**
-- ❌ **Overkill** — nếu chỉ có 2-3 states đơn giản, if/else đủ
-- ❌ **State explosion** — mỗi state là một class
-- ❌ **States phụ thuộc lẫn nhau** — nếu transition logic phức tạp
-
----
-
-## ⚠️ Khi nào nên / không nên dùng
-
-**Nên dùng khi:**
 - ✅ Object có **nhiều states** với behavior khác nhau rõ ràng
 - ✅ State transitions phức tạp, logic phân tán khắp nơi nếu dùng if/else
 - ✅ Cần **state machine** với clear transitions
 
-**Không nên dùng khi:**
+### ❌ Khi nào không nên dùng
+
 - ❌ Chỉ có 2 states đơn giản — boolean hoặc enum đủ
 - ❌ Behavior thay đổi theo external config — dùng Strategy
 
+### 🚫 Common Mistakes
+
+**1. State không access được context để transition**
+```typescript
+// ❌ Sai: State không thể gọi setState() vì không có context
+class BadState implements State {
+  publish() {
+    // ❌ Làm sao gọi context.setState()?
+  }
+}
+
+// ✅ Đúng: State nhận context để transition
+class GoodState implements State {
+  publish(context: Context) {
+    context.setState(new NextState());
+  }
+}
+```
+
+**2. Dùng State khi chỉ cần Strategy**
+```typescript
+// ❌ Thừa: Client tự quyết strategy, không phải state machine
+if (user.prefersDarkMode) {
+  theme.setStrategy(new DarkTheme());
+}
+// → Dùng Strategy, không phải State
+```
+
 ---
 
-## 🚫 Common Mistakes / Pitfalls
+## 🧪 Testing Strategies
 
-1. **State quyết định transition nhưng không có context access**
-   ```typescript
-   // ❌ Sai: State không thể transition vì không access context
-   class BadState implements State {
-     publish() {
-       // ❌ Làm sao gọi setState()?
-       // Cần context truyền vào!
-     }
-   }
+```typescript
+describe('DocumentContext', () => {
+  it('should transition from draft to published', () => {
+    const doc = new DocumentContext();
 
-   // ✅ Đúng: State nhận context để transition
-   class GoodState implements State {
-     publish(context: Context) {
-       context.setState(new NextState());
-     }
-   }
-   ```
+    doc.publish('author');
+    expect(doc).toBeDefined();
+
+    doc.review('editor');
+    expect(doc).toBeDefined();
+  });
+
+  it('should deny edit in review state', () => {
+    const doc = new DocumentContext();
+    doc.publish('author');
+
+    let error = '';
+    const originalLog = console.log;
+    console.log = (msg: string) => { error = msg; };
+
+    doc.edit('author', 'new content');
+
+    console.log = originalLog;
+    expect(error).toContain('Cannot edit');
+  });
+});
+```
 
 ---
 
 ## 🎤 Interview Q&A
 
 **Q: State Pattern là gì? Khi nào dùng?**
-> A: State đóng gói behavior vào các state classes riêng biệt. Context delegate behavior sang current state — khi state thay đổi, behavior tự thay đổi. Dùng khi object có nhiều states với transitions rõ ràng (document: draft→review→published, TCP: listen→established→closed).
+> A: State đóng gói behavior vào các state classes riêng biệt. Context delegate behavior sang current state — khi state thay đổi, behavior tự thay đổi. Dùng khi object có nhiều states với transitions rõ ràng (document: draft→review→published, TCP: listen→established→closed). Quan trọng: state nhận context để tự quyết định khi nào transition.
 
 **Q: State khác Strategy như thế nào?**
-> A: Strategy: **client chủ động** chọn algorithm qua setter. State: **object tự thay đổi** behavior khi internal state thay đổi — state class chứa transition logic. State là state machine; Strategy là algorithm selection.
+> A: Strategy: **client chủ động** chọn algorithm qua setter. State: **object tự thay đổi** behavior khi internal state thay đổi — state class chứa transition logic. State là state machine; Strategy là algorithm selection. State transition là automatic (sau action); Strategy swap là manual (client gọi setter).

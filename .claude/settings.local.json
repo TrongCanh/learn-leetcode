@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(netstat -ano)",
+      "Bash(findstr \"37156\")",
+      "Bash(findstr -v \"127.0.0.1\")",
+      "WebFetch(domain:trongcanh.github.io)",
+      "Bash(node -e \":*)",
+      "Bash(python3 -c \":*)",
+      "WebSearch"
+    ]
+  }
+}

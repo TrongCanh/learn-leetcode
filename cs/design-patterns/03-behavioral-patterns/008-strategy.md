@@ -2,48 +2,74 @@
 
 ## 🎯 Problem & Motivation
 
-**Bài toán:** Bạn có một thuật toán/behavior có **nhiều variants**, và muốn **chọn variant lúc runtime** mà không thay đổi code client.
+**Bài toán thực tế:** Bạn có một thuật toán/behavior có **nhiều variants**, và muốn **chọn variant lúc runtime** mà không thay đổi code client.
 
 **Ví dụ thực tế:** Thanh toán — user chọn Stripe, PayPal, hay VNPay? Logic xử lý khác nhau nhưng interface giống nhau. Hoặc sắp xếp — sort theo name, date, hay price?
 
-**Strategy giải quyết:** Đóng gói mỗi thuật toán vào **class riêng**, client chọn strategy cần dùng lúc runtime.
+```typescript
+// ❌ Strategy được chọn bằng if/else trong client
+async function processPayment(amount: number, method: string) {
+  if (method === 'stripe') {
+    const stripe = new StripeGateway();
+    await stripe.charge(amount);
+  } else if (method === 'paypal') {
+    const paypal = new PayPalGateway();
+    await paypal.sendMoney(amount);
+  } else if (method === 'vnpay') {
+    const vnpay = new VNPayGateway();
+    await vnpay.process(amount);
+  } else if (method === 'crypto') {
+    const crypto = new CryptoGateway();
+    await crypto.transfer(amount);
+  }
+  // ⚠️ Thêm method → sửa function này!
+}
+```
+
+→ **Hậu quả:** Client phải biết tất cả concrete implementations. Thêm strategy → sửa client. Khó test vì phụ thuộc vào if/else chain.
+
+**Strategy giải quyết:** Đóng gói mỗi thuật toán vào **class riêng**, client chọn strategy cần dùng và inject vào Context.
 
 ---
 
 ## 💡 Use Cases
 
-1. **Payment Processing** — Stripe vs PayPal vs VNPay
-2. **Sorting Algorithms** — QuickSort vs MergeSort vs TimSort tùy data size
-3. **Compression** — ZIP vs RAR vs GZIP tùy file type
-4. **Routing** — A* vs Dijkstra vs BFS tùy graph type
-5. **Authentication** — JWT vs OAuth vs Session vs API Key
-6. **Shipping Calculator** — FedEx vs UPS vs DHL vs Vietnam Post
+1. **Payment Processing** — Stripe vs PayPal vs VNPay vs Crypto
+2. **Sorting Algorithms** — QuickSort vs MergeSort vs TimSort tùy data size và distribution
+3. **Compression** — ZIP vs RAR vs GZIP tùy file type và size
+4. **Routing Algorithms** — A* vs Dijkstra vs BFS tùy graph characteristics
+5. **Authentication** — JWT vs OAuth vs Session vs API Key vs Biometric
+6. **Shipping Calculator** — FedEx vs UPS vs DHL vs Vietnam Post vs Self-pickup
 
 ---
 
 ## ❌ Before (Không dùng Strategy)
 
 ```typescript
-// ❌ Strategy được chọn bằng if/else trong client
-async function processPayment(amount: number, method: string) {
-  if (method === 'stripe') {
-    // Stripe logic: 10 dòng
-    const stripe = new StripeGateway();
-    await stripe.charge(amount);
-  } else if (method === 'paypal') {
-    // PayPal logic: 10 dòng khác
-    const paypal = new PayPalGateway();
-    await paypal.sendMoney(amount);
-  } else if (method === 'vnpay') {
-    // VNPay logic: 10 dòng nữa
-    const vnpay = new VNPayGateway();
-    await vnpay.process(amount);
+// ❌ Client chứa tất cả logic — vi phạm Single Responsibility
+async function processOrder(order: Order, shippingMethod: string) {
+  if (shippingMethod === 'standard') {
+    const warehouse = selectNearestWarehouse(order.zip);
+    const carrier = await getCarrier('USPS');
+    const rate = await carrier.calculateRate(order.weight);
+    const tracking = await carrier.createLabel(order.address, rate);
+    await sendEmail(order.email, tracking);
+  } else if (shippingMethod === 'express') {
+    const warehouse = selectNearestWarehouse(order.zip);
+    const carrier = await getCarrier('FedEx');
+    const rate = await carrier.calculateExpressRate(order.weight);
+    const tracking = await carrier.createExpressLabel(order.address, rate);
+    await sendSMS(order.phone, tracking);
+  } else if (shippingMethod === 'overnight') {
+    const carrier = await getCarrier('UPS');
+    const rate = await carrier.calculatePriorityRate(order.weight);
+    // ⚠️ Logic lặp lại ở khắp nơi!
   }
-  // ⚠️ Thêm method mới? Sửa function này!
+  // ⚠️ Thêm shipping method → sửa function này!
 }
 ```
 
-→ **Vấn đề:** Client phải biết tất cả concrete implementations. Thêm strategy mới → sửa client. Vi phạm Open/Closed Principle.
+→ **Hậu quả:** Single Responsibility vi phạm. Thêm method → sửa client. Logic trùng lặp. Khó test từng shipping method riêng.
 
 ---
 
@@ -53,127 +79,143 @@ async function processPayment(amount: number, method: string) {
 // ─────────────────────────────────────────
 // 1. Strategy Interface — contract cho mọi strategy
 // ─────────────────────────────────────────
-interface PaymentStrategy {
-  pay(amount: number): Promise<PaymentResult>;
-  getName(): string;
+interface ShippingStrategy {
+  calculateRate(weight: number, destination: string): Promise<ShippingRate>;
+  createLabel(order: Order, rate: ShippingRate): Promise<TrackingInfo>;
+  getCarrierName(): string;
 }
 
-interface PaymentResult {
-  success: boolean;
-  transactionId: string;
-  message?: string;
+interface ShippingRate {
+  cost: number;
+  currency: string;
+  estimatedDays: number;
+}
+
+interface TrackingInfo {
+  trackingId: string;
+  carrier: string;
+  estimatedDelivery: string;
+}
+
+interface Order {
+  id: string;
+  weight: number;
+  address: string;
+  zip: string;
+  email: string;
+  phone: string;
 }
 
 // ─────────────────────────────────────────
 // 2. Concrete Strategies — đóng gói từng thuật toán
 // ─────────────────────────────────────────
-class StripePayment implements PaymentStrategy {
-  async pay(amount: number): Promise<PaymentResult> {
-    console.log(`💳 [Stripe] Processing $${amount}...`);
-    // Stripe API call
+class StandardShippingStrategy implements ShippingStrategy {
+  async calculateRate(weight: number, destination: string): Promise<ShippingRate> {
+    console.log(`📦 [Standard] Calculating rate for ${weight}kg to ${destination}`);
+    return { cost: weight * 2.5, currency: 'USD', estimatedDays: 5 };
+  }
+
+  async createLabel(order: Order, rate: ShippingRate): Promise<TrackingInfo> {
+    console.log(`🏷️  [Standard] Creating USPS label...`);
     return {
-      success: true,
-      transactionId: `stripe_${Date.now()}`
+      trackingId: `USPS_${Date.now()}`,
+      carrier: 'USPS',
+      estimatedDelivery: `${rate.estimatedDays} business days`
     };
   }
 
-  getName() { return 'Stripe'; }
+  getCarrierName() { return 'USPS'; }
 }
 
-class PayPalPayment implements PaymentStrategy {
-  async pay(amount: number): Promise<PaymentResult> {
-    console.log(`🅿️ [PayPal] Processing $${amount}...`);
+class ExpressShippingStrategy implements ShippingStrategy {
+  async calculateRate(weight: number, destination: string): Promise<ShippingRate> {
+    console.log(`🚀 [Express] Calculating rate for ${weight}kg to ${destination}`);
+    return { cost: weight * 8.0, currency: 'USD', estimatedDays: 2 };
+  }
+
+  async createLabel(order: Order, rate: ShippingRate): Promise<TrackingInfo> {
+    console.log(`🏷️  [Express] Creating FedEx label...`);
     return {
-      success: true,
-      transactionId: `paypal_${Date.now()}`
+      trackingId: `FEDEX_${Date.now()}`,
+      carrier: 'FedEx',
+      estimatedDelivery: `${rate.estimatedDays} business days`
     };
   }
 
-  getName() { return 'PayPal'; }
+  getCarrierName() { return 'FedEx'; }
 }
 
-class VNPayPayment implements PaymentStrategy {
-  async pay(amount: number): Promise<PaymentResult> {
-    console.log(`🇻🇳 [VNPay] Processing $${amount}...`);
+class OvernightShippingStrategy implements ShippingStrategy {
+  async calculateRate(weight: number, destination: string): Promise<ShippingRate> {
+    console.log(`⚡ [Overnight] Calculating rate for ${weight}kg to ${destination}`);
+    return { cost: weight * 15.0, currency: 'USD', estimatedDays: 1 };
+  }
+
+  async createLabel(order: Order, rate: ShippingRate): Promise<TrackingInfo> {
+    console.log(`🏷️  [Overnight] Creating UPS Next Day Air label...`);
     return {
-      success: true,
-      transactionId: `vnpay_${Date.now()}`
+      trackingId: `UPS_${Date.now()}`,
+      carrier: 'UPS',
+      estimatedDelivery: 'Next business day'
     };
   }
 
-  getName() { return 'VNPay'; }
-}
-
-class CryptoPayment implements PaymentStrategy {
-  async pay(amount: number): Promise<PaymentResult> {
-    console.log(`₿ [Crypto] Processing $${amount}...`);
-    return {
-      success: true,
-      transactionId: `crypto_${Date.now()}`
-    };
-  }
-
-  getName() { return 'Cryptocurrency'; }
+  getCarrierName() { return 'UPS'; }
 }
 
 // ─────────────────────────────────────────
 // 3. Context — chứa strategy, client tương tác với context
 // ─────────────────────────────────────────
-class ShoppingCart {
-  private items: Array<{ name: string; price: number }> = [];
-  private paymentStrategy!: PaymentStrategy; // Bắt buộc set trước khi checkout
+class OrderFulfillment {
+  constructor(private shippingStrategy: ShippingStrategy) {}
 
-  addItem(item: { name: string; price: number }) {
-    this.items.push(item);
+  // Inject strategy mới lúc runtime
+  setShippingStrategy(strategy: ShippingStrategy) {
+    this.shippingStrategy = strategy;
   }
 
-  getTotal(): number {
-    return this.items.reduce((sum, item) => sum + item.price, 0);
-  }
+  async processOrder(order: Order): Promise<void> {
+    const carrier = this.shippingStrategy.getCarrierName();
+    console.log(`\n📋 Processing order ${order.id} via ${carrier}...`);
 
-  // Inject strategy từ bên ngoài
-  setPaymentStrategy(strategy: PaymentStrategy) {
-    this.paymentStrategy = strategy;
-  }
+    const rate = await this.shippingStrategy.calculateRate(order.weight, order.zip);
+    console.log(`💵 Rate: $${rate.cost} (${rate.estimatedDays} days)`);
 
-  // Checkout — không biết strategy cụ thể là gì!
-  async checkout(): Promise<PaymentResult> {
-    if (!this.paymentStrategy) {
-      throw new Error('❌ No payment strategy set!');
-    }
-
-    const total = this.getTotal();
-    console.log(`🛒 Cart total: $${total} via ${this.paymentStrategy.getName()}`);
-    return this.paymentStrategy.pay(total);
+    const tracking = await this.shippingStrategy.createLabel(order, rate);
+    console.log(`✅ Shipped! Tracking: ${tracking.trackingId}`);
   }
 }
 
 // ─────────────────────────────────────────
 // 4. Client — chọn strategy lúc runtime!
 // ─────────────────────────────────────────
-async function main() {
-  const cart = new ShoppingCart();
-  cart.addItem({ name: 'Laptop', price: 999 });
-  cart.addItem({ name: 'Mouse', price: 49 });
+const order: Order = {
+  id: 'ORD_456',
+  weight: 2.5,
+  address: '123 Main St',
+  zip: '10001',
+  email: 'customer@example.com',
+  phone: '+1234567890'
+};
 
-  // User chọn thanh toán Stripe
-  cart.setPaymentStrategy(new StripePayment());
-  await cart.checkout();
-  // 💳 [Stripe] Processing $1048...
+const fulfillment = new OrderFulfillment(new StandardShippingStrategy());
+await fulfillment.processOrder(order);
+// 📋 Processing ORD_456 via USPS...
+// 💵 Rate: $6.25 (5 days)
+// ✅ Shipped! Tracking: USPS_...
 
-  // User đổi sang PayPal
-  cart.setPaymentStrategy(new PayPalPayment());
-  await cart.checkout();
-  // 🅿️ [PayPal] Processing $1048...
+fulfillment.setShippingStrategy(new ExpressShippingStrategy());
+await fulfillment.processOrder(order);
+// 📋 Processing ORD_456 via FedEx...
+// 💵 Rate: $20.00 (2 days)
+// ✅ Shipped! Tracking: FEDEX_...
 
-  // Thêm Crypto? Tạo class mới — không sửa ShoppingCart!
-  cart.setPaymentStrategy(new CryptoPayment());
-  await cart.checkout();
-  // ₿ [Crypto] Processing $1048...
-}
+fulfillment.setShippingStrategy(new OvernightShippingStrategy());
+await fulfillment.processOrder(order);
+// 📋 Processing ORD_456 via UPS...
+// 💵 Rate: $37.50 (1 day)
+// ✅ Shipped! Tracking: UPS_...
 ```
-
-→ **Cải thiện:** ShoppingCart hoàn toàn không biết payment strategies cụ thể. Thêm method mới? Tạo `BitcoinPayment implements PaymentStrategy` — KHÔNG sửa ShoppingCart.
 
 ---
 
@@ -182,68 +224,67 @@ async function main() {
 ```
 ┌──────────────────────┐
 │       Context        │
-│   (ShoppingCart)     │
+│ (OrderFulfillment)  │
 ├──────────────────────┤
 │ -strategy: Strategy  │
 ├──────────────────────┤
 │ +setStrategy()       │
-│ +execute()           │
+│ +processOrder()      │
 └──────────┬───────────┘
            │ uses
            ▼
-┌────────────────────────┐         ┌─────────────────────────┐
-│   <<interface>>        │         │   <<interface>>         │
-│     Strategy           │         │    PaymentStrategy      │
-├────────────────────────┤         ├─────────────────────────┤
-│ +execute()             │         │ +pay(): Promise<Result> │
-└──────────┬─────────────┘         └────────────┬────────────┘
-           │ implements                        │ implements
-   ┌──────┴──────┐                    ┌────────┴────────┐
-   ▼             ▼                    ▼                 ▼
-┌────────┐  ┌────────┐         ┌──────────┐    ┌──────────┐
-│  SortA │  │  SortB │         │  Stripe  │    │  PayPal  │
-└────────┘  └────────┘         └──────────┘    └──────────┘
+┌────────────────────────┐         ┌──────────────────────────────┐
+│   <<interface>>        │         │     <<interface>>           │
+│     Strategy           │         │    ShippingStrategy          │
+├────────────────────────┤         ├──────────────────────────────┤
+│ +execute()             │         │ +calculateRate()            │
+└──────────┬─────────────┘         │ +createLabel()              │
+           │ implements            └────────────┬─────────────────┘
+   ┌───────┴───────┐                         │ implements
+   ▼               ▼                         │
+┌────────┐    ┌────────┐              ┌───────┴──────────┐
+│SortA   │    │SortB   │              ▼                  ▼
+└────────┘    └────────┘         ┌──────────────┐  ┌──────────────┐
+                                 │ StandardShip  │  │ ExpressShip  │
+                                 └──────────────┘  └──────────────┘
 ```
 
 ---
 
 ## 🔍 Step-by-step Trace
 
-**Scenario:** User mua laptop, chọn PayPal thanh toán.
+**Scenario:** Order 2.5kg, Express shipping.
 
 ```
-Bước 1: cart.addItem({ name: 'Laptop', price: 999 })
-  → items = [{ name: 'Laptop', price: 999 }]
+Bước 1: fulfillment.processOrder(order)
+  → OrderFulfillment.processOrder(order)
 
-Bước 2: cart.setPaymentStrategy(new PayPalPayment())
-  → cart.strategy = PayPalPayment instance
+Bước 2: this.shippingStrategy.calculateRate(2.5, '10001')
+  → ExpressShippingStrategy.calculateRate(2.5, '10001')
+  → Rate: 2.5 * $8 = $20
 
-Bước 3: cart.checkout()
-  → total = 999
-  → gọi cart.strategy.pay(999)
-          ↓
-     PayPalPayment.pay(999)
-          ↓
-     return { success: true, transactionId: 'paypal_123...' }
+Bước 3: this.shippingStrategy.createLabel(order, rate)
+  → ExpressShippingStrategy.createLabel(order, rate)
+  → Tracking: FEDEX_...
 
-Output: 🅿️ [PayPal] Processing $999...
+Output: $20, 2 days, FEDEX_...
 
-→ ShoppingCart không biết PayPal là gì!
-→ Chỉ biết PaymentStrategy interface ✅
+→ OrderFulfillment hoàn toàn không biết shipping strategy cụ thể là gì!
+→ Chỉ gọi Strategy interface ✅
 ```
 
 ---
 
 ## 🌍 Real-world Examples
 
-| Thư viện/Framework | Cách dùng Strategy |
-|---------------------|-------------------|
-| **React `useState` + reducers** | Different reducer = different state update strategy |
+| Thư viện/Framework | Chi tiết implementation |
+|---------------------|-------------------------|
+| **React + Zustand/Redux** | Different reducers = different state update strategies |
 | **Lodash `_.sortBy`** | Sort strategy tùy field |
 | **TypeScript `Array.sort(comparator)`** | Comparator function = Strategy |
-| **Node.js middleware** | `authStrategy`, `compressionStrategy` |
-| **Java `Collections.sort(List, Comparator)`** | Comparator = Strategy |
-| **Netflix Zuul** | Filter strategies cho routing |
+| **Python HTTP libraries** | `requests.Session` với different auth strategies |
+| **Spring Security** | Multiple `AuthenticationProvider` = Strategy pattern |
+| **Express middleware** | `authStrategy`, `compressionStrategy` |
 
 ---
 
@@ -253,44 +294,72 @@ Output: 🅿️ [PayPal] Processing $999...
 |----------|-------------|-------|---------|
 | Ai quyết định behavior? | **Client chủ động** chọn strategy | Object tự thay đổi theo state | Encapsulate request as object |
 | Khi nào thay đổi? | Client gọi setter | State machine transition | Executed later |
-| Mục đích | Chọn algorithm | Model state transitions | Undo/redo, queue |
+| Mục đích | Chọn algorithm | Model state transitions | Undo/redo, queue, logging |
 | Relationship | Composition | Composition + self-transition | Composition |
 
 ---
 
 ## 💻 TypeScript Implementation
 
+### Version 1: Route Planning Strategies
+
 ```typescript
-// ─────────────────────────────────────────
-// Example: Route Planning Strategies
-// ─────────────────────────────────────────
-
 interface RouteStrategy {
-  buildRoute(start: [number, number], end: [number, number]): string;
+  buildRoute(start: [number, number], end: [number, number]): RouteResult;
 }
 
-// Strategies
+interface RouteResult {
+  path: string;
+  distanceKm: number;
+  estimatedMinutes: number;
+  mode: string;
+}
+
 class WalkingStrategy implements RouteStrategy {
-  buildRoute(start: [number, number], end: [number, number]): string {
-    return `🚶 Walking route from (${start}) to (${end}): 5.2km, ~1 hour`;
+  buildRoute(start: [number, number], end: [number, number]): RouteResult {
+    const dist = this.haversine(start, end);
+    return {
+      path: `🚶 Walking from (${start[0]},${start[1]}) to (${end[0]},${end[1]})`,
+      distanceKm: dist,
+      estimatedMinutes: Math.round(dist * 12),
+      mode: 'walking'
+    };
   }
-}
 
-class CyclingStrategy implements RouteStrategy {
-  buildRoute(start: [number, number], end: [number, number]): string {
-    return `🚴 Cycling route from (${start}) to (${end}): 4.1km, ~20 min`;
+  private haversine(a: [number, number], b: [number, number]): number {
+    return Math.sqrt((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2) * 111;
   }
 }
 
 class DrivingStrategy implements RouteStrategy {
-  buildRoute(start: [number, number], end: [number, number]): string {
-    return `🚗 Driving route from (${start}) to (${end}): 3.8km, ~10 min`;
+  buildRoute(start: [number, number], end: [number, number]): RouteResult {
+    const dist = this.haversine(start, end);
+    return {
+      path: `🚗 Driving from (${start[0]},${start[1]}) to (${end[0]},${end[1]})`,
+      distanceKm: dist * 1.2,
+      estimatedMinutes: Math.round(dist * 1.2 * 1.5),
+      mode: 'driving'
+    };
+  }
+
+  private haversine(a: [number, number], b: [number, number]): number {
+    return Math.sqrt((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2) * 111;
   }
 }
 
 class PublicTransportStrategy implements RouteStrategy {
-  buildRoute(start: [number, number], end: [number, number]): string {
-    return `🚌 Transit from (${start}) to (${end}): 5.0km, ~25 min, 2 transfers`;
+  buildRoute(start: [number, number], end: [number, number]): RouteResult {
+    const dist = this.haversine(start, end);
+    return {
+      path: `🚌 Transit from (${start[0]},${start[1]}) to (${end[0]},${end[1]})`,
+      distanceKm: dist,
+      estimatedMinutes: Math.round(dist * 4),
+      mode: 'transit'
+    };
+  }
+
+  private haversine(a: [number, number], b: [number, number]): number {
+    return Math.sqrt((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2) * 111;
   }
 }
 
@@ -306,105 +375,139 @@ class NavigationApp {
     this.strategy = strategy;
   }
 
-  navigate(start: [number, number], end: [number, number]) {
-    const route = this.strategy.buildRoute(start, end);
-    console.log(`📍 ${route}`);
+  navigate(start: [number, number], end: [number, number]): void {
+    const result = this.strategy.buildRoute(start, end);
+    console.log(`${result.path}`);
+    console.log(`   Distance: ${result.distanceKm.toFixed(1)}km, ~${result.estimatedMinutes} min`);
   }
 }
 
 // Usage
 const app = new NavigationApp(new WalkingStrategy());
 app.navigate([10.7629, 106.6803], [10.7789, 106.6983]);
-// 🚶 Walking route: 5.2km, ~1 hour
+// 🚶 Walking: 5.2km, ~62 min
 
 app.setStrategy(new DrivingStrategy());
 app.navigate([10.7629, 106.6803], [10.7789, 106.6983]);
-// 🚗 Driving route: 3.8km, ~10 min
+// 🚗 Driving: 6.2km, ~14 min
 ```
 
 ---
 
-## 📝 LeetCode Problems áp dụng
+## ⚖️ Trade-offs & Common Mistakes
 
-- [Coin Change](https://leetcode.com/problems/coin-change/) — có thể implement nhiều DP strategies
-- [Validate Binary Search Tree](https://leetcode.com/problems/validate-binary-search-tree/) — iterative vs recursive strategy
-- [LFU Cache](https://leetcode.com/problems/lfu-cache/) — multiple eviction strategies
+### ✅ Khi nào nên dùng
 
----
-
-## ✅ Pros / ❌ Cons
-
-**Ưu điểm:**
-- ✅ **Open/Closed** — thêm algorithm mới mà không sửa client
-- ✅ **Single Responsibility** — mỗi strategy class một responsibility
-- ✅ **Runtime switching** — thay đổi behavior lúc runtime
-- ✅ **Testability** — test từng strategy riêng biệt
-
-**Nhược điểm:**
-- ❌ **Clients must be aware** — client phải biết strategies khác nhau để chọn
-- ❌ **Overkill if few algorithms** — nếu chỉ có 1-2 strategies, Strategy pattern thừa
-- ❌ **Increased objects** — mỗi strategy là một class mới
-
----
-
-## ⚠️ Khi nào nên / không nên dùng
-
-**Nên dùng khi:**
 - ✅ Có **nhiều related algorithms** (sorting, validation, compression...)
 - ✅ Cần **chọn algorithm lúc runtime**
 - ✅ Mỗi algorithm có **variant behavior** nhưng cùng interface
 - ✅ Muốn **tách biệt business logic** khỏi algorithm cụ thể
 
-**Không nên dùng khi:**
+### ❌ Khi nào không nên dùng
+
 - ❌ Chỉ có 1 algorithm — dùng thẳng
 - ❌ Algorithm rất đơn giản — if/else đủ
-- ❌ Clients phải **sensitive data** để chọn strategy — nên dùng factory
+- ❌ Clients cần sensitive data để chọn strategy — nên dùng factory
+
+### 🚫 Common Mistakes
+
+**1. Strategy giữ mutable state → shared state bugs**
+```typescript
+// ❌ Sai: Strategy giữ state → shared across calls
+class StatefulSort implements SortStrategy {
+  private comparisons = 0; // ❌ Mutable state
+
+  sort(data: number[]): number[] {
+    this.comparisons++; // ⚠️ Shared across calls!
+    return data.sort((a, b) => a - b);
+  }
+}
+
+// ✅ Đúng: Strategy stateless, state trong Context
+```
+
+**2. Dùng Strategy khi chỉ cần callback**
+```typescript
+// ❌ Thừa: 1 algorithm duy nhất, chỉ cần callback
+class BadContext {
+  setStrategy(fn: () => void) {} // → Just use callback!
+}
+
+// ✅ Đúng: Khi CÓ NHIỀU algorithms cần swap
+class GoodContext {
+  setStrategy(algorithm: SortStrategy) {}
+}
+```
 
 ---
 
-## 🚫 Common Mistakes / Pitfalls
+## 🧪 Testing Strategies
 
-1. **Strategy không nên giữ state nếu có thể**
-   ```typescript
-   // ❌ Sai: Strategy giữ mutable state → shared state bugs
-   class StatefulStrategy implements Strategy {
-     private step = 0; // ❌ Mutable state
+```typescript
+describe('OrderFulfillment', () => {
+  it('should use shipping strategy to calculate rate', async () => {
+    const mockStrategy: ShippingStrategy = {
+      calculateRate: jest.fn().mockResolvedValue({ cost: 10, currency: 'USD', estimatedDays: 3 }),
+      createLabel: jest.fn().mockResolvedValue({ trackingId: 'T123', carrier: 'Mock', estimatedDelivery: '3 days' }),
+      getCarrierName: () => 'MockCarrier'
+    };
 
-     execute() {
-       this.step++; // ⚠️ Shared across calls
-     }
-   }
+    const fulfillment = new OrderFulfillment(mockStrategy);
+    await fulfillment.processOrder({ id: 'O1', weight: 1, address: '', zip: '', email: '', phone: '' });
 
-   // ✅ Đúng: Strategy stateless, state trong Context
-   class StatelessStrategy implements Strategy {
-     execute(state: ContextState) {
-       return { ...state, step: state.step + 1 };
-     }
-   }
-   ```
+    expect(mockStrategy.calculateRate).toHaveBeenCalledWith(1, '');
+    expect(mockStrategy.createLabel).toHaveBeenCalled();
+  });
 
-2. **Dùng Strategy khi chỉ cần callback**
-   ```typescript
-   // ❌ Thừa: 1 algorithm duy nhất, chỉ cần callback
-   class BadContext {
-     setStrategy(fn: () => void) {} // → Just use callback!
-   }
+  it('should switch strategy at runtime', async () => {
+    const standard = new StandardShippingStrategy();
+    const express = new ExpressShippingStrategy();
+    const fulfillment = new OrderFulfillment(standard);
 
-   // ✅ Đúng: Khi CÓ NHIỀU algorithms cần swap
-   class GoodContext {
-     setStrategy(algorithm: SortStrategy) {}
-   }
-   ```
+    fulfillment.setShippingStrategy(express);
+    expect(fulfillment).toBeDefined();
+  });
+});
+```
+
+---
+
+## 🔄 Refactoring Path
+
+**Từ if/else → Strategy:**
+
+```typescript
+// ❌ Before: if/else chain
+function calculateDiscount(user: User, cart: Cart): number {
+  if (user.type === 'premium') return cart.total * 0.2;
+  if (user.type === 'vip') return cart.total * 0.3;
+  if (user.type === 'first_time') return cart.total * 0.1;
+  if (user.loyaltyPoints > 1000) return cart.total * 0.15;
+  return 0;
+}
+
+// ✅ After: Strategy
+interface DiscountStrategy {
+  calculate(user: User, cart: Cart): number;
+}
+
+class PremiumDiscount implements DiscountStrategy {
+  calculate(user: User, cart: Cart) { return cart.total * 0.2; }
+}
+class VIPDiscount implements DiscountStrategy {
+  calculate(user: User, cart: Cart) { return cart.total * 0.3; }
+}
+```
 
 ---
 
 ## 🎤 Interview Q&A
 
 **Q: Strategy Pattern là gì? Khi nào dùng?**
-> A: Strategy đóng gói một family of algorithms vào các classes riêng biệt implement cùng interface. Client chọn strategy cần dùng và inject vào Context. Dùng khi có nhiều variants của cùng logic (payment methods, sort algorithms, routing) và muốn chọn lúc runtime mà không sửa client code.
+> A: Strategy đóng gói một family of algorithms vào các classes riêng biệt implement cùng interface. Client chọn strategy cần dùng và inject vào Context. Dùng khi có nhiều variants của cùng logic (payment methods, sort algorithms, routing) và muốn chọn lúc runtime mà không sửa client code. Strategy stateless — state nên ở trong Context, không phải Strategy.
 
 **Q: Strategy khác State như thế nào?**
-> A: Trong Strategy, **client chủ động** chọn algorithm và gọi setter để swap. Trong State, **object tự thay đổi** behavior khi internal state thay đổi — state pattern làm việc với state machine, khi transition xảy ra → object tự chuyển sang state class khác mà client không cần gọi setter.
+> A: Trong Strategy, **client chủ động** chọn algorithm và gọi setter để swap. Trong State, **object tự thay đổi** behavior khi internal state thay đổi — state pattern làm việc với state machine, khi transition xảy ra → object tự chuyển sang state class khác mà client không cần gọi setter. Strategy là algorithm selection; State là state machine.
 
 **Q: Strategy có phải là if/else refactored không?**
 > A: Đúng về bản chất, nhưng Strategy tốt hơn nhiều: (1) Mỗi algorithm trong class riêng → test được, maintain được. (2) Thêm algorithm mới không sửa code cũ. (3) Có thể swap lúc runtime. Nếu chỉ có 2 cases đơn giản, if/else vẫn được — đừng over-engineer.

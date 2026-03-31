@@ -2,33 +2,16 @@
 
 ## 🎯 Problem & Motivation
 
-**Bài toán:** Bạn cần **encapsulate một request thành object**, để có thể:
-- **Queue** requests (thực thi sau)
-- **Undo/Redo** (lưu lịch sử)
-- **Logging** (ghi lại actions)
-- **Macro** (group nhiều commands thành một)
+**Bài toán thực tế:** Bạn cần **encapsulate một request/action thành object**, để có thể:
+- **Queue** requests (thực thi sau, batch)
+- **Undo/Redo** (lưu lịch sử actions)
+- **Logging** (ghi lại actions để replay sau crash)
+- **Macro** (gộp nhiều commands thành một)
 
-**Ví dụ thực tế:** Text editor — Ctrl+Z (undo), Ctrl-Y (redo), macro recording, clipboard.
-
-**Command giải quyết:** Mỗi action được đóng gói thành `Command` object với method `execute()`. Invoker gọi `execute()` mà không biết action cụ thể là gì.
-
----
-
-## 💡 Use Cases
-
-1. **Undo/Redo system** — Text editor, graphics editor, IDE refactoring
-2. **Macro Recording** — Record sequence of actions → replay
-3. **Async Task Queue** — Job queue, message queue, cron jobs
-4. **Transactional Operations** — Database transactions (commit/rollback)
-5. **Remote Procedure Call** — Serialize command → send over network → execute remote
-6. **Menu buttons** — Mỗi menu item là một Command object
-
----
-
-## ❌ Before (Không dùng Command)
+**Ví dụ thực tế:** Text editor — Ctrl+Z (undo), Ctrl-Y (redo), macro recording, clipboard. Mỗi action (type, delete, paste) được đóng gói thành Command object.
 
 ```typescript
-// ❌ Commands hard-coded trong UI
+// ❌ Commands hard-coded trong UI — không có undo
 class Button {
   onClick(action: string, ...args: any[]) {
     if (action === 'cut') {
@@ -40,12 +23,51 @@ class Button {
     } else if (action === 'delete') {
       editor.delete();
     }
-    // ⚠️ Thêm command mới? Sửa Button class!
+    // ⚠️ Không có history → không undo/redo!
+    // ⚠️ Thêm command → sửa Button class!
   }
 }
 ```
 
-→ **Vấn đề:** Button phải biết tất cả actions → tight coupling. Không có history → không undo/redo. Không queue → không replay.
+→ **Hậu quả:** Không có history → không undo/redo. Không queue → không replay. Không logging → không replay sau crash.
+
+**Command giải quyết:** Mỗi action được đóng gói thành `Command` object với method `execute()` và `undo()`. Invoker gọi `execute()` mà không biết action cụ thể là gì.
+
+---
+
+## 💡 Use Cases
+
+1. **Undo/Redo system** — Text editor, graphics editor, IDE refactoring
+2. **Macro Recording** — Record sequence of actions → replay
+3. **Async Task Queue** — Job queue, message queue, cron jobs
+4. **Transactional Operations** — Database transactions (commit/rollback)
+5. **Remote Procedure Call** — Serialize command → send over network → execute remote
+6. **Menu buttons / Toolbar** — Mỗi menu item là một Command object
+
+---
+
+## ❌ Before (Không dùng Command)
+
+```typescript
+// ❌ Không có history → không undo/redo
+class TextEditor {
+  private content: string = '';
+
+  type(text: string) {
+    this.content += text;
+  }
+
+  delete(count: number) {
+    this.content = this.content.slice(0, -count);
+  }
+
+  clear() {
+    this.content = ''; // ⚠️ Xóa mất rồi, không undo được!
+  }
+}
+```
+
+→ **Hậu quả:** Không lưu lại previous state. Undo gần như bất khả thi với approach này.
 
 ---
 
@@ -57,31 +79,33 @@ class Button {
 // ─────────────────────────────────────────
 interface Command {
   execute(): void;
-  undo(): void; // Support undo!
+  undo(): void;
 }
 
 // ─────────────────────────────────────────
 // 2. Receiver — Object thực sự thực hiện công việc
 // ─────────────────────────────────────────
 class TextEditor {
-  private content: string = '';
+  private _content: string = '';
 
-  getContent(): string {
-    return this.content;
-  }
+  get content(): string { return this._content; }
 
   append(text: string): void {
-    this.content += text;
+    this._content += text;
   }
 
   delete(count: number): string {
-    const deleted = this.content.slice(-count);
-    this.content = this.content.slice(0, -count);
+    const deleted = this._content.slice(-count);
+    this._content = this._content.slice(0, -count);
     return deleted;
   }
 
+  insert(position: number, text: string): void {
+    this._content = this._content.slice(0, position) + text + this._content.slice(position);
+  }
+
   setContent(text: string): void {
-    this.content = text;
+    this._content = text;
   }
 }
 
@@ -91,10 +115,7 @@ class TextEditor {
 
 // Command: Type text
 class TypeCommand implements Command {
-  constructor(
-    private editor: TextEditor,
-    private text: string
-  ) {}
+  constructor(private editor: TextEditor, private text: string) {}
 
   execute(): void {
     this.editor.append(this.text);
@@ -105,7 +126,7 @@ class TypeCommand implements Command {
   }
 }
 
-// Command: Delete
+// Command: Delete với state để undo
 class DeleteCommand implements Command {
   private deletedText: string = '';
 
@@ -119,31 +140,28 @@ class DeleteCommand implements Command {
   }
 
   undo(): void {
-    // Restore deleted text
     this.editor.append(this.deletedText);
   }
 }
 
-// Command: Paste (có thể undo được)
-class PasteCommand implements Command {
-  private pastedText: string = '';
-
+// Command: Insert
+class InsertCommand implements Command {
   constructor(
     private editor: TextEditor,
-    private clipboard: string
+    private position: number,
+    private text: string
   ) {}
 
   execute(): void {
-    this.pastedText = this.clipboard;
-    this.editor.append(this.pastedText);
+    this.editor.insert(this.position, this.text);
   }
 
   undo(): void {
-    this.editor.delete(this.pastedText.length);
+    this.editor.delete(this.text.length);
   }
 }
 
-// Command: Replace all (complex command)
+// Command: Replace all
 class ReplaceCommand implements Command {
   private previousContent: string = '';
 
@@ -154,7 +172,7 @@ class ReplaceCommand implements Command {
   ) {}
 
   execute(): void {
-    this.previousContent = this.editor.getContent();
+    this.previousContent = this.editor.content;
     const newContent = this.previousContent.split(this.search).join(this.replacement);
     this.editor.setContent(newContent);
   }
@@ -175,7 +193,7 @@ class CommandManager {
     command.execute();
     this.history.push(command);
     this.future = []; // Clear redo stack on new action
-    console.log(`✅ Executed: ${command.constructor.name}`);
+    console.log(`✅ Executed: ${command.constructor.name} → "${command['text'] ?? command['search'] ?? command['count'] ?? ''}"`);
   }
 
   undo(): void {
@@ -201,8 +219,11 @@ class CommandManager {
   }
 
   showHistory(): void {
-    console.log(`📜 History (${this.history.length}):`);
-    this.history.forEach((c, i) => console.log(`  ${i + 1}. ${c.constructor.name}`));
+    console.log(`\n📜 History (${this.history.length} actions):`);
+    this.history.forEach((c, i) => {
+      const detail = (c as any).text ?? (c as any).search ?? (c as any).count ?? '';
+      console.log(`  ${i + 1}. ${c.constructor.name}${detail ? `: "${detail}"` : ''}`);
+    });
   }
 }
 
@@ -211,38 +232,44 @@ class CommandManager {
 // ─────────────────────────────────────────
 const editor = new TextEditor();
 const manager = new CommandManager();
-const clipboard = 'Hello World!';
 
 manager.execute(new TypeCommand(editor, 'Hello'));
-// ✅ Editor: "Hello"
-
 manager.execute(new TypeCommand(editor, ' '));
 manager.execute(new TypeCommand(editor, 'World!'));
-// ✅ Editor: "Hello World!"
+console.log(`📝 Editor: "${editor.content}"`);
+// 📝 Editor: "Hello World!"
 
 manager.execute(new DeleteCommand(editor, 6));
-// ✅ Editor: "Hello "
-manager.showHistory();
-// 📜 History:
-//  1. TypeCommand
-//  2. TypeCommand
-//  3. TypeCommand
-//  4. DeleteCommand
+console.log(`📝 After delete: "${editor.content}"`);
+// 📝 After delete: "Hello "
 
+manager.showHistory();
+// 📜 History (4 actions):
+//  1. TypeCommand: "Hello"
+//  2. TypeCommand: " "
+//  3. TypeCommand: "World!"
+//  4. DeleteCommand: "6"
+
+console.log('\n--- Undo ---');
 manager.undo();
 // ↩️ Undo: DeleteCommand
-// ✅ Editor: "Hello World!"
+console.log(`📝 Editor: "${editor.content}"`);
+// 📝 Editor: "Hello World!"
 
 manager.undo();
-// ↩️ Undo: TypeCommand
-// ✅ Editor: "Hello "
+console.log(`📝 Editor: "${editor.content}"`);
+// 📝 Editor: "Hello "
 
+console.log('\n--- Redo ---');
 manager.redo();
 // ↪️ Redo: TypeCommand
-// ✅ Editor: "Hello World!"
-```
+console.log(`📝 Editor: "${editor.content}"`);
+// 📝 Editor: "Hello World!"
 
-→ **Cải thiện:** Thêm command mới? Tạo class implements `Command`. Undo/redo tự động. History tracking không cần thay đổi Invoker.
+manager.redo();
+console.log(`📝 Editor: "${editor.content}"`);
+// 📝 Editor: "Hello World!" (delete không redo được vì đã bị history mới clear)
+```
 
 ---
 
@@ -258,21 +285,22 @@ manager.redo();
 │ +redo()      │         └────────┬───────────┘
 └──────────────┘                  │ implements
                                   │
-               ┌──────────────────┼──────────────────┐
-               ▼                  ▼                  ▼
-        ┌────────────┐    ┌────────────┐    ┌────────────┐
-        │ TypeCommand│    │DeleteCommand│   │ PasteCommand│
-        ├────────────┤    ├────────────┤    ├────────────┤
-        │ +execute() │    │ +execute() │    │ +execute() │
-        │ +undo()    │    │ +undo()    │    │ +undo()    │
-        └─────┬──────┘    └─────┬──────┘    └─────┬──────┘
-              │                 │                  │
-              └─────────────────┴──────────────────┘
+               ┌──────────────────┴──────────────────┐
+               ▼                                     ▼
+        ┌────────────┐                       ┌────────────┐
+        │TypeCommand │                       │DeleteCommand│
+        ├────────────┤                       ├────────────┤
+        │ +execute() │                       │ +execute() │
+        │ +undo()    │                       │ +undo()    │
+        │ state: ""  │                       │ deleted: ""│
+        └─────┬──────┘                       └─────┬──────┘
+              │                                   │
+              └─────────────────┴─────────────────┘
                                │
                                ▼
                      ┌──────────────────┐
                      │     Receiver      │
-                     │  (TextEditor)    │
+                     │  (TextEditor)     │
                      └──────────────────┘
 ```
 
@@ -295,10 +323,11 @@ Bước 3: DeleteCommand(6).execute()
   → editor.delete(6) → xóa ' World'
   → deletedText = ' World'
   → editor.content = 'Hello'
-  → history = [TypeCommand('Hello'), TypeCommand(' World'), DeleteCommand]
+  → history = [TypeCommand('Hello'), TypeCommand(' World'), DeleteCommand(6)]
+  → future = []
 
 Bước 4: undo()
-  → Pop DeleteCommand(6)
+  → Pop DeleteCommand(6) từ history
   → command.undo() → editor.append(' World')
   → editor.content = 'Hello World'
   → future = [DeleteCommand(6)]
@@ -312,8 +341,8 @@ Future:  [DeleteCommand(6)]
 
 ## 🌍 Real-world Examples
 
-| Thư viện/Framework | Cách dùng Command |
-|--------------------|-----------------|
+| Thư viện/Framework | Chi tiết implementation |
+|---------------------|------------------------|
 | **UndoManager (macOS/iOS)** | Built-in undo/redo system |
 | **Redux** | Action = Command object; reducer = receiver |
 | **RabbitMQ / Kafka** | Message = Command; consumer = receiver |
@@ -336,16 +365,14 @@ Future:  [DeleteCommand(6)]
 
 ## 💻 TypeScript Implementation
 
-```typescript
-// ─────────────────────────────────────────
-// Example: Macro Command — batch operations
-// ─────────────────────────────────────────
+### Version 1: Macro Command — batch operations
 
+```typescript
 // MacroCommand: execute nhiều commands như một
 class MacroCommand implements Command {
   private commands: Command[] = [];
 
-  constructor(commands: Command[]) {
+  constructor(commands: Command[] = []) {
     this.commands = commands;
   }
 
@@ -360,148 +387,206 @@ class MacroCommand implements Command {
   }
 
   undo(): void {
-    // Undo in reverse order
+    // Undo in REVERSE order — quan trọng!
     for (let i = this.commands.length - 1; i >= 0; i--) {
       this.commands[i].undo();
     }
   }
 }
 
-// Usage: "Make text bold + change color + save" = one macro
-class BoldCommand implements Command {
-  constructor(private editor: TextEditor) {}
-  execute() { console.log('📝 Apply bold'); }
-  undo() { console.log('📝 Remove bold'); }
+// Usage: "Format + Color + Save" = one macro
+class FormatCommand implements Command {
+  execute() { console.log('📝 Formatting...'); }
+  undo() { console.log('📝 Undo formatting'); }
 }
 
 class ColorCommand implements Command {
-  constructor(private editor: TextEditor, private color: string) {}
-  execute() { console.log(`🎨 Apply color: ${this.color}`); }
+  constructor(private color: string) {}
+  execute() { console.log(`🎨 Applying color: ${this.color}`); }
   undo() { console.log('🎨 Reset color'); }
 }
 
 class SaveCommand implements Command {
-  constructor(private editor: TextEditor) {}
   execute() { console.log('💾 File saved!'); }
-  undo() { console.log('💾 Undo save (delete file)'); }
+  undo() { console.log('💾 Undo save'); }
 }
 
 const formatMacro = new MacroCommand([
-  new BoldCommand(editor),
-  new ColorCommand(editor, 'red'),
-  new SaveCommand(editor)
+  new FormatCommand(),
+  new ColorCommand('red'),
+  new SaveCommand()
 ]);
 
-const manager2 = new CommandManager();
-manager2.execute(formatMacro);
-// ✅ Executed: MacroCommand
-// 📝 Apply bold
-// 🎨 Apply color: red
-// 💾 File saved!
-
+const mgr2 = new CommandManager();
+mgr2.execute(formatMacro);
 console.log('--- Undo macro ---');
-manager2.undo();
+mgr2.undo();
 // ↩️ Undo: MacroCommand
 // 💾 Undo save
 // 🎨 Reset color
-// 📝 Remove bold
+// 📝 Undo formatting
 ```
 
 ---
 
-## 📝 LeetCode Problems áp dụng
+## ⚖️ Trade-offs & Common Mistakes
 
-- [Design Search Autocomplete System](https://leetcode.com/problems/design-search-autocomplete-system/) — Command pattern cho search history
-- [Evaluate Reverse Polish Notation](https://leetcode.com/problems/evaluate-reverse-polish-notation/) — Mỗi operator = Command được execute
-- [Design In Memory File System](https://leetcode.com/problems/design-in-memory-file-system/) — Commands: mkdir, ls, add, cd
+### ✅ Khi nào nên dùng
 
----
-
-## ✅ Pros / ❌ Cons
-
-**Ưu điểm:**
-- ✅ **Undo/Redo** — Command lưu state cần thiết để revert
-- ✅ **Queue & Scheduling** — execute commands later, batch operations
-- ✅ **Macro** — group commands thành một composite command
-- ✅ **Loose coupling** — invoker không biết concrete command
-- ✅ **Logging** — log commands để replay sau crash
-
-**Nhược điểm:**
-- ❌ **Complex** — cần implement undo() cho mỗi command
-- ❌ **Memory** — history lưu nhiều commands có thể tốn memory
-- ❌ **Many Command classes** — mỗi action cần một class
-
----
-
-## ⚠️ Khi nào nên / không nên dùng
-
-**Nên dùng khi:**
 - ✅ Cần **undo/redo** functionality
 - ✅ Cần **queue, delay, schedule** execution
 - ✅ Cần **macro** — batch multiple operations
-- ✅ Cần **logging và replay** actions
+- ✅ Cần **logging và replay** actions (VD: auto-save)
 
-**Không nên dùng khi:**
+### ❌ Khi nào không nên dùng
+
 - ❌ Đơn giản, không cần undo/redo
 - ❌ Không có queueing/scheduling needs
-- ❌ Actions không có inverse (VD: "send email" — không thể undo email đã gửi)
+- ❌ Actions không có inverse (VD: "send email" — không thể undo)
+
+### 🚫 Common Mistakes
+
+**1. Undo không restore đúng state**
+```typescript
+// ❌ Sai: DeleteCommand không lưu deleted text
+class BadDeleteCommand implements Command {
+  execute() {
+    this.editor.delete(this.count); // ❌ Deleted text bị mất!
+  }
+  undo() {
+    // ❌ Không biết xóa gì!
+  }
+}
+
+// ✅ Đúng: Lưu deleted text để restore
+class GoodDeleteCommand implements Command {
+  private deletedText: string = '';
+
+  execute() {
+    this.deletedText = this.editor.delete(this.count);
+  }
+
+  undo() {
+    this.editor.append(this.deletedText); // ✅ Restore
+  }
+}
+```
+
+**2. MacroCommand undo không reverse order**
+```typescript
+// ❌ Sai: Undo cùng thứ tự execute
+undo() {
+  for (const cmd of this.commands) { // ❌ SAI THỨ TỰ!
+    cmd.undo();
+  }
+}
+
+// ✅ Đúng: Undo reverse order
+undo() {
+  for (let i = this.commands.length - 1; i >= 0; i--) {
+    this.commands[i].undo();
+  }
+}
+```
+
+**3. Command quá lớn — làm quá nhiều thứ**
+```typescript
+// ❌ Sai: Một command làm TẤT CẢ
+class BadCommand implements Command {
+  execute() {
+    this.login(); // ❌ Nhiều trách nhiệm
+    this.fetchData();
+    this.render();
+  }
+}
+// → Nên chia: LoginCommand, FetchCommand, RenderCommand riêng
+```
 
 ---
 
-## 🚫 Common Mistakes / Pitfalls
+## 🧪 Testing Strategies
 
-1. **Undo không restore đúng state**
-   ```typescript
-   // ❌ Sai: DeleteCommand không lưu deleted text
-   class BadDeleteCommand implements Command {
-     constructor(private editor: TextEditor, private count: number) {}
+```typescript
+describe('CommandManager', () => {
+  it('should undo/redo correctly', () => {
+    const editor = new TextEditor();
+    const mgr = new CommandManager();
 
-     execute() {
-       // ❌ Deleted text bị mất! Không thể undo!
-       this.editor.delete(this.count);
-     }
+    mgr.execute(new TypeCommand(editor, 'Hello'));
+    mgr.execute(new TypeCommand(editor, ' World'));
+    expect(editor.content).toBe('Hello World');
 
-     undo() {
-       // ❌ Không biết xóa gì!
-     }
-   }
+    mgr.undo();
+    expect(editor.content).toBe('Hello');
 
-   // ✅ Đúng: Lưu deleted text
-   class GoodDeleteCommand implements Command {
-     private deletedText: string = '';
+    mgr.redo();
+    expect(editor.content).toBe('Hello World');
+  });
 
-     execute() {
-       this.deletedText = this.editor.delete(this.count);
-     }
+  it('should clear redo stack on new action', () => {
+    const editor = new TextEditor();
+    const mgr = new CommandManager();
 
-     undo() {
-       this.editor.append(this.deletedText); // ✅ Restore
-     }
-   }
-   ```
+    mgr.execute(new TypeCommand(editor, 'A'));
+    mgr.undo();
+    expect(mgr['future'].length).toBe(1);
 
-2. **Command quá lớn — làm quá nhiều thứ**
-   ```typescript
-   // ❌ Sai: Một command làm TẤT CẢ (login + fetch + render)
-   class BadCommand implements Command {
-     execute() {
-       this.login();
-       this.fetchData();
-       this.render();
-     }
-   }
-   // → Nên chia: LoginCommand, FetchCommand, RenderCommand riêng
-   ```
+    mgr.execute(new TypeCommand(editor, 'B'));
+    expect(mgr['future'].length).toBe(0); // Clear!
+  });
+
+  it('should restore previous state on undo', () => {
+    const editor = new TextEditor();
+    const mgr = new CommandManager();
+
+    mgr.execute(new DeleteCommand(editor, 3));
+    expect(editor.content).toBe('');
+
+    mgr.undo();
+    expect(editor.content).toBe('World'); // Restored!
+  });
+});
+```
+
+---
+
+## 🔄 Refactoring Path
+
+**Từ Imperative Code → Command:**
+
+```typescript
+// ❌ Before: imperative, không undo được
+function processForm(form: Form) {
+  validate(form);
+  saveToDatabase(form);
+  sendEmail(form);
+  redirect('/success');
+}
+
+// ✅ After: Command pattern
+class ProcessFormCommand implements Command {
+  execute() {
+    validate(this.form);
+    saveToDatabase(this.form);
+    sendEmail(this.form);
+    redirect('/success');
+  }
+
+  undo() {
+    deleteFromDatabase(this.form.id);
+  }
+}
+```
 
 ---
 
 ## 🎤 Interview Q&A
 
 **Q: Command Pattern là gì? Khi nào dùng?**
-> A: Command đóng gói một request/action thành object với method `execute()`. Điều này cho phép queue requests, undo/redo, logging, và macro. Dùng khi cần undo/redo (text editors, IDEs), task queue (job schedulers), hoặc batch operations (macros).
+> A: Command đóng gói một request/action thành object với method `execute()` và `undo()`. Điều này cho phép queue requests, undo/redo, logging, và macro. Dùng khi cần undo/redo (text editors, IDEs), task queue (job schedulers), hoặc batch operations (macros). Quan trọng: mỗi command phải lưu đủ state để `undo()` restore đúng.
 
 **Q: Command vs Function callback khác nhau gì?**
 > A: Callback là function được passed như argument — stateless, không có undo. Command là object với state (data cần thiết để undo) và method `undo()`. Callback dùng khi chỉ cần execute once, không cần reverse. Command dùng khi cần undo, queue, hoặc replay.
 
 **Q: Làm sao implement undo/redo hiệu quả?**
-> A: Dùng 2 stacks: `history` (undo) và `future` (redo). Khi execute → push vào history, clear future. Undo → pop từ history, call undo(), push vào future. Redo → pop từ future, call execute(), push vào history. Giới hạn history size (VD: 100 commands) để tránh memory leak.
+> A: Dùng 2 stacks: `history` (undo) và `future` (redo). Execute → push vào history, clear future. Undo → pop từ history, call undo(), push vào future. Redo → pop từ future, call execute(), push vào history. Giới hạn history size (VD: 100 commands) để tránh memory leak.

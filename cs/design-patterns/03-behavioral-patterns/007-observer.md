@@ -2,32 +2,16 @@
 
 ## 🎯 Problem & Motivation
 
-**Bài toán:** Một object (**Subject**) thay đổi state, cần **thông báo** cho **nhiều other objects (Observers)** biết — mà Subject không biết Observers là ai.
+**Bài toán thực tế:** Một object (**Subject**) thay đổi state, cần **thông báo** cho **nhiều other objects (Observers)** biết — mà Subject không biết Observers là ai, không cần import chúng.
 
-**Ví dụ thực tế:** YouTube channel — khi có video mới, channel thông báo cho tất cả subscribers. Channel không cần biết subscriber là ai (email, phone, notification app).
-
-**Observer giải quyết:** Định nghĩa **subscription mechanism** — Observers đăng ký nhận thông báo, Subject gửi notification khi state thay đổi.
-
----
-
-## 💡 Use Cases
-
-1. **Event System / Pub-Sub** — Message brokers (Kafka, Redis pub/sub), DOM events (`addEventListener`)
-2. **MVC Architecture** — Model thay đổi → View tự update
-3. **Real-time Data** — Stock price changes → UI widgets update
-4. **Newsletter / Notification** — User đăng ký topic → notification khi có update
-5. **Auto-save / Sync** — File thay đổi → observers auto-sync lên cloud
-
----
-
-## ❌ Before (Không dùng Observer)
+**Ví dụ thực tế:** YouTube channel — khi có video mới, channel thông báo cho tất cả subscribers. Channel không cần biết subscriber là ai (email, phone, notification app). Thêm subscriber mới? Không cần sửa channel.
 
 ```typescript
 // ❌ Tight coupling: Subject phải biết và gọi từng observer cụ thể
 class NewsAgency {
   private news: string = '';
 
-  // ❌ Mỗi khi thêm subscriber mới → phải sửa class này!
+  // ❌ Mỗi khi thêm subscriber → phải sửa class này!
   private emailService = new EmailService();
   private smsService = new SmsService();
   private pushService = new PushNotificationService();
@@ -38,12 +22,57 @@ class NewsAgency {
     this.emailService.send(news);
     this.smsService.send(news);
     this.pushService.send(news);
-    // Thêm subscriber mới? Sửa đây!
+    // Thêm subscriber → sửa đây!
   }
 }
 ```
 
-→ **Vấn đề:** Subject phụ thuộc vào concrete observers → tight coupling. Thêm observer mới → sửa Subject. Observable không tái sử dụng được.
+→ **Hậu quả:** Subject phụ thuộc vào concrete observers → tight coupling. Thêm observer → sửa Subject. Observable không tái sử dụng được.
+
+**Observer giải quyết:** Định nghĩa **subscription mechanism** — Observers đăng ký nhận thông báo, Subject gửi notification khi state thay đổi.
+
+---
+
+## 💡 Use Cases
+
+1. **Event System / Pub-Sub** — Message brokers (Kafka, Redis pub/sub), DOM events (`addEventListener`)
+2. **MVC Architecture** — Model thay đổi → View tự update
+3. **Real-time Data** — Stock price changes → UI widgets update, WebSocket push
+4. **Newsletter / Notification** — User đăng ký topic → notification khi có update
+5. **Auto-save / Sync** — File thay đổi → observers auto-sync lên cloud
+6. **Distributed Systems** — Service mesh event notification
+
+---
+
+## ❌ Before (Không dùng Observer)
+
+```typescript
+// ❌ Tight coupling: Subject biết tất cả observers
+class OrderManager {
+  private status: string = 'pending';
+
+  private emailNotifier = new EmailNotifier();
+  private smsNotifier = new SmsNotifier();
+  private warehouseSystem = new WarehouseSystem();
+  private accountingSystem = new AccountingSystem();
+
+  updateStatus(newStatus: string) {
+    this.status = newStatus;
+    // ⚠️ Subject phải gọi từng observer theo đúng logic!
+    this.emailNotifier.notify(this.status);
+    this.smsNotifier.notify(this.status);
+    if (this.status === 'shipped') {
+      this.warehouseSystem.notify(this.status); // ⚠️ Logic rải khắp nơi
+    }
+    if (this.status === 'completed') {
+      this.accountingSystem.notify(this.status);
+    }
+    // Thêm observer → sửa toàn bộ method
+  }
+}
+```
+
+→ **Hậu quả:** Subject phải biết thứ tự, dependencies, logic của từng observer. Thêm observer → sửa Subject. Khó test vì khó mock.
 
 ---
 
@@ -53,186 +82,246 @@ class NewsAgency {
 // ─────────────────────────────────────────
 // 1. Observer Interface — contract cho tất cả observers
 // ─────────────────────────────────────────
-interface Observer {
-  update(subject: Subject): void;
+interface Observer<T> {
+  update(data: T): void;
 }
 
 // ─────────────────────────────────────────
-// 2. Subject Interface — defines subscription
+// 2. Subject — maintain state, manage observers
 // ─────────────────────────────────────────
-interface Subject {
-  attach(observer: Observer): void;
-  detach(observer: Observer): void;
-  notify(): void;
-}
+class Observable<T> {
+  private observers: Observer<T>[] = [];
+  private subscribers: Array<(data: T) => void> = [];
+  private data: T;
 
-// ─────────────────────────────────────────
-// 3. Concrete Subject — maintain state, notify observers
-// ─────────────────────────────────────────
-class NewsPortal implements Subject {
-  private observers: Observer[] = [];
-  private news: string = '';
+  constructor(initialData: T) {
+    this.data = initialData;
+  }
 
-  attach(observer: Observer): void {
-    const exists = this.observers.includes(observer);
-    if (!exists) {
+  // Subscribe — hỗ trợ cả Observer interface và function
+  subscribe(observer: Observer<T> | ((data: T) => void)): () => void {
+    if (typeof observer === 'function') {
+      this.subscribers.push(observer);
+    } else {
       this.observers.push(observer);
-      console.log(`✅ Observer subscribed`);
+    }
+
+    // Return unsubscribe function — quan trọng để tránh memory leak!
+    return () => this.unsubscribe(observer);
+  }
+
+  unsubscribe(observer: Observer<T> | ((data: T) => void)): void {
+    if (typeof observer === 'function') {
+      this.subscribers = this.subscribers.filter(o => o !== observer);
+    } else {
+      this.observers = this.observers.filter(o => o !== observer);
     }
   }
 
-  detach(observer: Observer): void {
-    const index = this.observers.indexOf(observer);
-    if (index !== -1) {
-      this.observers.splice(index, 1);
-      console.log(`❌ Observer unsubscribed`);
-    }
-  }
-
-  notify(): void {
-    console.log(`📢 Notifying ${this.observers.length} observers...`);
+  protected notifyObservers(): void {
     for (const observer of this.observers) {
-      observer.update(this);
+      observer.update(this.data);
+    }
+    for (const fn of this.subscribers) {
+      fn(this.data);
     }
   }
 
-  // Business logic — khi news thay đổi
-  setNews(news: string): void {
-    console.log(`📰 NewsPortal: New article — "${news}"`);
-    this.news = news;
-    this.notify(); // Tự động notify tất cả observers
+  getData(): T {
+    return this.data;
   }
 
-  getNews(): string {
-    return this.news;
+  protected updateData(newData: T): void {
+    this.data = newData;
+    this.notifyObservers();
+  }
+}
+
+// ─────────────────────────────────────────
+// 3. Concrete Subject — Order với status
+// ─────────────────────────────────────────
+type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+
+interface Order {
+  id: string;
+  status: OrderStatus;
+  total: number;
+  customerEmail: string;
+}
+
+class OrderManager extends Observable<Order> {
+  constructor(order: Order) {
+    super(order);
+  }
+
+  updateStatus(newStatus: OrderStatus) {
+    const previousStatus = this.getData().status;
+    const updatedOrder = { ...this.getData(), status: newStatus };
+    console.log(`📦 Order ${updatedOrder.id}: ${previousStatus} → ${newStatus}`);
+    this.updateData(updatedOrder);
   }
 }
 
 // ─────────────────────────────────────────
 // 4. Concrete Observers — react to notifications
 // ─────────────────────────────────────────
-class EmailSubscriber implements Observer {
-  constructor(private email: string) {}
-
-  update(subject: Subject): void {
-    const portal = subject as NewsPortal;
-    console.log(`📧 Email to ${this.email}: "${portal.getNews()}"`);
+class EmailNotifier implements Observer<Order> {
+  update(order: Order): void {
+    if (order.status === 'shipped') {
+      console.log(`📧 [Email] Sending shipping notification to ${order.customerEmail}`);
+    }
+    if (order.status === 'cancelled') {
+      console.log(`📧 [Email] Sending cancellation to ${order.customerEmail}`);
+    }
   }
 }
 
-class SmsSubscriber implements Observer {
-  constructor(private phone: string) {}
-
-  update(subject: Subject): void {
-    const portal = subject as NewsPortal;
-    console.log(`📱 SMS to ${this.phone}: "${portal.getNews()}"`);
+class WarehouseNotifier implements Observer<Order> {
+  update(order: Order): void {
+    if (order.status === 'processing') {
+      console.log(`🏭 [Warehouse] Preparing order ${order.id} for shipment`);
+    }
   }
 }
 
-class PushSubscriber implements Observer {
-  constructor(private deviceId: string) {}
-
-  update(subject: Subject): void {
-    const portal = subject as NewsPortal;
-    console.log(`🔔 Push to ${this.deviceId}: "${portal.getNews()}"`);
+class AccountingNotifier implements Observer<Order> {
+  update(order: Order): void {
+    if (order.status === 'delivered') {
+      console.log(`💰 [Accounting] Recording revenue: $${order.total}`);
+    }
+    if (order.status === 'cancelled') {
+      console.log(`💰 [Accounting] Issuing refund for ${order.id}: $${order.total}`);
+    }
   }
 }
 
 // ─────────────────────────────────────────
 // 5. Client — subscribe/unsubscribe dynamically
 // ─────────────────────────────────────────
-const portal = new NewsPortal();
+const order = new OrderManager({
+  id: 'ORD_123',
+  status: 'pending',
+  total: 299.99,
+  customerEmail: 'john@example.com'
+});
 
-const email1 = new EmailSubscriber('john@example.com');
-const sms1 = new SmsSubscriber('+1234567890');
-const push1 = new PushSubscriber('device_001');
+const emailNotif = new EmailNotifier();
+const warehouseNotif = new WarehouseNotifier();
+const accountingNotif = new AccountingNotifier();
 
-portal.attach(email1);
-portal.attach(sms1);
-portal.attach(push1);
+order.subscribe(emailNotif);
+order.subscribe(warehouseNotif);
+order.subscribe(accountingNotif);
 
-portal.setNews('🚀 Breaking: AI beats humans at Go!');
-// 📢 Notifying 3 observers...
-// 📧 Email to john@example.com: "🚀 Breaking: AI beats humans at Go!"
-// 📱 SMS to +1234567890: "🚀 Breaking: AI beats humans at Go!"
-// 🔔 Push to device_001: "🚀 Breaking: AI beats humans at Go!"
+// Order lifecycle
+order.updateStatus('processing');
+// 📦 Order ORD_123: pending → processing
+// 🏭 [Warehouse] Preparing order ORD_123
 
-portal.detach(sms1); // Unsubscribe SMS
-portal.setNews('💻 New programming language released!');
-// 📢 Notifying 2 observers... (SMS đã unsubscribe)
-// ...
+order.updateStatus('shipped');
+// 📦 Order ORD_123: processing → shipped
+// 📧 [Email] Sending shipping notification to john@example.com
+
+order.unsubscribe(warehouseNotif);
+
+order.updateStatus('delivered');
+// 📦 Order ORD_123: shipped → delivered
+// 💰 [Accounting] Recording revenue: $299.99
+// (Warehouse notification NOT sent — đã unsubscribe ✅)
+
+// Hoặc dùng function subscriber — không cần class
+const logOrder = (order: Order) => {
+  console.log(`📝 [Logger] Order ${order.id} is now ${order.status}`);
+};
+const unsubLogger = order.subscribe(logOrder);
+
+order.updateStatus('cancelled');
+// 📧 [Email] Sending cancellation to john@example.com
+// 💰 [Accounting] Issuing refund for ORD_123: $299.99
+// 📝 [Logger] Order ORD_123 is now cancelled
+
+unsubLogger(); // Cleanup
 ```
-
-→ **Cải thiện:** Thêm observer mới? Tạo class mới implements `Observer`. Subject hoàn toàn không cần biết observer cụ thể.
 
 ---
 
 ## 🏗️ UML Diagram
 
 ```
-┌──────────────────────┐         ┌─────────────────────────────┐
-│      Subject         │         │       <<interface>>         │
-│     (NewsPortal)     │         │         Observer            │
-├──────────────────────┤         ├─────────────────────────────┤
-│ +observers: []       │         │ +update(subject): void      │
-├──────────────────────┤         └──────────────┬──────────────┘
-│ +attach()            │                        │ implements
-│ +detach()            │         ┌──────────────┴──────────────┐
-│ +notify()            │         ▼                              ▼
-└──────────┬───────────┘  ┌──────────────────┐    ┌──────────────────┐
-           │               │  EmailSubscriber  │    │   PushSubscriber │
-           │               ├──────────────────┤    ├──────────────────┤
-           └──────────────→│ +update()        │    │ +update()        │
-               notifies    └──────────────────┘    └──────────────────┘
+┌──────────────────────┐         ┌─────────────────────────────────┐
+│      Subject           │         │       <<interface>> Observer      │
+│    (OrderManager)     │         ├─────────────────────────────────┤
+├──────────────────────┤         │ +update(data: T): void            │
+│ +observers: []         │         └──────────────┬──────────────────┘
+├──────────────────────┤                        │ implements
+│ +subscribe()           │         ┌─────────────┴─────────────┐
+│ +unsubscribe()        │         ▼                              ▼
+│ +notifyObservers()  │  ┌──────────────────┐    ┌──────────────────┐
+└──────────┬───────────┘  │  EmailNotifier   │    │ WarehouseNotifier │
+           │               └──────────────────┘    └──────────────────┘
+           │ notifies
+           └───────────────→ observers[i].update(data)
 ```
 
 ---
 
 ## 🔍 Step-by-step Trace
 
-**Scenario:** User subscribe email + push, news thay đổi.
+**Scenario:** Order từ pending → processing → shipped.
 
 ```
-Bước 1: portal.attach(email1) → observers = [email1]
-Bước 2: portal.attach(push1)  → observers = [email1, push1]
-Bước 3: portal.setNews('Breaking: AI!')
-  → this.news = 'Breaking: AI!'
-  → this.notify()
+Bước 1: order.subscribe(emailNotif)
+  → observers = [emailNotif]
 
-Bước 4: notify() loops through observers:
-  Loop 1: email1.update(portal)
-    → portal.getNews() → 'Breaking: AI!'
-    → 📧 Email sent
+Bước 2: order.subscribe(warehouseNotif)
+  → observers = [emailNotif, warehouseNotif]
 
-  Loop 2: push1.update(portal)
-    → portal.getNews() → 'Breaking: AI!'
-    → 🔔 Push sent
+Bước 3: order.updateStatus('processing')
+  → data.status = 'processing'
+  → notifyObservers()
 
-→ Subject không biết email1 hay push1 là gì!
-→ Chỉ biết "có Observer interface" → gọi update()
+Bước 4: Loop observers:
+  emailNotif.update(data)
+    → order.status === 'processing'? NO → do nothing
+
+  warehouseNotif.update(data)
+    → order.status === 'processing'? YES
+    → 🏭 [Warehouse] Preparing order ORD_123
+
+Bước 5: order.updateStatus('shipped')
+  → notifyObservers()
+
+  emailNotif.update(data)
+    → order.status === 'shipped'? YES
+    → 📧 [Email] Sending shipping notification
+
+  warehouseNotif.update(data)
+    → order.status === 'shipped'? NO → do nothing
+
+→ Subject hoàn toàn không biết observers làm gì!
+→ Subject chỉ biết "gọi update(data)" → observers tự xử lý
 ```
 
 ---
 
 ## 🌍 Real-world Examples
 
-| Thư viện/Framework | Cách dùng Observer |
-|--------------------|-------------------|
+| Thư viện/Framework | Chi tiết implementation |
+|---------------------|-------------------------|
 | **DOM Events** | `element.addEventListener('click', handler)` |
 | **Redux Store** | `store.subscribe(() => rerender())` |
 | **RxJS** | Observable + Observer + subscription |
-| **Vue 2 `watch`** | `watch(() => this.value, callback)` |
-| **Java `java.util.Observer`** | Deprecated nhưng là implementation gốc |
+| **Vue 3 `ref/reactive`** | Reactive dependencies tự track observers |
 | **Kafka / Redis Pub/Sub** | Topic-based publish/subscribe |
-| **Angular `Subject`** | `BehaviorSubject`, `ReplaySubject` |
+| **Node.js EventEmitter** | `emitter.on()` = subscribe, `emitter.emit()` = notify |
 
 ---
 
 ## 📊 So sánh với Patterns liên quan
 
 | Criteria | **Observer** | Mediator | Event Bus |
-|----------|-------------|----------|-----------|
-| Communication | Subject → Observers | Objects ↔ Mediator | Any → Any |
+|----------|-------------|----------|----------|
+| Communication | Subject → Observers | Objects ↔ Mediator | Any ↔ Any |
 | Coupling | Subject tách biệt observers | Mọi object tách biệt nhau | Loose coupling |
 | Central point | Subject (per observable) | Mediator (central) | Event Bus (global) |
 | Use case | 1:many, push-based | Many:many, complex interaction | Distributed events |
@@ -241,45 +330,42 @@ Bước 4: notify() loops through observers:
 
 ## 💻 TypeScript Implementation
 
-```typescript
-// ─────────────────────────────────────────
-// Example: Reactive State (mini-Redux)
-// ─────────────────────────────────────────
+### Version 1: Reactive Store (Mini-Redux)
 
+```typescript
 type Listener<T> = (state: T) => void;
 
-class ReactiveStore<T> {
+class ReactiveStore<T extends object> {
   private state: T;
-  private listeners: Listener<T>[] = [];
+  private listeners: Set<Listener<T>> = new Set();
 
   constructor(initialState: T) {
     this.state = initialState;
   }
 
-  // Observer pattern: subscribe
+  // Subscribe với Set — tự động tránh duplicate
   subscribe(listener: Listener<T>): () => void {
-    this.listeners.push(listener);
-    // Return unsubscribe function
+    this.listeners.add(listener);
     return () => {
-      this.listeners = this.listeners.filter(l => l !== listener);
+      this.listeners.delete(listener);
     };
   }
 
-  // Notify all listeners
-  private emit(): void {
-    for (const listener of this.listeners) {
-      listener(this.state);
-    }
-  }
-
-  // Update state → auto notify
-  setState(partial: Partial<T>): void {
-    this.state = { ...this.state, ...partial };
+  // Immutable update
+  setState(partial: Partial<T> | ((prev: T) => Partial<T>)): void {
+    const updates = typeof partial === 'function' ? partial(this.state) : partial;
+    this.state = { ...this.state, ...updates };
     this.emit();
   }
 
   getState(): T {
     return this.state;
+  }
+
+  private emit(): void {
+    for (const listener of this.listeners) {
+      listener(this.state);
+    }
   }
 }
 
@@ -288,131 +374,186 @@ interface AppState {
   user: string | null;
   theme: 'light' | 'dark';
   notifications: number;
+  cartItems: number;
 }
 
 const store = new ReactiveStore<AppState>({
   user: null,
   theme: 'light',
-  notifications: 0
+  notifications: 0,
+  cartItems: 0
 });
 
-// Observer 1: Theme switcher
 const unsubTheme = store.subscribe(state => {
-  document.body.dataset.theme = state.theme;
-  console.log(`🎨 Theme changed to ${state.theme}`);
+  console.log(`🎨 Theme: ${state.theme}`);
 });
 
-// Observer 2: Notification badge
-const unsubNotif = store.subscribe(state => {
-  const badge = document.querySelector('.notification-badge');
-  if (badge) badge.textContent = String(state.notifications);
+const unsubBadge = store.subscribe(state => {
   console.log(`🔔 Notifications: ${state.notifications}`);
 });
 
-// Observer 3: User status
-const unsubUser = store.subscribe(state => {
-  const nav = document.querySelector('.user-nav');
-  if (nav) nav.textContent = state.user ?? 'Login';
-  console.log(`👤 User: ${state.user ?? 'Guest'}`);
+const unsubCart = store.subscribe(state => {
+  console.log(`🛒 Cart: ${state.cartItems} items`);
 });
 
-// Trigger updates — observers tự động update!
+// Update → all observers notified
 store.setState({ user: 'john_doe', theme: 'dark' });
-// 🎨 Theme changed to dark
+// 🎨 Theme: dark
 // 🔔 Notifications: 0
-// 👤 User: john_doe
+// 🛒 Cart: 0 items
 
-store.setState({ notifications: 5 });
-// 🎨 Theme changed to dark  (bị gọi lại vì full state)
+store.setState({ cartItems: 3, notifications: 5 });
+// 🎨 Theme: dark (full state re-emitted)
 // 🔔 Notifications: 5
-// 👤 User: john_doe
+// 🛒 Cart: 3 items
 
-unsubNotif(); // Unsubscribe notification badge
+unsubBadge(); // Cleanup — quan trọng!
 store.setState({ theme: 'light' });
-// 🎨 Theme changed to light
-// 👤 User: john_doe
-// (Notification không được gọi — đã unsubscribe)
+// 🎨 Theme: light
+// 🛒 Cart: 3 items (badge đã unsubscribe)
 ```
 
 ---
 
-## 📝 LeetCode Problems áp dụng
+## ⚖️ Trade-offs & Common Mistakes
 
-- [Design Twitter](https://leetcode.com/problems/design-twitter/) — Observer: user posts → followers see tweets
-- [Find Bottom Left Tree Value](https://leetcode.com/problems/find-bottom-left-tree-value/) — level-order traversal = push-based observer
-- [Exam Room](https://leetcode.com/problems/exam-room/) — Observer pattern khi seat thay đổi → notify students
+### ✅ Khi nào nên dùng
 
----
-
-## ✅ Pros / ❌ Cons
-
-**Ưu điện:**
-- ✅ **Open/Closed** — thêm observer mới không sửa Subject
-- ✅ **Loose coupling** — Subject và Observers hoàn toàn tách biệt
-- ✅ **Dynamic relationships** — subscribe/unsubscribe lúc runtime
-- ✅ **Broadcast communication** — một state change → notify tất cả
-
-**Nhược điểm:**
-- ❌ **Memory leaks** — nếu quên unsubscribe → observer không bị GC
-- ❌ **Order không đảm bảo** — thứ tự observers được notify không xác định
-- ❌ **Cascade updates** — observer A notify → observer B notify → infinite loop
-- ❌ **Unexpected notifications** — nếu Subject thay đổi quá nhiều → performance
-
----
-
-## ⚠️ Khi nào nên / không nên dùng
-
-**Nên dùng khi:**
 - ✅ Một object thay đổi → nhiều objects khác cần react
-- ✅ Cần subscribe/unsubscribe động
-- ✅ Want to maintain **loose coupling** giữa publisher và subscribers
+- ✅ Cần subscribe/unsubscribe động lúc runtime
+- ✅ Muốn maintain **loose coupling** giữa publisher và subscribers
 
-**Không nên dùng khi:**
-- ❌ Observer cần thay đổi Subject — có thể tạo circular updates
+### ❌ Khi nào không nên dùng
+
+- ❌ Observer cần thay đổi Subject trong update() → có thể tạo circular updates
 - ❌ Đơn giản quá — chỉ cần callback là đủ
-- ❌ Cần synchronous update ordering nghiêm ngặt
+- ❌ Cần synchronous update ordering nghiêm ngặt → dùng Mediator
+
+### 🚫 Common Mistakes
+
+**1. Quên unsubscribe → memory leak**
+```typescript
+// ❌ Sai: Component unmount nhưng không cleanup
+class Component {
+  ngOnInit() {
+    store.subscribe(state => this.render(state)); // ❌ Memory leak!
+  }
+}
+
+// ✅ Đúng: Luôn unsubscribe
+class Component {
+  private unsub: () => void = () => {};
+
+  ngOnInit() {
+    this.unsub = store.subscribe(state => this.render(state));
+  }
+
+  ngOnDestroy() {
+    this.unsub(); // ✅ Cleanup khi unmount
+  }
+}
+```
+
+**2. Notification trong vòng lặp → infinite loop**
+```typescript
+// ❌ Sai: Observer update Subject → Subject notify → observer update...
+observer.update(subject: Subject) {
+  subject.setState({ ... }); // Subject thay đổi → notify lại → infinite!
+}
+
+// ✅ Đúng: Observer chỉ đọc, không sửa Subject
+```
+
+**3. Dùng Array thay vì Set → duplicate subscribers**
+```typescript
+// ❌ Sai: Array có thể duplicate nếu subscribe 2 lần
+this.observers.push(observer); // ⚠️ Duplicate!
+
+// ✅ Đúng: Set tự động tránh duplicate
+this.listeners.add(listener); // ✅
+```
 
 ---
 
-## 🚫 Common Mistakes / Pitfalls
+## 🧪 Testing Strategies
 
-1. **Quên unsubscribe → memory leak**
-   ```typescript
-   // ❌ Sai: Component unmount nhưng không cleanup
-   class Component {
-     ngOnInit() {
-       this.store.subscribe(state => this.render(state));
-       // ❌ Khi component unmount, listener vẫn tồn tại!
-     }
-   }
+```typescript
+describe('Observable', () => {
+  it('should notify all subscribers', () => {
+    const observable = new Observable<number>(0);
+    const fn1 = jest.fn();
+    const fn2 = jest.fn();
 
-   // ✅ Đúng: Luôn unsubscribe
-   ngOnInit() {
-     this.unsubscribe = this.store.subscribe(state => this.render(state));
-   }
+    observable.subscribe({ update: fn1 });
+    observable.subscribe({ update: fn2 });
 
-   ngOnDestroy() {
-     this.unsubscribe(); // ✅ Cleanup khi unmount
-   }
-   ```
+    (observable as any).notifyObservers();
 
-2. **Notification trong vòng lặp → infinite loop**
-   ```typescript
-   // ❌ Sai: Observer update Subject → Subject notify → observer update...
-   observer.update(subject: Subject) {
-     subject.setState({ ... }); // Subject thay đổi → notify lại → infinite loop!
-   }
-   ```
+    expect(fn1).toHaveBeenCalledWith(0);
+    expect(fn2).toHaveBeenCalledWith(0);
+  });
+
+  it('should allow unsubscribe and prevent notification', () => {
+    const observable = new Observable<number>(0);
+    const fn = jest.fn();
+    const unsub = observable.subscribe({ update: fn });
+
+    (observable as any).notifyObservers();
+    expect(fn).toHaveBeenCalledTimes(1);
+
+    unsub(); // Unsubscribe
+    (observable as any).notifyObservers();
+    expect(fn).toHaveBeenCalledTimes(1); // Không tăng
+  });
+
+  it('should support function subscribers', () => {
+    const observable = new Observable<string>('initial');
+    const fn = jest.fn();
+    observable.subscribe(fn);
+
+    (observable as any).notifyObservers();
+    expect(fn).toHaveBeenCalledWith('initial');
+  });
+});
+```
+
+---
+
+## 🔄 Refactoring Path
+
+**Từ Callback Hell → Observer:**
+
+```typescript
+// ❌ Before: Nested callbacks
+api.getUser(id, (err, user) => {
+  api.getOrders(user.id, (err, orders) => {
+    api.getProducts(orders, (err, products) => {
+      // Callback hell!
+    });
+  });
+});
+
+// ✅ After: Observable chain (RxJS-style)
+api.getUser$(id)
+  .pipe(
+    switchMap(user => api.getOrders$(user.id)),
+    switchMap(orders => api.getProducts$(orders))
+  )
+  .subscribe({
+    next: products => render(products),
+    error: err => showError(err)
+  });
+```
 
 ---
 
 ## 🎤 Interview Q&A
 
 **Q: Observer Pattern là gì? Khi nào dùng?**
-> A: Observer định nghĩa subscription mechanism — một object (Subject) maintain danh sách observers và notify tất cả khi state thay đổi. Mỗi observer implement interface có method `update()`. Dùng khi một object thay đổi → nhiều objects khác cần react. Ví dụ: DOM events, Redux store, message brokers, newsletter.
+> A: Observer định nghĩa subscription mechanism — một object (Subject) maintain danh sách observers và notify tất cả khi state thay đổi. Mỗi observer implement interface có method `update()`. Dùng khi một object thay đổi → nhiều objects khác cần react. Ví dụ: DOM events, Redux store, message brokers, newsletter. Quan trọng: luôn return unsubscribe function để tránh memory leak.
 
 **Q: Pub/Sub khác Observer thế nào?**
-> A: Observer là direct subscription — Subject trực tiếp gọi `observer.update()`. Pub/Sub dùng Event Bus/Channel trung gian — publisher gửi message vào channel, subscribers đăng ký vào channel mà không biết publisher là ai. Pub/Sub decoupled hơn, scale tốt hơn vì publisher và subscriber không biết nhau.
+> A: Observer là direct subscription — Subject trực tiếp gọi `observer.update()`. Pub/Sub dùng Event Bus/Channel trung gian — publisher gửi message vào channel, subscribers đăng ký vào channel mà không biết publisher là ai. Pub/Sub decoupled hơn, scale tốt hơn cho distributed systems.
 
 **Q: Làm sao tránh memory leak trong Observer?**
-> A: Luôn cung cấp `detach()` hoặc trả về unsubscribe function từ `subscribe()`. Trong frontend, nhớ cleanup subscription trong `componentWillUnmount` / `ngOnDestroy`. Trong garbage-collected languages, object không được referenced mới bị GC, nên subscription giữ reference → leak.
+> A: Luôn return unsubscribe function từ `subscribe()`. Trong frontend, nhớ cleanup subscription trong `componentWillUnmount` / `ngOnDestroy`. Subscription giữ reference đến observer → observer không bị garbage collected nếu không unsubscribe. Dùng `Set` thay vì `Array` để tự động tránh duplicate subscribers.

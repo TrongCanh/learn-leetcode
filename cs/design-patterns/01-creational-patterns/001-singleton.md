@@ -2,23 +2,37 @@
 
 ## 🎯 Problem & Motivation
 
-**Bài toán:** Bạn cần một object **duy nhất** trong toàn bộ ứng dụng — ví dụ: logger, database connection, config manager.
+**Bài toán thực tế:** Bạn cần một object **duy nhất** trong toàn bộ ứng dụng, với **global access point** và **controlled lifecycle**.
 
-**Tại sao không dùng global variable?** Global variable rất dễ bị ghi đè, không kiểm soát được lifecycle, và khó test.
+**Tại sao không dùng global variable?**
 
-**Singleton đảm bảo:**
-- Chỉ có **một instance** tồn tại trong app
-- Truy cập **toàn cục** từ bất kỳ đâu
-- Lazy initialization — tạo khi cần, không lãng phí resource
+```typescript
+// ❌ Global variable — đầy rủi ro
+const db = new Database(); // Tạo ngay khi load, không kiểm soát
+db.query('SELECT * FROM users');
+
+// Ai đó có thể ghi đè:
+const db = createMockDatabase(); // Toàn bộ app bị ảnh hưởng!
+
+// Hoặc tệ hơn:
+db = null; // 💥 Runtime crash ở bất kỳ đâu gọi db.query()
+```
+
+**Singleton đảm bảo ba điều:**
+1. Chỉ có **một instance** tồn tại trong app
+2. Truy cập **toàn cục** từ bất kỳ đâu qua well-known access point
+3. **Lazy initialization** — tạo khi cần, không lãng phí resource khi không dùng
 
 ---
 
 ## 💡 Use Cases
 
-1. **Logger** — Tất cả các module cùng ghi vào một instance duy nhất
-2. **Database Connection Pool** — Một connection pool dùng chung cho toàn app, tránh mở quá nhiều connections
-3. **Configuration Manager** — Đọc config từ file một lần, share cho toàn bộ app
-4. **Cache Service** — Một cache instance duy nhất, đảm bảo state nhất quán
+1. **Logger** — Tất cả các module cùng ghi vào một stream duy nhất, đảm bảo thứ tự log nhất quán
+2. **Database Connection Pool** — Một pool dùng chung, tránh mở quá nhiều connections gây resource exhaustion
+3. **Configuration Manager** — Đọc config từ file/env một lần khi app khởi động, share cho toàn bộ app mà không đọc lại
+4. **Cache Service** — Một cache instance duy nhất, invalidation nhất quán trong toàn app
+5. **Thread Pool / Worker Pool** — Một pool quản lý workers, tránh tạo quá nhiều threads
+6. **Event Emitter (global)** — Một global event bus cho inter-module communication
 
 ---
 
@@ -33,26 +47,26 @@ export class UserRepository {
   constructor() {
     this.connection = createConnection(); // ❌ Mỗi repo tạo connection riêng
   }
-
-  async getUser(id: number) {
+  async findById(id: number) {
     return this.connection.query(`SELECT * FROM users WHERE id = ?`, [id]);
   }
 }
-```
 
-```typescript
-// auth.ts — Tạo connection riêng
-import { createConnection } from './db';
-const conn1 = createConnection(); // ❌ Connection #1
+export class OrderRepository {
+  constructor() {
+    this.connection = createConnection(); // ❌ Connection #2
+  }
+  async findByUser(userId: number) {
+    return this.connection.query(`SELECT * FROM orders WHERE user_id = ?`, [userId]);
+  }
+}
 
-// payment.ts — Tạo connection riêng
-import { createConnection } from './db';
-const conn2 = createConnection(); // ❌ Connection #2
-
+// auth.ts — Tạo connection #3
+// payment.ts — Tạo connection #4
 // → 10 modules = 10 connections → Database quá tải!
 ```
 
-→ **Vấn đề:** Mỗi `createConnection()` tạo một connection mới → resource leak, không nhất quán state, khó quản lý.
+→ **Hậu quả:** Connection pool exhaustion, không có shared state, mỗi query có thể nằm ở connection khác nhau → không transaction được.
 
 ---
 
@@ -67,10 +81,9 @@ class DatabaseConnection {
   // Private constructor — không thể new trực tiếp
   private constructor() {
     this.connection = this.connect();
-    console.log('📦 Database connection created');
   }
 
-  // Static method — cách duy nhất để lấy instance
+  // Static access point — cách DUY NHẤT để lấy instance
   public static getInstance(): DatabaseConnection {
     if (!DatabaseConnection.instance) {
       DatabaseConnection.instance = new DatabaseConnection();
@@ -79,30 +92,32 @@ class DatabaseConnection {
   }
 
   private connect(): any {
-    return { /* actual connection logic */ };
+    // Connection pool thực sự: 10 connections
+    return { pool: [], maxConnections: 10 };
   }
 
   public query(sql: string, params: any[] = []): any {
-    return this.connection.execute(sql, params);
+    return this.connection.pool[0].execute(sql, params);
   }
 }
 
+// Export singleton instance — module-level singleton
 export const db = DatabaseConnection.getInstance();
 ```
 
 ```typescript
 // auth.ts
 import { db } from './singleton';
-const user1 = db.query('SELECT * FROM users WHERE id = ?', [1]);
+const user = db.query('SELECT * FROM users WHERE id = ?', [1]);
 
 // payment.ts
 import { db } from './singleton';
-const user2 = db.query('SELECT * FROM users WHERE id = ?', [2]);
+const order = db.query('SELECT * FROM orders WHERE user_id = ?', [1]);
 
-// → Cả hai dùng cùng 1 connection!
+// → Cả hai cùng dùng một DatabaseConnection instance!
 ```
 
-→ **Cải thiện:** `getInstance()` kiểm tra — nếu đã có instance thì trả về, không tạo mới.
+→ **Cải thiện:** `getInstance()` kiểm tra — nếu đã có instance thì trả về, không tạo mới. Toàn app dùng chung một connection pool.
 
 ---
 
@@ -110,15 +125,24 @@ const user2 = db.query('SELECT * FROM users WHERE id = ?', [2]);
 
 ```
 ┌─────────────────────────────────┐
-│       Singleton Class          │
+│       SingletonClass            │
 ├─────────────────────────────────┤
-│ - static instance: Singleton   │
+│ - static instance: Singleton    │
 ├─────────────────────────────────┤
 │ - constructor()                 │
 │ + static getInstance(): Singleton│
+│ + doSomething()                 │
 └─────────────────────────────────┘
 
-Singleton instance ──→ Singleton (self-reference)
+┌──────────────────────────────────┐
+│  Module A          │ Module B   │
+│  db = Singleton.getInstance()   │
+│         ↕                      │
+│  ┌─────────────────────────────┐ │
+│  │    Singleton.instance       │ │
+│  │    (shared reference)      │ │
+│  └─────────────────────────────┘ │
+└──────────────────────────────────┘
 ```
 
 ---
@@ -128,214 +152,283 @@ Singleton instance ──→ Singleton (self-reference)
 **Scenario:** Gọi `getInstance()` 3 lần từ 3 modules khác nhau.
 
 ```
-Bước 1: auth.ts → db.getInstance()
+Module A: db.getInstance()
   ├── instance === null? → TRUE
-  ├── new DatabaseConnection() → instance created
-  └── return instance #1
+  ├── new DatabaseConnection()
+  │     └── this.connect() → pool created
+  └── return instance #1 ← stored in static field
 
-Bước 2: payment.ts → db.getInstance()
+Module B: db.getInstance()
   ├── instance === null? → FALSE (đã có #1)
-  └── return instance #1 ← cùng instance với auth.ts!
+  └── return instance #1 ← CÙNG reference với Module A!
 
-Bước 3: user.ts → db.getInstance()
+Module C: db.getInstance()
   ├── instance === null? → FALSE
-  └── return instance #1 ← vẫn là instance ban đầu!
+  └── return instance #1 ← Vẫn là instance ban đầu!
 
 Kết quả: 3 modules, 1 instance ✅
+Memory: chỉ 1 object được tạo ✅
 ```
 
 ---
 
 ## 🌍 Real-world Examples
 
-| Thư viện/Framework | Cách dùng Singleton |
-|---------------------|---------------------|
-| **Redux (React)** | `createStore()` trả về một store instance duy nhất |
-| **Angular DI** | `Injector` là singleton per module |
-| **Winston Logger** | `createLogger()` mặc định là singleton |
-| **Java `java.lang.Runtime`** | `Runtime.getRuntime()` là Singleton thực sự |
-| **Node.js `process` object** | Global singleton trong Node |
+| Thư viện/Framework | Chi tiết implementation |
+|---------------------|------------------------|
+| **Redux Store (React)** | `createStore()` — mỗi app chỉ có một store instance |
+| **Winston Logger** | `createLogger()` mặc định là singleton; muốn multi-logger phải dùng `winston.createLogger()` nhiều lần |
+| **Java `java.lang.Runtime`** | `Runtime.getRuntime()` — singleton thực sự trong JDK |
+| **Node.js `process` object** | Global singleton, không thể thay thế |
+| **Angular DI** | `Injector` là singleton per module scope, không phải global |
+| **Spring `@Component`** | Spring beans mặc định là singleton per container |
+| **Python `logging.getLogger()`** | Logger registry — có thể coi là singleton registry |
 
 ---
 
 ## 📊 So sánh với Patterns liên quan
 
-| Criteria | **Singleton** | Module/Global Variable | Static Class |
-|----------|--------------|------------------------|--------------|
-| Instance count | 1 | 1 (global) | 1 (nhưng không phải object) |
-| Lazy init | ✅ Có | ❌ Không | ❌ Không |
-| Interface / Polymorphism | ✅ Có | ❌ Không | ❌ Không |
-| Testability | ⚠️ Khó mock | ❌ Rất khó | ❌ Khó |
-| Thread safety | ⚠️ Cần cẩn thận | ✅ An toàn | ✅ An toàn |
+| Criteria | **Singleton** | Module/ES6 Import | Static Class | DI Container |
+|----------|--------------|-------------------|--------------|--------------|
+| Instance count | 1 | 1 (module-level) | 1 | 1 per scope |
+| Lazy init | ✅ Có | ❌ Khi load | ❌ Khi load | ✅ Có |
+| Interface / Polymorphism | ✅ Có | ❌ Không | ❌ Không | ✅ Có |
+| Testability | ⚠️ Khó mock | ❌ Rất khó | ❌ Khó | ✅ Dễ mock |
+| Thread safety | ⚠️ Cần cẩn thận | ✅ An toàn | ✅ An toàn | ✅ An toàn |
 
 ---
 
 ## 💻 TypeScript Implementation
 
+### Version 1: Basic Singleton (ES Module Pattern — Recommended in TypeScript)
+
 ```typescript
-// ─────────────────────────────────────────
-// Version 1: Basic Singleton (simple)
-// ─────────────────────────────────────────
-class SingletonV1 {
-  private static instance: SingletonV1;
-
-  private constructor() {}
-
-  public static getInstance(): SingletonV1 {
-    if (!SingletonV1.instance) {
-      SingletonV1.instance = new SingletonV1();
-    }
-    return SingletonV1.instance;
+// Logger.ts — ES Module Singleton (đơn giản, TypeScript-friendly)
+class Logger {
+  private formatMessage(level: string, message: string): string {
+    return `[${new Date().toISOString()}] [${level}] ${message}`;
   }
 
-  public doSomething(): void {
-    console.log('Singleton V1 doing something');
+  info(message: string): void {
+    console.log(this.formatMessage('INFO', message));
+  }
+
+  error(message: string): void {
+    console.error(this.formatMessage('ERROR', message));
   }
 }
 
-// ─────────────────────────────────────────
-// Version 2: Thread-safe (Java/C#)
-// Dùng IIFE + closure để simulate
-// ─────────────────────────────────────────
-const SingletonV2 = (() => {
-  let instance: any = null;
+// Export instance — TypeScript module singleton
+// Module này được load 1 lần, logger là singleton thực sự
+export const logger = new Logger();
+```
 
-  function createInstance() {
-    return {
-      timestamp: Date.now(),
-      doSomething() {
-        console.log('Singleton V2 doing something');
-      }
-    };
-  }
+```typescript
+// auth.ts — dùng singleton
+import { logger } from './Logger';
 
-  return {
-    getInstance() {
-      if (!instance) {
-        instance = createInstance();
-      }
-      return instance;
-    }
-  };
-})();
+logger.info('User logged in');
+```
 
-// ─────────────────────────────────────────
-// Version 3: with Dependency Injection
-// ─────────────────────────────────────────
+```typescript
+// payment.ts — cùng logger instance
+import { logger } from './Logger';
+
+logger.info('Payment processed');
+// → [2026-03-31T...] [INFO] User logged in
+// → [2026-03-31T...] [INFO] Payment processed
+```
+
+> **Tại sao ES Module Singleton tốt hơn classic `getInstance()`?**
+> - Không cần `getInstance()` — module được load 1 lần → instance được tạo 1 lần
+> - Không có static field → test dễ hơn (chỉ cần mock module)
+> - TypeScript type inference tốt hơn
+
+---
+
+### Version 2: Singleton với Dependency Injection
+
+```typescript
+// injectable.ts — Singleton qua DI container
 interface IDatabase {
-  query(sql: string): any;
+  query(sql: string, params?: any[]): any;
+  transaction<T>(fn: () => T): T;
 }
 
 class DatabaseConnection implements IDatabase {
-  constructor(private config: { host: string; port: number }) {
-    console.log(`Connecting to ${config.host}:${config.port}`);
+  private pool: any[] = [];
+  private static instance: DatabaseConnection;
+
+  // Private constructor ngăn new trực tiếp
+  private constructor(config: { host: string; port: number; max: number }) {
+    console.log(`🔌 Connecting to ${config.host}:${config.port} (max ${config.max})`);
+    this.pool = Array.from({ length: config.max }, (_, i) => ({ id: i }));
   }
 
-  query(sql: string): any {
-    return { sql, result: [] };
-  }
-}
-
-// Singleton Factory
-class Container {
-  private static services = new Map<string, any>();
-
-  public static register<T>(token: string, factory: () => T): void {
-    Container.services.set(token, factory());
+  // Double-checked locking (cho multithreaded languages)
+  public static getInstance(config?: { host: string; port: number; max: number }): IDatabase {
+    if (!DatabaseConnection.instance) {
+      DatabaseConnection.instance = new DatabaseConnection(config ?? { host: 'localhost', port: 5432, max: 10 });
+    }
+    return DatabaseConnection.instance;
   }
 
-  public static get<T>(token: string): T {
-    const service = Container.services.get(token);
-    if (!service) throw new Error(`Service ${token} not found`);
-    return service as T;
+  query(sql: string, params?: any[]): any {
+    return { sql, params, result: [] };
+  }
+
+  transaction<T>(fn: () => T): T {
+    return fn(); // Simplified
   }
 }
 
 // Usage
-Container.register('db', () => new DatabaseConnection({ host: 'localhost', port: 5432 }));
-const db = Container.get<IDatabase>('db');
+const db = DatabaseConnection.getInstance({ host: 'db.prod.com', port: 5432, max: 20 });
 ```
 
 ---
 
-## 📝 LeetCode Problems áp dụng
+## ⚖️ Trade-offs & Common Mistakes
 
-- **Không có bài LeetCode nào dành riêng cho Singleton** — nhưng pattern này xuất hiện trong:
-  - [LRU Cache](https://leetcode.com/problems/lru-cache/) — dùng Singleton cho cache manager
-  - [Min Stack](https://leetcode.com/problems/min-stack/) — dùng single instance pattern
+### ✅ Khi nào nên dùng
+
+- ✅ Cần **đúng một instance** trong toàn app (logger, config, connection pool)
+- ✅ Cần **global access point** đã biết trước, không muốn truyền qua mọi hàm
+- ✅ Instance được **reuse giữa nhiều modules** mà không muốn pass qua dependency chain
+
+### ❌ Khi nào không nên dùng
+
+- ❌ Có thể dùng **ES Module export** thay thế (đơn giản hơn, test dễ hơn)
+- ❌ Cần **nhiều instances** cho testing khác nhau → Singleton khó mock
+- ❌ Object cần **nhiều configurations** (dev vs prod) → dùng DI factory
+- ❌ Trong **multithreaded environment** (Java, Go) nếu không implement thread-safe
+
+### 🚫 Common Mistakes
+
+**1. Global variable disguised as Singleton**
+```typescript
+// ❌ Sai: Tạo biến global — không phải Singleton đúng nghĩa
+export const db = new Database(); // Đây là global variable!
+```
+
+**2. Multithreading race condition**
+```typescript
+// ❌ Sai: Trong multithreaded, 2 threads có thể vào cùng lúc → tạo 2 instances
+public static getInstance(): Singleton {
+  if (!instance) {           // Thread A check → TRUE
+    instance = new Singleton(); // Thread A + B đều vào đây → 2 instances!
+  }
+  return instance;
+}
+
+// ✅ Đúng: Double-checked locking
+public static getInstance(): Singleton {
+  if (!instance) {
+    synchronized (Singleton.class) {
+      if (!instance) {
+        instance = new Singleton();
+      }
+    }
+  }
+  return instance;
+}
+```
+
+**3. Serializable Singleton bị break**
+```typescript
+// ❌ Sai: Deserialize tạo instance mới, vi phạm Singleton!
+const obj = JSON.parse(JSON.stringify(singleton));
+
+// ✅ Đúng: Implement readResolve() (Java) hoặc use ES Module pattern
+```
+
+**4. Singleton tự ý extend behavior**
+```typescript
+// ❌ Sai: Singleton chứa quá nhiều trách nhiệm
+class BadSingleton {
+  static getInstance() { /* ... */ }
+  doA() { /* A */ }
+  doB() { /* B */ }  // ❌ Nên là class riêng
+  doC() { /* C */ }  // ❌ Quá nhiều responsibility
+}
+```
 
 ---
 
-## ✅ Pros / ❌ Cons
+## 🧪 Testing Strategies
 
-**Ưu điểm:**
-- ✅ Đảm bảo một instance duy nhất, tiết kiệm resource
-- ✅ Global access point — dễ gọi từ bất kỳ đâu
-- ✅ Lazy initialization — chỉ tạo khi cần
-- ✅ Có thể bảo vệ instance (private constructor)
+```typescript
+// Singleton khó test vì hard-coded instance
+// Cách 1: Mock ES Module
+jest.mock('./Logger', () => ({
+  logger: { info: jest.fn(), error: jest.fn() }
+}));
 
-**Nhược điểm:**
-- ❌ **Vi phạm Single Responsibility** — quản lý lifecycle + logic nghiệp vụ trong 1 class
-- ❌ **Hard coupling** — code phụ thuộc vào Singleton cụ thể, khó thay thế bằng mock trong test
-- ❌ **Global state** — là một dạng global variable, dễ tạo hidden dependencies
-- ❌ **Khó test** — không thể mock khi `getInstance()` trả về hardcoded instance
-- ❌ **Multithreading issues** — trong Java/C++ nếu không cẩn thận, nhiều threads có thể tạo nhiều instances
+// Cách 2: Reset instance giữa tests
+describe('UserService', () => {
+  beforeEach(() => {
+    // Reset singleton state (cần method công khai)
+    (DatabaseConnection as any).instance = null;
+  });
+
+  afterEach(() => {
+    (DatabaseConnection as any).instance = null;
+  });
+
+  it('should use database singleton', () => {
+    const db = DatabaseConnection.getInstance();
+    expect(db).toBe(DatabaseConnection.getInstance());
+  });
+});
+
+// Cách 3: Tốt nhất — dùng DI thay vì Singleton
+class UserService {
+  constructor(private db: IDatabase) {} // Inject, don't hard-code
+}
+```
 
 ---
 
-## ⚠️ Khi nào nên / không nên dùng
+## 🔄 Refactoring Path
 
-**Nên dùng khi:**
-- ✅ Cần đúng một instance trong toàn app (logger, config, connection pool)
-- ✅ Cần global access point đã biết trước
-- ✅ Instance được share giữa nhiều modules mà không muốn truyền qua mọi hàm
+**Từ Singleton → Dependency Injection:**
 
-**Không nên dùng khi:**
-- ❌ Có thể dùng **Dependency Injection** thay thế (DI tốt hơn vì test được)
-- ❌ Cần **nhiều instances** cho testing khác nhau
-- ❌ Object cần **nhiều configurations** khác nhau ( VD: test config ≠ prod config )
-- ❌ Trong **multithreaded environment** mà không implement thread-safe
+```typescript
+// ❌ Before: Singleton hard-coded
+class UserService {
+  private db = DatabaseConnection.getInstance();
 
----
+  async findUser(id: number) {
+    return this.db.query('SELECT * FROM users WHERE id = ?', [id]);
+  }
+}
 
-## 🚫 Common Mistakes / Pitfalls
+// ✅ After: DI — test được, mock được
+class UserService {
+  constructor(private db: IDatabase) {}
 
-1. **Global variable disguised as Singleton**
-   ```typescript
-   // ❌ Sai: Tạo biến global thay vì dùng getInstance()
-   export const db = new DatabaseConnection(); // đây là global variable, không phải Singleton!
-   ```
+  async findUser(id: number) {
+    return this.db.query('SELECT * FROM users WHERE id = ?', [id]);
+  }
+}
 
-2. **Multithreading race condition**
-   ```typescript
-   // ❌ Sai: Trong multithreaded, 2 threads có thể vào cùng lúc
-   public static getInstance(): Singleton {
-     if (!instance) {           // Thread A check
-       instance = new Singleton(); // Thread A + B đều vào đây!
-     }
-     return instance;
-   }
-   ```
-
-3. **Serializable Singleton bị break**
-   ```typescript
-   // ❌ Sai: Deserialize tạo instance mới!
-   const obj = JSON.parse(JSON.stringify(singleton));
-   // obj !== singleton → vi phạm Singleton
-   ```
+// Container setup
+container.register('db', () => DatabaseConnection.getInstance());
+const userService = new UserService(container.get<IDatabase>('db'));
+```
 
 ---
 
 ## 🎤 Interview Q&A
 
 **Q: Singleton là gì? Khi nào dùng?**
-> A: Singleton đảm bảo một class chỉ có một instance duy nhất trong app, với global access point. Dùng khi cần shared resource như logger, database connection pool, configuration manager.
+> A: Singleton đảm bảo một class chỉ có một instance duy nhất trong app, với global access point. Dùng khi cần shared resource như logger, database connection pool, configuration manager. Trong TypeScript, ES Module pattern (export instance từ module) là cách tốt nhất vì đơn giản và test dễ hơn classic `getInstance()`.
 
-**Q: Singleton khác gì global variable?**
-> A: Global variable tạo ngay khi load, không kiểm soát được lifecycle. Singleton lazy-init, có thể control khi nào tạo và destroy. Ngoài ra, Singleton có thể implement interface → test được, global variable thì không.
-
-**Q: Nhược điểm của Singleton là gì?**
-> A: Vi phạm Single Responsibility Principle (vừa quản lý instance vừa làm nghiệp vụ), gây hidden dependencies, khó test vì hard coupling, và là global state — anti-pattern trong OOP. Nhiều người khuyên tránh Singleton, dùng Dependency Injection thay thế.
+**Q: Singleton khác global variable?**
+> A: Global variable tạo ngay khi load module, không kiểm soát được lifecycle, có thể bị ghi đè. Singleton lazy-init khi cần, constructor private ngăn ghi đè, và có thể implement interface để mock trong test. Tuy nhiên, nhiều developer coi Singleton cũng là anti-pattern vì nó là global state ẩn — Dependency Injection được khuyên dùng thay thế.
 
 **Q: Làm sao test được code dùng Singleton?**
-> A: Có vài cách: (1) Thay `getInstance()` bằng Dependency Injection — inject mock instance vào constructor. (2) Dùng Singleton với `reset()` method cho test. (3) Interface hóa Singleton rồi mock qua DI container.
+> A: Ba cách: (1) Dùng ES Module pattern — chỉ cần `jest.mock()`. (2) Implement `resetInstance()` method cho test. (3) Tốt nhất: thay Singleton bằng Dependency Injection — inject mock instance vào constructor, không cần sửa code.
+
+**Q: Eager Singleton vs Lazy Singleton khác nhau gì?**
+> A: Eager tạo instance ngay khi class được load (an toàn trong multithreaded). Lazy tạo khi `getInstance()` được gọi lần đầu (tiết kiệm resource nếu không dùng). Trong TypeScript, ES Module singleton là eager (tạo khi module load) nhưng vì TypeScript module chỉ load một lần, nó hoạt động đúng.
