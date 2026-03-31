@@ -324,6 +324,104 @@ const TRACKS = [
   },
 
   {
+    id: 'redis',
+    name: 'Redis',
+    icon: '🔴',
+    domain: 'cs',
+    path: 'cs/redis',
+    readme: 'README.md',
+    chapters: [
+      {
+        name: '📖 Overview',
+        path: 'cs/redis',
+        readme: 'README.md',
+        problems: []
+      },
+      {
+        name: '01 — Core Data Structures',
+        path: 'cs/redis/01-core-data-structures',
+        readme: 'README.md',
+        problems: [
+          { name: 'Strings',               file: '001-strings.md',               difficulty: 'Easy' },
+          { name: 'Lists',                 file: '002-lists.md',                 difficulty: 'Easy' },
+          { name: 'Sets',                  file: '003-sets.md',                  difficulty: 'Easy' },
+          { name: 'Sorted Sets',           file: '004-sorted-sets.md',           difficulty: 'Medium' },
+          { name: 'Hashes',                file: '005-hashes.md',                 difficulty: 'Easy' },
+          { name: 'Bitmaps & HyperLogLog', file: '006-bitmaps-hyperloglog.md',   difficulty: 'Medium' },
+        ]
+      },
+      {
+        name: '02 — Advanced Structures',
+        path: 'cs/redis/02-advanced-structures',
+        readme: 'README.md',
+        problems: [
+          { name: 'Streams',               file: '007-streams.md',               difficulty: 'Medium' },
+          { name: 'Geospatial',           file: '008-geospatial.md',            difficulty: 'Medium' },
+          { name: 'JSON',                  file: '009-json.md',                  difficulty: 'Medium' },
+        ]
+      },
+      {
+        name: '03 — Features',
+        path: 'cs/redis/03-features',
+        readme: 'README.md',
+        problems: [
+          { name: 'Pub/Sub',              file: '010-pubsub.md',               difficulty: 'Easy' },
+          { name: 'Transactions',        file: '011-transactions.md',         difficulty: 'Medium' },
+          { name: 'Lua Scripting',        file: '012-lua-scripting.md',         difficulty: 'Hard' },
+          { name: 'Pipelines',            file: '013-pipelines.md',             difficulty: 'Medium' },
+          { name: 'Modules',              file: '014-modules.md',               difficulty: 'Medium' },
+        ]
+      },
+      {
+        name: '04 — Persistence',
+        path: 'cs/redis/04-persistence',
+        readme: 'README.md',
+        problems: [
+          { name: 'RDB Snapshots',        file: '015-rdb-snapshots.md',         difficulty: 'Medium' },
+          { name: 'AOF',                  file: '016-aof.md',                   difficulty: 'Medium' },
+          { name: 'Hybrid Storage',       file: '017-hybrid-storage.md',        difficulty: 'Hard' },
+        ]
+      },
+      {
+        name: '05 — Clustering & HA',
+        path: 'cs/redis/05-clustering-ha',
+        readme: 'README.md',
+        problems: [
+          { name: 'Replication',         file: '018-replication.md',           difficulty: 'Medium' },
+          { name: 'Sentinel',             file: '019-sentinel.md',              difficulty: 'Hard' },
+          { name: 'Cluster',              file: '020-cluster.md',               difficulty: 'Hard' },
+          { name: 'Redlock',              file: '021-redlock.md',               difficulty: 'Hard' },
+        ]
+      },
+      {
+        name: '06 — Performance',
+        path: 'cs/redis/06-performance',
+        readme: 'README.md',
+        problems: [
+          { name: 'Memory Management',   file: '022-memory-management.md',    difficulty: 'Medium' },
+          { name: 'Eviction Policies',   file: '023-eviction-policies.md',     difficulty: 'Medium' },
+          { name: 'I/O Threads',         file: '024-io-threads.md',            difficulty: 'Hard' },
+          { name: 'Optimization',        file: '025-optimization.md',          difficulty: 'Hard' },
+        ]
+      },
+      {
+        name: '07 — Use Cases',
+        path: 'cs/redis/07-use-cases',
+        readme: 'README.md',
+        problems: [
+          { name: 'Caching',             file: '026-caching.md',              difficulty: 'Medium' },
+          { name: 'Rate Limiting',       file: '027-rate-limiting.md',         difficulty: 'Medium' },
+          { name: 'Session Store',       file: '028-session-store.md',         difficulty: 'Easy' },
+          { name: 'Leaderboard',         file: '029-leaderboard.md',           difficulty: 'Medium' },
+          { name: 'Message Queue',       file: '030-message-queue.md',         difficulty: 'Hard' },
+          { name: 'Vector Search',       file: '031-vector-search.md',         difficulty: 'Hard' },
+          { name: 'Redis Stack',         file: '032-redis-stack.md',           difficulty: 'Medium' },
+        ]
+      },
+    ]
+  },
+
+  {
     id: 'english',
     name: 'English',
     icon: '🇬🇧',
