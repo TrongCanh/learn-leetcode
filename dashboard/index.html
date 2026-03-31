@@ -340,6 +340,7 @@
       padding: 30px 40px;
       max-height: calc(100vh - 100px);
       overflow-y: auto;
+      overflow-x: hidden;
       background: white;
     }
 
@@ -410,6 +411,18 @@
       margin: 18px 0;
       font-size: 14px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .preview-content .table-wrapper {
+      overflow-x: auto;
+      margin: 18px 0;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .preview-content .table-wrapper table {
+      margin: 0;
+      box-shadow: none;
     }
 
     .preview-content th, .preview-content td {
@@ -501,6 +514,8 @@
       .modal-body { padding: 20px; }
       .modal-header { flex-wrap: wrap; gap: 10px; }
       .modal-title { max-width: 100%; }
+      .preview-content .table-wrapper { margin: 18px 0; }
+      .preview-content table { font-size: 13px; }
     }
 
     footer {
@@ -816,6 +831,13 @@
         .then(md => {
           const html = marked.parse(md);
           document.getElementById('previewContent').innerHTML = html;
+          // Wrap tables in scrollable container
+          document.querySelectorAll('#previewContent table').forEach(table => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'table-wrapper';
+            table.parentNode.insertBefore(wrapper, table);
+            wrapper.appendChild(table);
+          });
           // Apply syntax highlighting after render
           document.querySelectorAll('pre code').forEach((block) => {
             hljs.highlightElement(block);
