@@ -136,139 +136,189 @@ set.size;  // 2
 
 ### Pattern 1: Frequency Counter
 
-**Dùng khi:** Đếm tần suất xuất hiện của các phần tử.
+**🤔 Tư duy:** Thay vì so sánh mọi cặp (O(n²)), ta đếm mỗi phần tử xuất hiện bao nhiêu lần rồi dùng con số đó để so sánh. Đếm tần suất = hash table (key = phần tử, value = số lần).
+
+**🔍 Dùng khi:**
+- Đề bài có: "đếm số lần xuất hiện", "tần suất", "frequency", "có bao nhiêu..."
+- Tìm phần tử xuất hiện nhiều nhất / ít nhất
+- Kiểm tra duplicate (hasDuplicate)
+- So sánh 2 chuỗi: anagram, isomorphic, palindrome permutation
+- Đề bài yêu cầu "top K phần tử hay gặp nhất"
+
+**📝 Tại sao nó hoạt động:**
+Mỗi phần tử ta chỉ duyệt **đúng 1 lần** để insert vào map. Sau đó đọc kết quả bất kỳ lúc nào → tổng O(n) thay vì O(n²) của brute force.
+
+**💻 Code mẫu:**
 
 ```javascript
-// ❌ Brute Force: O(n²) - so sánh mọi cặp
+// === HAS DUPLICATE ===
+// ❌ Brute Force: O(n²)
 function hasDuplicateBrute(nums) {
-  for (let i = 0; i < nums.length; i++) {
-    for (let j = i + 1; j < nums.length; j++) {
+  for (let i = 0; i < nums.length; i++)
+    for (let j = i + 1; j < nums.length; j++)
       if (nums[i] === nums[j]) return true;
-    }
-  }
   return false;
 }
 
-// ✅ Frequency Counter: O(n) - dùng Set
+// ✅ Frequency Counter: O(n)
 function hasDuplicate(nums) {
   const seen = new Set();
   for (const num of nums) {
-    if (seen.has(num)) return true;
+    if (seen.has(num)) return true; // gặp lần 2 → duplicate!
     seen.add(num);
   }
   return false;
 }
+
+// === TOP K FREQUENT ===
+// ❌ Sort toàn bộ: O(n log n)
+function topKFrequentSort(nums, k) {
+  const freq = new Map();
+  for (const num of nums)
+    freq.set(num, (freq.get(num) || 0) + 1);
+  return [...freq.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, k)
+    .map(([v]) => v);
+}
+
+// ✅ Bucket Sort: O(n) — freq tối đa = nums.length
+function topKFrequent(nums, k) {
+  const freq = new Map();
+  for (const num of nums)
+    freq.set(num, (freq.get(num) || 0) + 1);
+
+  // index = frequency → bucket[freq] chứa các số có freq đó
+  const buckets = Array(nums.length + 1).fill(null).map(() => []);
+  for (const [num, count] of freq)
+    buckets[count].push(num);
+
+  const result = [];
+  for (let f = buckets.length - 1; f >= 0 && result.length < k; f--)
+    if (buckets[f].length) result.push(...buckets[f]);
+  return result;
+}
 ```
 
-**Visual — Frequency Counter cho "anagram":**
+**🔍 Visual — Bucket Sort cho Top K:**
 ```
-Input: s = "cba", t = "abc"
+nums = [1, 1, 1, 2, 2, 3], k = 2
 
-Step 1: Count s
-  c → 1
-  b → 1
-  a → 1
+Frequency map:
+  1 → 3
+  2 → 2
+  3 → 1
 
-Step 2: Decrement t
-  a: 1 - 1 = 0  ✓
-  c: 1 - 1 = 0  ✓
-  b: 1 - 1 = 0  ✓
+Buckets (index = frequency):
+  [0]: []       [1]: [3]      [2]: [2]      [3]: [1]
+  freq=0       freq=1         freq=2         freq=3
 
-Step 3: Check - tất cả = 0 → ANAGRAM ✓
+Lấy từ freq cao → thấp: freq=3 → [1], freq=2 → [2]
+
+Answer: [1, 2] ✓
 ```
 
 ---
 
-### Pattern 2: Two Sum
+### Pattern 2: Two Sum (Hash Map)
 
-**Dùng khi:** Tìm 2 phần tử có tổng bằng target.
+**🤔 Tư duy:** Với mỗi số `num`, ta cần tìm `complement = target - num`. Thay vì duyệt toàn bộ, ta hỏi: "Ta đã thấy `complement` chưa?". Nếu có → tìm thấy. Chưa có → lưu `num` lại để dùng sau. Nhìn từ **tương lai ngược về quá khứ**.
+
+**🔍 Dùng khi:**
+- Đề bài có: "tìm 2 số có tổng bằng target", "có cặp nào thỏa..."
+- Trả về **index** (không phải giá trị)
+- Mảng có thể unsorted
+- LeetCode #1 (Two Sum) — bài kinh điển nhất
+
+**📝 Tại sao nó hoạt động:**
+Với mỗi `num` tại index `i`, `complement = target - num` là **duy nhất** nếu pair tồn tại. Dùng Map lưu `{value → index}` giúp tra O(1). Quan trọng: **check trước, insert sau** — để tránh tìm thấy chính mình.
+
+**💻 Code mẫu:**
 
 ```javascript
-// ❌ Brute Force: O(n²)
-function twoSumBrute(nums, target) {
-  for (let i = 0; i < nums.length; i++) {
-    for (let j = i + 1; j < nums.length; j++) {
-      if (nums[i] + nums[j] === target) {
-        return [i, j];
-      }
-    }
-  }
-}
-
-// ✅ Hash Map: O(n) - complement = target - num
+// ✅ Hash Map: O(n)
 function twoSum(nums, target) {
   const map = new Map(); // { value → index }
 
   for (let i = 0; i < nums.length; i++) {
     const complement = target - nums[i];
 
-    if (map.has(complement)) {
-      return [map.get(complement), i];
-    }
+    // ① CHECK trước: complement đã có trong map?
+    if (map.has(complement))
+      return [map.get(complement), i]; // ← Tìm thấy!
 
+    // ② INSERT sau: lưu số hiện tại
     map.set(nums[i], i);
   }
 }
 ```
 
-**Visual — Two Sum:**
+**🔍 Visual — Two Sum:**
 ```
 Input: nums = [2, 7, 11, 15], target = 9
 
-i=0: num=2,  complement=7  → map={} → miss → map={2:0}
-i=1: num=7,  complement=2  → map={2:0} → HIT! → return [0, 1]
+i=0: num=2,  complement=7
+     map={} → 7 chưa có → map.set(2, 0)
 
-Logic: "Ta đã thấy 2 trước đó, giờ cần 7 để = 9"
+i=1: num=7,  complement=2
+     map={2:0} → 2 đã có! → return [0, 1] ✓
+
+Logic: "Số 2 ta đã thấy ở index 0,
+        giờ cần 7 → pair (0,1)"
 ```
+
+**⚠️ Lưu ý:**
+- Trả về **index** (nên dùng Map, không phải Set)
+- Check **trước** khi insert — không thì tìm thấy chính mình
+- Map trong JS lưu **insertion order** → an toàn khi duyệt
 
 ---
 
 ### Pattern 3: Anagram Check
 
-**Dùng khi:** Kiểm tra 2 strings có cùng ký tự hay không.
+**🤔 Tư duy:** Anagram = 2 chuỗi có cùng ký tự, chỉ khác thứ tự. Nếu đếm ký tự của cả 2 chuỗi → 2 bảng giống nhau → là anagram. Đếm bằng Hash Map với key = ký tự, value = số lần.
+
+**🔍 Dùng khi:**
+- "2 chuỗi có phải là anagram không"
+- "cùng ký tự, thứ tự khác"
+- "group các strings là anagram của nhau"
+- Đề bài về ký tự: đếm chữ cái, kiểm tra permutation
+
+**📝 Tại sao nó hoạt động:**
+Anagram có tính chất: tổng tần suất mỗi ký tự bằng nhau. Dùng Map đếm → nếu 2 Map giống nhau → anagram. Tương tự có thể dùng **sorted string** làm key: `"eat"` → `"aet"`, `"tea"` → `"aet"` → cùng key = cùng anagram group.
+
+**💻 Code mẫu:**
 
 ```javascript
-// ❌ Brute Force: O(n log n) - sort rồi so sánh
-function isAnagramBrute(s, t) {
-  return s.split('').sort().join('') ===
-         t.split('').sort().join('');
-}
-
-// ✅ Hash Map: O(n) - đếm tần suất
+// ✅ Cách 1: Hash Map — O(n)
 function isAnagram(s, t) {
   if (s.length !== t.length) return false;
 
-  const count = {};
-  for (const char of s) {
-    count[char] = (count[char] || 0) + 1;
-  }
+  const count = new Map();
+  for (const char of s)
+    count.set(char, (count.get(char) || 0) + 1);
 
   for (const char of t) {
-    if (!count[char]) return false;
-    count[char]--;
+    if (!count.get(char)) return false; // char không có hoặc hết
+    count.set(char, count.get(char) - 1);
   }
-
   return true;
 }
 
-// ✅ Simplified: O(n) - dùng Map
-function isAnagram(s, t) {
-  if (s.length !== t.length) return false;
-
-  const freq = new Map();
-  for (const char of s) {
-    freq.set(char, (freq.get(char) || 0) + 1);
+// ✅ Cách 2: Sorted Key — O(n·k log k), k = avg length
+// "eat", "tea", "ate" → sorted = "aet" → cùng key
+function groupAnagrams(strs) {
+  const map = new Map();
+  for (const str of strs) {
+    const key = str.split('').sort().join(''); // sorted key
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(str);
   }
-  for (const char of t) {
-    if (!freq.has(char)) return false;
-    freq.set(char, freq.get(char) - 1);
-    if (freq.get(char) === 0) freq.delete(char);
-  }
-  return freq.size === 0;
+  return [...map.values()];
 }
 ```
 
-**Visual — Group Anagrams:**
+**🔍 Visual — Group Anagrams:**
 ```
 Input: ["eat","tea","tan","ate","nat","bat"]
 
@@ -284,46 +334,164 @@ Kết quả: [["eat","tea","ate"], ["tan","nat"], ["bat"]]
 
 ### Pattern 4: Prefix / Suffix Product
 
-**Dùng khi:** Tính product của tất cả phần tử TRỪ chính nó, mà KHÔNG dùng division.
+**🤔 Tư duy:** Muốn tính product của tất cả TRỪ chính mình. Nếu dùng division → gặp số 0 sẽ ra Infinity. Thay vào đó: với mỗi index `i`, chia mảng làm 2 phần — **trước i** và **sau i**. Tích trước + tích sau = kết quả. Mỗi phần tính **một lần duy nhất** qua mảng.
+
+**🔍 Dùng khi:**
+- Tính product của array **trừ chính nó**
+- Đề bài cấm dùng division
+- Có số 0 trong mảng
+- LeetCode #238 (Product Except Self)
+
+**📝 Tại sao nó hoạt động:**
+Tại index `i`, `result[i]` = (tích tất cả trước `i`) × (tích tất cả sau `i`). Prefix tích từ trái sang, Suffix tích từ phải sang — mỗi phần tử được nhân đúng 1 lần → O(n). Không dùng division nên không có vấn đề với số 0.
+
+**💻 Code mẫu:**
 
 ```javascript
-// ❌ Naive với Division: O(n) nhưng có edge case (0)
-// ✅ Prefix/Suffix: O(n) - không division
+// ✅ Prefix/Suffix: O(n), O(1) space (không tính result array)
 function productExceptSelf(nums) {
   const n = nums.length;
   const result = new Array(n).fill(1);
 
-  // Prefix: result[i] = product của tất cả phần tử TRƯỚC i
+  // ① Prefix: tích tất cả phần tử TRƯỚC i
   let prefix = 1;
   for (let i = 0; i < n; i++) {
-    result[i] = prefix;
-    prefix *= nums[i];
+    result[i] = prefix;      // gán trước khi nhân
+    prefix *= nums[i];      // cập nhật prefix
   }
 
-  // Suffix: nhân thêm product của tất cả phần tử SAU i
+  // ② Suffix: nhân thêm tích sau i
   let suffix = 1;
   for (let i = n - 1; i >= 0; i--) {
-    result[i] *= suffix;
-    suffix *= nums[i];
+    result[i] *= suffix;   // nhân thêm suffix
+    suffix *= nums[i];      // cập nhật suffix
   }
 
   return result;
 }
 ```
 
-**Visual — Product Except Self:**
+**🔍 Visual — Product Except Self:**
 ```
 Input: [1, 2, 3, 4]
 
-Index:   0    1    2    3
-nums:   [1]  [2]  [3]  [4]
-prefix:  1    1    2    6    (product trước i)
-suffix:  24   24   12   4    (product sau i)
+Pass 1 (Prefix):
+  i=0: result[0]=1,     prefix=1×1=1
+  i=1: result[1]=1,     prefix=1×2=2
+  i=2: result[2]=2,     prefix=2×3=6
+  i=3: result[3]=6,     prefix=6×4=24
+  → result = [1, 1, 2, 6]
 
-result:  24   12   8    6    (prefix × suffix)
+Pass 2 (Suffix):
+  i=3: result[3]=6×1=6,   suffix=1×4=4
+  i=2: result[2]=2×4=8,   suffix=4×3=12
+  i=1: result[1]=1×12=12, suffix=12×2=24
+  i=0: result[0]=1×24=24, suffix=24×1=24
+  → result = [24, 12, 8, 6]
 
-         2×3×4  1×3×4  1×2×4  1×2×3
-         = 24   = 12   = 8    = 6   ✓
+Kiểm tra: result[0] = 2×3×4 = 24 ✓
+          result[2] = 1×2×4 = 8  ✓
+```
+
+---
+
+### Pattern 5: Hash Map vs Object vs Set
+
+**🤔 Tư duy:** 3 cấu trúc này đều dùng hash, nhưng phục vụ mục đích khác nhau. **Set** = "có hay không", **Object** = key→value đơn giản, **Map** = key→value với đầy đủ tính năng.
+
+**🔍 Khi nào dùng cái nào:**
+
+| Cấu trúc | Dùng khi | Ví dụ |
+|-----------|-----------|--------|
+| **Set** | Chỉ cần kiểm tra tồn tại | duplicate check, seen values |
+| **Object `{}`** | Key là string/symbol, cần `.` hoặc `[]` access | simple key-value |
+| **Map** | Key là bất kỳ type, cần `.get/.set/.has()`, cần iteration order | đa số bài LeetCode |
+
+**💻 Code mẫu:**
+
+```javascript
+// Set — kiểm tra tồn tại
+const seen = new Set();
+seen.add(1);           // O(1)
+seen.has(1);           // true
+seen.delete(1);
+
+// Object — key luôn là string/symbol
+const obj = { name: "Alice", 1: "one" };
+obj[1];        // "one" — number tự convert sang "1"
+obj.name;     // "Alice"
+obj["name"];  // "Alice"
+
+// Map — key là bất kỳ type
+const map = new Map();
+map.set(1, "one");           // number key OK
+map.set({}, "object");        // object key OK
+map.get(1);                  // "one"
+map.keys();                   // iterable, giữ insertion order
+```
+
+**⚠️ Pitfall hay mắc:**
+```javascript
+// ❌ Object dùng number key → tự convert sang string
+const obj = {};
+obj[1] = "a";
+obj["1"]; // "a" ← 1 và "1" là cùng 1 key!
+
+// ✅ Map giữ nguyên type
+const map = new Map();
+map.set(1, "a");
+map.set("1", "b");
+map.get(1);   // "a"
+map.get("1"); // "b"
+```
+
+---
+
+### Pattern 6: Tại sao Bucket Sort là O(n)?
+
+**🤔 Tư duy:** Bucket Sort hoạt động O(n) vì nó **không sort** theo nghĩa truyền thống. Thay vào đó, nó **phân loại** phần tử vào các bucket dựa trên giá trị. Mỗi phần tử chỉ được xử lý O(1) khi bỏ vào bucket.
+
+**🔍 Tại sao không phải O(n log n)?**
+
+Sort truyền thống (quicksort, mergesort) mất O(n log n) vì phải **so sánh và sắp xếp** giữa các phần tử. Bucket Sort bỏ qua bước so sánh — nó dùng **giá trị làm index trực tiếp**.
+
+```
+Ví dụ: nums = [1,1,1,2,2,3], freq = {1:3, 2:2, 3:1}
+Bước 1: Đếm — mỗi phần tử duyệt 1 lần → O(n)
+Bước 2: Bỏ vào bucket[freq] — O(1) mỗi phần tử → O(n)
+Bước 3: Duyệt bucket từ freq cao → thấp → O(n + range)
+
+Tổng: O(n) vì không có bước so sánh nào!
+```
+
+**⚠️ Điều kiện để Bucket Sort đạt O(n):**
+- Range của giá trị phải **nhỏ và biết trước** (để tạo đủ bucket)
+- Nếu range = n² (ví dụ số từ 1 đến 10⁹), thì Bucket Sort trở nên O(n²)
+- Top K Frequent dùng được vì `freq ≤ nums.length` → range = n
+
+**💻 Code mẫu:**
+
+```javascript
+// Bucket Sort cho Top K Frequent — điều kiện lý tưởng
+// freq tối đa = nums.length → tạo n+1 buckets
+function topKFrequent(nums, k) {
+  const freq = new Map();
+  for (const num of nums)
+    freq.set(num, (freq.get(num) || 0) + 1);
+
+  // Bucket: index = frequency
+  // bucket[3] = [các số xuất hiện 3 lần]
+  const buckets = Array(nums.length + 1).fill(null).map(() => []);
+  for (const [num, count] of freq)
+    buckets[count].push(num);
+
+  // Thu thập từ freq cao nhất
+  const result = [];
+  for (let i = buckets.length - 1; i >= 0 && result.length < k; i--)
+    if (buckets[i].length) result.push(...buckets[i]);
+
+  return result;
+}
 ```
 
 ---
