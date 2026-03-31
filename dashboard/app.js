@@ -164,6 +164,63 @@ const TRACKS = [
   },
 
   {
+    id: 'design-patterns',
+    name: 'Design Patterns',
+    icon: '🏗️',
+    domain: 'cs',
+    path: 'cs/design-patterns',
+    readme: 'README.md',
+    chapters: [
+      {
+        name: '📖 Overview',
+        path: 'cs/design-patterns',
+        readme: 'README.md',
+        problems: []
+      },
+      {
+        name: 'Creational Patterns',
+        path: 'cs/design-patterns/01-creational-patterns',
+        readme: 'README.md',
+        problems: [
+          { name: 'Singleton',          file: '001-singleton.md',        difficulty: 'Easy' },
+          { name: 'Factory Method',      file: '002-factory-method.md',  difficulty: 'Easy' },
+          { name: 'Builder',             file: '003-builder.md',         difficulty: 'Easy' },
+        ]
+      },
+      {
+        name: 'Structural Patterns',
+        path: 'cs/design-patterns/02-structural-patterns',
+        readme: 'README.md',
+        problems: [
+          { name: 'Adapter',            file: '004-adapter.md',         difficulty: 'Medium' },
+          { name: 'Facade',             file: '005-facade.md',          difficulty: 'Medium' },
+          { name: 'Decorator',           file: '006-decorator.md',       difficulty: 'Medium' },
+        ]
+      },
+      {
+        name: 'Behavioral Patterns',
+        path: 'cs/design-patterns/03-behavioral-patterns',
+        readme: 'README.md',
+        problems: [
+          { name: 'Observer',           file: '007-observer.md',        difficulty: 'Easy' },
+          { name: 'Strategy',           file: '008-strategy.md',        difficulty: 'Easy' },
+          { name: 'Command',            file: '009-command.md',          difficulty: 'Medium' },
+        ]
+      },
+      {
+        name: 'State & Template & Proxy',
+        path: 'cs/design-patterns/04-state-template-proxy',
+        readme: 'README.md',
+        problems: [
+          { name: 'State',             file: '010-state.md',           difficulty: 'Medium' },
+          { name: 'Template Method',   file: '011-template-method.md',  difficulty: 'Medium' },
+          { name: 'Proxy',             file: '012-proxy.md',            difficulty: 'Medium' },
+        ]
+      }
+    ]
+  },
+
+  {
     id: 'database',
     name: 'Database',
     icon: '🗄️',

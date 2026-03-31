@@ -17,6 +17,7 @@ learn-leetcode/
 │
 ├── cs/                ← Computer Science
 │   ├── neetcode-75/  ← ✅ Hoàn thành
+│   ├── design-patterns/ ← 🚧 Đang xây dựng
 │   ├── database/      ← 🚧 Đang xây dựng
 │   └── typescript/    ← 🚧 Đang xây dựng
 │
@@ -54,6 +55,7 @@ xdg-open dashboard/index.html
 | Track | Trạng thái |
 |-------|------------|
 | 🧠 NeetCode 75 | ✅ Hoàn thành (75/75 bài) |
+| 🏗️ Design Patterns | 🚧 Đang xây dựng (0/12 patterns) |
 | 🗄️ Database | 🚧 Đang xây dựng |
 | 🟦 TypeScript | 🚧 Đang xây dựng |
 | 🇬🇧 English | 🚧 Đang xây dựng |
