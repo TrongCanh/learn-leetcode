@@ -125,12 +125,30 @@
     .week-progress {
       display: flex;
       align-items: center;
-      gap: 15px;
+      gap: 10px;
     }
 
     .progress-text {
       font-weight: 600;
       color: #ffd700;
+    }
+
+    .concept-btn {
+      padding: 8px 16px;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 10px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+
+    .concept-btn:hover {
+      background: rgba(255,255,255,0.35);
+      transform: scale(1.05);
     }
 
     .week-content {
@@ -438,6 +456,15 @@
       color: #dc2626;
     }
 
+    /* Remove visited link color */
+    .preview-content a, .concept-btn, .view-btn, .check-btn {
+      color: inherit;
+    }
+
+    .preview-content a:visited {
+      color: #667eea;
+    }
+
     /* Mobile */
     @media (max-width: 768px) {
       h1 { font-size: 2rem; }
@@ -511,6 +538,7 @@
         name: "Tuần 1: Arrays & Hashing",
         icon: "📦",
         folder: "01-arrays-hashing",
+        readme: "README.md",
         problems: [
           { name: "Contains Duplicate", file: "001-contains-duplicate.md", difficulty: "Easy" },
           { name: "Valid Anagram", file: "002-valid-anagram.md", difficulty: "Easy" },
@@ -526,6 +554,7 @@
         name: "Tuần 2: Two Pointers & Stack",
         icon: "👆",
         folder: "02-two-pointers-stack",
+        readme: "README.md",
         problems: [
           { name: "Valid Parentheses", file: "001-valid-parentheses.md", difficulty: "Easy" },
           { name: "Longest Substring", file: "002-longest-substring.md", difficulty: "Medium" },
@@ -541,6 +570,7 @@
         name: "Tuần 3: Sliding Window & Binary Search",
         icon: "🔍",
         folder: "03-sliding-window-binary-search",
+        readme: "README.md",
         problems: [
           { name: "Binary Search", file: "001-binary-search.md", difficulty: "Easy" },
           { name: "Search 2D Matrix", file: "002-search-2d-matrix.md", difficulty: "Medium" },
@@ -556,6 +586,7 @@
         name: "Tuần 4: Linked List & Trees",
         icon: "🌲",
         folder: "04-linked-list-trees",
+        readme: "README.md",
         problems: [
           { name: "Reverse Linked List", file: "001-reverse-linked-list.md", difficulty: "Easy" },
           { name: "Merge Two Sorted Lists", file: "002-merge-two-sorted-lists.md", difficulty: "Easy" },
@@ -572,6 +603,7 @@
         name: "Tuần 5: Trie & Heap",
         icon: "📊",
         folder: "05-trie-heap",
+        readme: "README.md",
         problems: [
           { name: "Implement Trie", file: "001-implement-trie.md", difficulty: "Medium" },
           { name: "Design Search Words", file: "002-design-search-words.md", difficulty: "Medium" },
@@ -585,6 +617,7 @@
         name: "Tuần 6: Dynamic Programming",
         icon: "💡",
         folder: "06-dynamic-programming",
+        readme: "README.md",
         problems: [
           { name: "Climbing Stairs", file: "001-climbing-stairs.md", difficulty: "Easy" },
           { name: "Min Cost Climbing", file: "002-min-cost-climbing.md", difficulty: "Easy" },
@@ -598,6 +631,7 @@
         name: "Tuần 7: Graphs",
         icon: "🔗",
         folder: "07-graphs",
+        readme: "README.md",
         problems: [
           { name: "Number of Islands", file: "001-number-of-islands.md", difficulty: "Medium" },
           { name: "Clone Graph", file: "002-clone-graph.md", difficulty: "Medium" },
@@ -615,6 +649,7 @@
         name: "Tuần 8: Intervals, Backtracking & Math",
         icon: "🧮",
         folder: "08-intervals-backtracking-math",
+        readme: "README.md",
         problems: [
           { name: "Insert Interval", file: "001-insert-interval.md", difficulty: "Hard" },
           { name: "Merge Intervals", file: "002-merge-intervals.md", difficulty: "Medium" },
@@ -677,6 +712,13 @@
               </div>
             </div>
             <div class="week-content" id="week-${wi}">
+              ${week.readme ? `
+              <div class="concept-section" style="padding: 15px 25px 10px;">
+                <button class="concept-btn" onclick="openPreview('${week.folder}', '${week.readme}', '📖 Concepts: ${week.name}', ${wi}, -1)">
+                  📖 Concepts & Patterns
+                </button>
+              </div>
+              ` : ''}
               <div class="problem-grid">
                 ${week.problems.map((p, pi) => {
                   const key = `${week.folder}/${p.file}`;
@@ -734,8 +776,8 @@
       currentProblem = pi;
       
       document.getElementById('modalTitle').textContent = title;
-      document.getElementById('prevBtn').disabled = pi === 0;
-      document.getElementById('nextBtn').disabled = pi === weeks[wi].problems.length - 1;
+      document.getElementById('prevBtn').disabled = pi <= 0;
+      document.getElementById('nextBtn').disabled = pi === -1 || pi === weeks[wi].problems.length - 1;
       document.getElementById('previewModal').classList.add('show');
       document.getElementById('previewContent').innerHTML = '<div class="preview-loading">⏳ Đang tải nội dung...</div>';
       document.body.style.overflow = 'hidden';
@@ -760,6 +802,7 @@
     }
 
     function prevProblem() {
+      if (currentProblem === -1) return;
       if (currentProblem > 0) {
         currentProblem--;
         const p = weeks[currentWeek].problems[currentProblem];
@@ -768,6 +811,7 @@
     }
 
     function nextProblem() {
+      if (currentProblem === -1) return;
       const problems = weeks[currentWeek].problems;
       if (currentProblem < problems.length - 1) {
         currentProblem++;
