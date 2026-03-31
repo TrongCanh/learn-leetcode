@@ -164,6 +164,75 @@ const TRACKS = [
   },
 
   {
+    id: 'socket-programming',
+    name: 'Socket Programming',
+    icon: '🔌',
+    domain: 'cs',
+    path: 'cs/socket-programming',
+    readme: 'README.md',
+    chapters: [
+      {
+        name: '📖 Overview',
+        path: 'cs/socket-programming',
+        readme: 'README.md',
+        problems: []
+      },
+      {
+        name: '01 — Fundamentals',
+        path: 'cs/socket-programming/01-fundamentals',
+        readme: 'README.md',
+        problems: [
+          { name: 'Network Basics',       file: '001-network-basics.md',    difficulty: 'Easy' },
+          { name: 'TCP vs UDP',           file: '002-tcp-vs-udp.md',        difficulty: 'Easy' },
+          { name: 'Socket API',           file: '003-socket-api.md',        difficulty: 'Medium' },
+          { name: 'OSI Model',           file: '004-osi-model.md',        difficulty: 'Easy' },
+        ]
+      },
+      {
+        name: '02 — TCP Sockets',
+        path: 'cs/socket-programming/02-tcp-sockets',
+        readme: 'README.md',
+        problems: [
+          { name: 'TCP Server',           file: '005-tcp-server.md',       difficulty: 'Medium' },
+          { name: 'TCP Client',           file: '006-tcp-client.md',       difficulty: 'Medium' },
+          { name: 'TCP State Diagram',    file: '007-tcp-state-diagram.md', difficulty: 'Hard' },
+        ]
+      },
+      {
+        name: '03 — UDP Sockets',
+        path: 'cs/socket-programming/03-udp-sockets',
+        readme: 'README.md',
+        problems: [
+          { name: 'UDP Server',              file: '008-udp-server.md',             difficulty: 'Medium' },
+          { name: 'UDP Client',              file: '009-udp-client.md',             difficulty: 'Medium' },
+          { name: 'Broadcast & Multicast',   file: '010-broadcast-multicast.md',   difficulty: 'Hard' },
+        ]
+      },
+      {
+        name: '04 — Advanced',
+        path: 'cs/socket-programming/04-advanced',
+        readme: 'README.md',
+        problems: [
+          { name: 'Non-blocking I/O',    file: '011-non-blocking-io.md',   difficulty: 'Hard' },
+          { name: 'Socket Options',     file: '012-socket-options.md',    difficulty: 'Medium' },
+          { name: 'IPv6',               file: '013-ipv6.md',              difficulty: 'Medium' },
+          { name: 'Socket Security',    file: '014-socket-security.md',   difficulty: 'Medium' },
+        ]
+      },
+      {
+        name: '05 — Real-World',
+        path: 'cs/socket-programming/05-real-world',
+        readme: 'README.md',
+        problems: [
+          { name: 'HTTP & WebSocket',       file: '015-http-websocket.md',    difficulty: 'Medium' },
+          { name: 'RPC & gRPC',             file: '016-rpc-grpc.md',          difficulty: 'Hard' },
+          { name: 'Performance Tuning',     file: '017-performance-tuning.md', difficulty: 'Hard' },
+        ]
+      },
+    ]
+  },
+
+  {
     id: 'design-patterns',
     name: 'Design Patterns',
     icon: '🏗️',
