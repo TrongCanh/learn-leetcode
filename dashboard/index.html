@@ -744,7 +744,7 @@
     }
 
     function loadPreview(folder, file) {
-      fetch(`${folder}/${file}`)
+      fetch(`../${folder}/${file}`)
         .then(res => res.text())
         .then(md => {
           const html = marked.parse(md);
