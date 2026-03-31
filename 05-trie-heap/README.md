@@ -279,7 +279,474 @@ class MaxHeap {
 
 ### Pattern 1: Implement Trie (Prefix Tree)
 
-**Dùng khi:** Cần insert/search/prefix-lookup strings.
+**🤔 Tư duy:** Trie lưu trữ strings theo **prefix path** — mỗi node là một ký tự, mỗi đường đi từ root đến một node là một prefix. Nếu `isEnd = true` tại một node → có một word kết thúc tại đó. Muốn tìm prefix → chỉ cần đi theo path từ root. Muốn tìm word → đi theo path và kiểm tra `isEnd`.
+
+**🔍 Dùng khi:**
+- Autocomplete / search-as-you-type
+- Spell checker
+- Tìm tất cả words bắt đầu bằng prefix
+- Tìm longest common prefix
+- IP routing (longest prefix match)
+- Word games (Scrabble, Boggle)
+
+**📝 Trie giải quyết vấn đề gì mà HashMap không:**
+- HashMap: tìm prefix "app*" → phải duyệt tất cả keys, kiểm tra startsWith → O(n·m)
+- Trie: đi theo path "a→p→p" → tất cả words dưới path này là prefix → O(m) với m = độ dài prefix
+- HashMap không có cách tự nhiên để liệt kê tất cả keys bắt đầu bằng prefix
+- Trie cho phép shared prefix storage → tiết kiệm memory khi nhiều words có chung prefix
+
+**💻 Code mẫu:**
+
+```javascript
+class TrieNode {
+  constructor() {
+    this.children = {};  // Map<character, TrieNode>
+    this.isEnd = false;
+  }
+}
+
+class Trie {
+  constructor() {
+    this.root = new TrieNode();
+  }
+
+  insert(word) {
+    let node = this.root;
+    for (const char of word) {
+      if (!node.children[char]) {
+        node.children[char] = new TrieNode();
+      }
+      node = node.children[char];
+    }
+    node.isEnd = true;
+  }
+
+  search(word) {
+    let node = this.root;
+    for (const char of word) {
+      if (!node.children[char]) return false;
+      node = node.children[char];
+    }
+    return node.isEnd;  // Must be a complete word
+  }
+
+  startsWith(prefix) {
+    let node = this.root;
+    for (const char of prefix) {
+      if (!node.children[char]) return false;
+      node = node.children[char];
+    }
+    return true;  // Just prefix, not necessarily a word
+  }
+}
+```
+
+**🔍 Visual — Trie Operations với ["app", "apple", "apply", "banana", "band"]:**
+
+```
+Insert các từ: "app", "apple", "apply", "banana", "band"
+
+root
+└── a
+│   └── p
+│       ├── p(isEnd) ────────────────────→ "app" ✓
+│       └── p → l → e(isEnd) ────────────→ "apple" ✓
+│           └── p → l → y(isEnd) ────────→ "apply" ✓
+└── b
+    └── a
+        └── n
+            ├── d → a → n → a(isEnd) ────→ "banana" ✓
+            └── d(isEnd) ──────────────────→ "band" ✓
+
+Search "apple":
+  root → a ✓ → p ✓ → p ✓ → l ✓ → e(isEnd=true) → return true ✓
+
+Search "app":
+  root → a ✓ → p ✓ → p(isEnd=true) → return true ✓
+
+StartsWith "appl":
+  root → a ✓ → p ✓ → p ✓ → l ✓ → return true ✓
+  (Không cần isEnd = true vì chỉ là prefix)
+
+StartsWith "ban":
+  root → b ✓ → a ✓ → n ✓ → return true ✓
+  (Dưới "ban" có "banana" và "band")
+```
+
+---
+
+### Pattern 2: Trie với Wildcard (. character)
+
+**🤔 Tư duy:** Wildcard `.` = "bất kỳ ký tự nào". Khi gặp `.`, ta phải thử **tất cả các children** của node hiện tại. Đệ quy DFS qua mọi nhánh. Nếu bất kỳ nhánh nào trả về true → pattern match.
+
+**🔍 Dùng khi:**
+- Design Add and Search Words Data Structure (LeetCode 211)
+- Pattern matching với wildcards
+- Word search trong bảng chữ cái (ví dụ: boggle)
+- Tìm words khớp với pattern có `.`
+
+**💻 Code mẫu:**
+
+```javascript
+class WordDictionary {
+  constructor() {
+    this.root = new TrieNode();
+  }
+
+  addWord(word) {
+    let node = this.root;
+    for (const char of word) {
+      if (!node.children[char]) {
+        node.children[char] = new TrieNode();
+      }
+      node = node.children[char];
+    }
+    node.isEnd = true;
+  }
+
+  search(word) {
+    return this.searchDFS(word, 0, this.root);
+  }
+
+  searchDFS(word, index, node) {
+    if (!node) return false;
+
+    if (index === word.length) {
+      return node.isEnd;  // Đã duyệt hết word
+    }
+
+    const char = word[index];
+
+    if (char === '.') {
+      // Thử TẤT CẢ children — bất kỳ nhánh nào match đều OK
+      for (const child of Object.values(node.children)) {
+        if (this.searchDFS(word, index + 1, child)) {
+          return true;
+        }
+      }
+      return false;
+    } else {
+      if (!node.children[char]) return false;
+      return this.searchDFS(word, index + 1, node.children[char]);
+    }
+  }
+}
+```
+
+**🔍 Visual — Search với ".ed":**
+
+```
+Trie có: ["head", "help", "hemp", "test"]
+
+Search ".ed":
+  root → '.' (wildcard) → thử tất cả children
+    h → e → a → d(isEnd) ← Match! ✓
+    h → e → l → p(isEnd)
+    h → e → m → p(isEnd)
+    t → e → s → t(isEnd)
+  Return true ✓
+
+Search "t..t":
+  root → t → '.' → 2 children (e)
+    e → '.' → s
+      s(isEnd) ← Match "test" ✓
+  Return true ✓
+
+Search "he..":
+  root → h → e → '.' → 3 children (a, l, m)
+    a✗ no path
+    l✗ no path
+    m✗ no path
+  Return false (no word "he.." in trie) ✓
+```
+
+---
+
+### Pattern 3: Kth Largest Element (MinHeap K)
+
+**🤔 Tư duy:** Để tìm K phần tử lớn nhất, ta chỉ cần giữ **K phần tử lớn nhất** trong heap tại mọi thời điểm. MinHeap size K: root = **nhỏ nhất** trong K elements lớn nhất. Khi thêm phần tử mới:
+- Nếu heap chưa đầy → thêm bình thường
+- Nếu heap đầy và phần tử mới > root → extract root rồi thêm mới
+
+**🔍 Dùng khi:**
+- Tìm K phần tử lớn nhất / nhỏ nhất
+- Kth largest, Kth smallest
+- Top K frequent elements
+- Leaderboard (top 10 players)
+- Trending topics
+
+**📝 Tại sao dùng Heap thay vì Sort toàn bộ:**
+- Sort toàn bộ: O(n log n) — sort tất cả
+- MinHeap size K: O(n log k) — chỉ maintain K elements
+- Khi n >> k (VD: 1 triệu elements, k=10): n log k = 1M × log 10 ≈ 1M × 4 vs n log n = 1M × 20 → **5 lần nhanh hơn**
+- Intuition: không cần sort những phần tử không nằm trong top K
+
+**💻 Code mẫu:**
+
+```javascript
+// ✅ MinHeap size K → O(n log k)
+function findKthLargest(nums, k) {
+  const minHeap = new MinHeap();
+
+  for (const num of nums) {
+    minHeap.insert(num);
+    if (minHeap.size() > k) {
+      minHeap.extractMin();  // Bỏ phần tử nhỏ nhất trong top K
+    }
+  }
+
+  return minHeap.peek();  // Root = Kth largest ✓
+}
+```
+
+**🔍 Visual — Trace với `nums = [3, 2, 1, 5, 6, 4]`, `k = 2` (tìm 2nd largest):**
+
+```
+MinHeap size K=2 → giữ 2 phần tử LỚN NHẤT
+
+Step  Array      Heap         Action              Root (min)
+───────────────────────────────────────────────────────────────
+ 1    [3]        [3]         insert 3, size≤2      3
+ 2    [3,2]      [2,3]       insert 2, size≤2       2
+ 3    [3,2,1]    [2,3,1]     insert 1, size=3>2    extract 1
+                      → heap=[2,3], size=2          2
+ 4    [3,2,1,5]  [2,5,3]     insert 5, size=3>2    extract 2
+                      → heap=[3,5], size=2          3
+ 5    [3,2,1,5,6] [3,5,6]    insert 6, size=3>2    extract 3
+                      → heap=[5,6], size=2          5
+ 6    [...,4]    [4,6,5]     insert 4, size=3>2    extract 4
+                      → heap=[5,6], size=2          5
+
+Final heap = [5, 6]
+  peek() = 5 = 2nd largest ✓
+  (1st largest = 6, extract lần cuối để ra)
+```
+
+---
+
+### Pattern 4: Top K Frequent Elements
+
+**🤔 Tư duy:** Kết hợp **Frequency Counter** (đếm số lần xuất hiện) với **MinHeap size K** (giữ K phần tử có frequency cao nhất). Mỗi lần thêm phần tử vào heap, nếu heap đầy → extract cái có frequency nhỏ nhất (đang ở root). Kết quả cuối = K phần tử xuất hiện nhiều nhất.
+
+**🔍 Dùng khi:**
+- Tìm K phần tử xuất hiện nhiều nhất
+- Đếm tần suất và tìm top
+- Trending hashtags, recommendation systems
+
+**📝 Tại sao MinHeap theo frequency (không phải MaxHeap):**
+
+| Cách | Heap size | So sánh | Kết quả |
+|------|-----------|---------|---------|
+| MinHeap size K | K | `num < peek()` → extract | Root = nhỏ nhất trong K lớn nhất ✓ |
+| MaxHeap size K | K | `num > peek()` → extract | Root = lớn nhất trong K nhỏ nhất ✗ |
+
+MinHeap giúp **tự động loại bỏ** những phần tử ít xuất hiện hơn. Root luôn là phần tử "yếu nhất" trong top K.
+
+**💻 Code mẫu:**
+
+```javascript
+// ✅ MinHeap theo frequency — O(n log k)
+function topKFrequent(nums, k) {
+  // 1. Frequency counter
+  const freq = new Map();
+  for (const num of nums) {
+    freq.set(num, (freq.get(num) || 0) + 1);
+  }
+
+  // 2. MinHeap size K — so sánh theo frequency
+  const heap = new MinHeap((a, b) => a.count - b.count);
+  for (const [num, count] of freq) {
+    heap.insert({ val: num, count });
+    if (heap.size() > k) {
+      heap.extractMin();  // Bỏ phần tử ít xuất hiện nhất
+    }
+  }
+
+  // 3. Extract: thứ tự ngược để có top K đúng
+  const result = [];
+  while (heap.size() > 0) {
+    result.push(heap.extractMin().val);
+  }
+  return result.reverse();
+}
+```
+
+---
+
+### Pattern 5: Median Data Stream (MaxHeap + MinHeap)
+
+**🤔 Tư duy:** Dùng 2 heaps: **MaxHeap** giữ nửa NHỎ hơn median, **MinHeap** giữ nửa LỚN hơn median. Invariant: `|size(maxHeap) - size(minHeap)| ≤ 1` và mọi phần tử trong maxHeap ≤ mọi phần tử trong minHeap. Khi đó: median = top của heap lớn hơn (odd) hoặc (top_max + top_min) / 2 (even).
+
+**🔍 Dùng khi:**
+- Tìm median của data stream (dữ liệu đến liên tục)
+- Real-time analytics
+- Stock price median, sensor data
+- Running median calculation
+
+**📝 Tại sao 2 heaps:** Với sorted array, median là phần tử giữa. 2 heaps đảm bảo ta luôn có: (1) nửa dưới (maxHeap) chứa K phần tử nhỏ nhất đã thấy, (2) nửa trên (minHeap) chứa K phần tử lớn nhất đã thấy. Median là điểm giữa → top của heap lớn hơn.
+
+**💻 Code mẫu:**
+
+```javascript
+// ✅ Two Heaps: O(n log n)
+class MedianFinder {
+  constructor() {
+    this.small = new MaxHeap();  // Nửa nhỏ hơn median
+    this.large = new MinHeap();   // Nửa lớn hơn median
+  }
+
+  addNum(num) {
+    // 1. Luôn insert vào maxHeap trước
+    this.small.insert(num);
+
+    // 2. Đảm bảo: all elements in small ≤ all in large
+    if (this.large.size() > 0 && this.small.peekMax() > this.large.peek()) {
+      const val = this.small.extractMax();
+      this.large.insert(val);
+    }
+
+    // 3. Balance sizes: |small| = |large| hoặc |small| = |large| + 1
+    if (this.small.size() > this.large.size() + 1) {
+      this.large.insert(this.small.extractMax());
+    }
+    if (this.large.size() > this.small.size()) {
+      this.small.insert(this.large.extractMin());
+    }
+  }
+
+  findMedian() {
+    if (this.small.size() > this.large.size()) {
+      return this.small.peekMax();  // Odd: median = top của maxHeap
+    }
+    return (this.small.peekMax() + this.large.peekMin()) / 2;  // Even
+  }
+}
+```
+
+**🔍 Visual — Trace với stream `[2, 1, 5, 7, 3, 8, 9]`:**
+
+```
+Stream: [2, 1, 5, 7, 3, 8, 9]
+─────────────────────────────────────────────────────────────
+add(2):  small=[2], large=[]  → median = 2
+add(1):  small=[1,2] (max heap) → balance → small=[1], large=[2]
+         → median = (1+2)/2 = 1.5
+add(5):  insert 5 into small → small=[5,1] → 5>2 → swap → small=[2,1], large=[5]
+         → median = (2+5)/2 = 3.5
+add(7):  insert 7 into small → small=[7,2] → 7>5 → swap → small=[5,2], large=[7]
+         → median = (5+7)/2 = 6
+add(3):  insert 3 into small → small=[3,5,2] → balance → small=[3,2], large=[5,7]
+         → median = (3+5)/2 = 4
+add(8):  insert 8 into small → small=[8,3,2] → 8>5 → swap → small=[5,3,2], large=[7,8]
+         → balance → |5|=3, |7|=2 → small=[5,3,2], large=[7,8]
+         → median = 5
+add(9):  insert 9 into small → small=[9,5,2,3] → 9>7 → swap → small=[7,5,2,3], large=[8,9]
+         → balance → |7|=4, |8|=2 → small=[7,5,2,3], large=[8,9]
+         → median = (7+8)/2 = 7.5
+
+Medians: [2, 1.5, 3.5, 6, 4, 5, 7.5]
+```
+
+---
+
+### Pattern 6: Merge K Sorted Lists (MinHeap)
+
+**🤔 Tư duy:** Thay vì merge lần lượt từng list (tốn O(n·k)), dùng MinHeap để luôn chọn **node nhỏ nhất tiếp theo** từ tất cả lists. Mỗi list contribute node đầu tiên vào heap → extract min → thêm node tiếp theo của list đó → lặp.
+
+**🔍 Dùng khi:**
+- Merge nhiều sorted lists/arrays thành một sorted list
+- External sorting (sort file lớn không load hết vào memory)
+- Database merge join
+
+**📝 Tại sao Heap tốt hơn brute force:** Brute force collect all → sort = O(N log N). Heap = O(N log K) với K = số lists. Khi K << N (VD: 10 lists, mỗi list 1000 elements = N=10000), heap tiết kiệm rất nhiều.
+
+**💻 Code mẫu:**
+
+```javascript
+// ✅ MinHeap: O(n log k) với k = số lists
+function mergeKLists(lists) {
+  const heap = new MinHeap();
+  const dummy = new ListNode(0);
+  let curr = dummy;
+
+  // 1. Insert head của mỗi list vào heap
+  for (const list of lists) {
+    if (list) {
+      heap.insert({ val: list.val, node: list });
+    }
+  }
+
+  // 2. Extract min → thêm next của nó vào heap
+  while (heap.size() > 0) {
+    const { val, node } = heap.extractMin();
+    curr.next = node;
+    curr = curr.next;
+
+    if (node.next) {
+      heap.insert({ val: node.next.val, node: node.next });
+    }
+  }
+
+  return dummy.next;
+}
+```
+
+**🔍 Visual — Trace với `lists = [1→4→5], [1→3→4], [2→6]`:**
+
+```
+Step 1: Init heap → [1(list1), 1(list2), 2(list3)]
+        Extract 1(list1) → output: 1
+        Push 4(list1) → heap: [1(list2), 2(list3), 4(list1)]
+
+Step 2: Extract 1(list2) → output: 1→1
+        Push 3(list2) → heap: [2(list3), 3(list2), 4(list1)]
+
+Step 3: Extract 2(list3) → output: 1→1→2
+        Push 6(list3) → heap: [3(list2), 4(list1), 6(list3)]
+
+Step 4: Extract 3(list2) → output: 1→1→2→3
+        Push 4(list2) → heap: [4(list1), 4(list2), 6(list3)]
+
+Step 5: Extract 4(list1) → output: 1→1→2→3→4
+        Push 5(list1) → heap: [4(list2), 5(list1), 6(list3)]
+
+Step 6: Extract 4(list2) → output: 1→1→2→3→4→4
+Step 7: Extract 5(list1) → output: 1→1→2→3→4→4→5
+Step 8: Extract 6(list3) → output: 1→1→2→3→4→4→5→6
+
+Result: 1→1→2→3→4→4→5→6 ✓
+```
+
+---
+
+### Pattern 7: Tại sao Heap thay vì Sort? O(n log k) vs O(n log n)
+
+**🤔 Tư duy:** Sort toàn bộ O(n log n) — tính toán nhiều hơn cần thiết khi ta chỉ muốn K phần tử. MinHeap size K chỉ maintain K elements → mỗi insert/extract chỉ tốn O(log K) thay vì O(log N). Khi K << N, đây là cải thiện đáng kể.
+
+**📝 So sánh:**
+
+```
+Khi n = 1,000,000 và k = 10:
+
+Sort toàn bộ:    1,000,000 × log₂(1,000,000) ≈ 20,000,000 operations
+MinHeap size K:  1,000,000 × log₂(10)          ≈  4,000,000 operations
+→ Tiết kiệm 5 lần ✓
+
+Khi n = k (VD: sort toàn bộ): cả 2 = O(n log n) — không khác biệt
+
+Intuition: Nếu bạn chỉ cần top 10 từ 1 triệu, tại sao phải sort 999,990 phần tử khác?
+Heap giúp bạn bỏ qua những phần tử không liên quan.
+```
+
+**📝 Checklist — Khi nào Heap vs Sort:**
+
+| Tình huống | Chọn | Lý do |
+|-----------|------|-------|
+| Top K / Bottom K | Heap O(n log k) | Không sort những phần tử không cần |
+| Cần sorted output | Sort O(n log n) | Heap không cho sorted order |
+| Data stream, median | 2 Heaps | Cần luôn biết median hiện tại |
+| Merge K sorted lists | MinHeap O(n log k) | Mỗi step chọn min từ K lists |
+| Priority queue (scheduling) | Heap | Insert/extract O(log n), peek O(1) |
 
 ```javascript
 class Trie {

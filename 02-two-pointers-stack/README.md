@@ -162,7 +162,16 @@ class Stack {
 
 ### Pattern 1: Valid Parentheses (Stack)
 
-**Dùng khi:** Kiểm tra cặp đóng/mở ngoặc hợp lệ.
+**🤔 Tư duy:** Stack hoạt động theo nguyên tắc **LIFO (Last In First Out)** — cái nào vào sau cùng thì ra trước. Với bài toán parentheses, mỗi ngoặc đóng `) } ]` phải khớp với ngoặc mở gần nhất chưa được đóng phía trước nó. Stack chính là cách ta "nhớ" ngoặc mở đang chờ được đóng.
+
+**🔍 Dùng khi:**
+- Đề bài hỏi "valid parentheses" / "balanced brackets"
+- Cần kiểm tra nesting đúng thứ tự (lồng nhau đúng cách)
+- Input là chuỗi chỉ chứa `(`, `)`, `{`, `}`, `[`, `]`
+- Compiler kiểm tra syntax code — lỗi "unexpected token"
+- Cần kiểm tra HTML/XML tags có đóng đúng thứ tự không
+
+**📝 Tại sao nó hoạt động:** Mỗi ngoặc đóng phải khớp với ngoặc mở **gần nhất** chưa được đóng. Stack đảm bảo: push ngoặc mở khi gặp → pop khi gặp ngoặc đóng → nếu pop ra không khớp → invalid. Cuối cùng stack rỗng nghĩa là tất cả đã được đóng đúng.
 
 ```javascript
 // ✅ Stack - O(n)
@@ -190,47 +199,48 @@ function isValid(s) {
 }
 ```
 
-**Visual — Valid Parentheses:**
+**🔍 Visual — Trace với input `"{[()]}"` và `"([)]"`:**
+
 ```
-Input: "({[]})"
-
-Char   Action    Stack
-─────────────────────────
-  (    push      [(]
-  {    push      [(, {]
-  [    push      [(, {, []
-  ]    pop [     [(, {]  ✓ match
-  }    pop {     [(]    ✓ match
-  )    pop (     []     ✓ match
-                        → Stack EMPTY → TRUE ✓
-
+Input: "{[()]}"
+══════════════════════════════════════════════════════
+Char   Action    Stack              Giải thích
+──────────────────────────────────────────────────────
+  {    push      [{]               Mở curly
+  [    push      [{, []            Mở square
+  (    push      [{, [, (]         Mở paren
+  )    pop → (   [{, []            Đóng paren khớp ✓
+  ]    pop → [   [{]               Đóng square khớp ✓
+  }    pop → {   []                Đóng curly khớp ✓
+                                           Stack EMPTY → TRUE ✓
+══════════════════════════════════════════════════════
 Input: "([)]"
-
-Char   Action    Stack
-─────────────────────────
-  (    push      [(]
-  [    push      [(, []
-  )    pop [     [(]    ✗ expected [ but got ( → FALSE ✗
+══════════════════════════════════════════════════════
+Char   Action    Stack              Giải thích
+──────────────────────────────────────────────────────
+  (    push      [(]               Mở paren
+  [    push      [(, []            Mở square
+  )    pop → [   [(]               Đóng paren... nhưng top là [! ✗
+                                           Mismatch → FALSE ✗
+══════════════════════════════════════════════════════
 ```
 
 ---
 
 ### Pattern 2: Two Sum (Sorted Array)
 
-**Dùng khi:** Tìm 2 số có tổng = target trong sorted array.
+**🤔 Tư duy:** Vì mảng đã sorted, nếu tổng 2 phần tử **lớn hơn** target thì dù có thay đổi left hay không, **luôn cần giảm right** (vì right càng lớn sum càng lớn). Tương tự, nếu sum **nhỏ hơn**, cần tăng left. Hai pointer đi ngược nhau thu hẹp không gian tìm kiếm từ O(n²) xuống O(n) vì mỗi phần tử chỉ được duyệt tối đa 1 lần.
+
+**🔍 Dùng khi:**
+- Mảng đã sorted, tìm 2 số có tổng = target
+- Đề bài hỏi "find two numbers that add up to target in a sorted array"
+- Đề bài hỏi "pair with given sum in sorted order"
+- Container With Most Water (biến thể: không tìm sum mà tìm max area)
+- Trapping Rain Water
+
+**📝 Tại sao nó hoạt động:** Sorted array cho ta **monotonicity** — khi left tăng, sum tăng; khi right giảm, sum giảm. Vậy nếu sum > target, ta chắc chắn cần giảm sum → chỉ có thể di chuyển right sang trái. Không bao giờ cần di chuyển left sang phải vì điều đó chỉ làm sum lớn hơn.
 
 ```javascript
-// ❌ Brute Force: O(n²)
-function twoSumSorted(nums, target) {
-  for (let i = 0; i < nums.length; i++) {
-    for (let j = i + 1; j < nums.length; j++) {
-      if (nums[i] + nums[j] === target) {
-        return [i, j];
-      }
-    }
-  }
-}
-
 // ✅ Two Pointers: O(n)
 function twoSumSorted(nums, target) {
   let left = 0;
@@ -242,9 +252,9 @@ function twoSumSorted(nums, target) {
     if (sum === target) {
       return [left, right];
     } else if (sum < target) {
-      left++;   // Tăng sum → di chuyển left sang phải
+      left++;   // Sum nhỏ → tăng left để tăng sum
     } else {
-      right--;  // Giảm sum → di chuyển right sang trái
+      right--;  // Sum lớn → giảm right để giảm sum
     }
   }
 
@@ -252,101 +262,124 @@ function twoSumSorted(nums, target) {
 }
 ```
 
-**Visual — Two Pointers vs Brute Force:**
+**🔍 Visual — Trace với `nums = [1, 2, 4, 7, 11, 15]`, target = 9:**
+
 ```
-Mảng sorted: [1, 2, 3, 4, 5, 6, 7, 8, 9], target = 9
+Step 1: left=1 (idx 0), right=15 (idx 5)  →  sum = 16 > 9
+        ┌──────────────────────────────────────────────┐
+        │  [1,  2,  4,  7,  11,  15]                │
+        │   ↑                         ↑               │
+        │  left                     right            │
+        │  sum=16 > 9 → RIGHT--                             │
+        └──────────────────────────────────────────────┘
 
-BRUTE FORCE (O(n²)):
-  Check mọi cặp:
-    (1,2)(1,3)(1,4)...(1,9)
-    (2,3)(2,4)...(2,9)
-    ...
+Step 2: left=1, right=11  →  sum = 12 > 9
+        ┌──────────────────────────────────────────────┐
+        │  [1,  2,  4,  7,  11,  15]                │
+        │   ↑               ↑                        │
+        │  left            right                      │
+        │  sum=12 > 9 → RIGHT--                             │
+        └──────────────────────────────────────────────┘
 
-TWO POINTERS (O(n)):
-  Step 1: left=1, right=9 → sum=10 > 9 → right--  [1,2,3,4,5,6,7,8,9]
-                                                      ↑           ↑
-                                                    left       right
+Step 3: left=1, right=7  →  sum = 8 < 9
+        ┌──────────────────────────────────────────────┐
+        │  [1,  2,  4,  7,  11,  15]                │
+        │   ↑          ↑                              │
+        │  left      right                            │
+        │  sum=8 < 9 → LEFT++                              │
+        └──────────────────────────────────────────────┘
 
-  Step 2: left=1, right=8 → sum=9 → FOUND!  [1,2,3,4,5,6,7,8,9]
-                                                  ↑       ↑
-                                                left   right
+Step 4: left=2, right=7  →  sum = 9 = target = 9 ✓
+        ┌──────────────────────────────────────────────┐
+        │  [1,  2,  4,  7,  11,  15]                │
+        │       ↑      ↑                              │
+        │     left  right                             │
+        │     Return [1, 3] (values 2 + 7 = 9)  ✓         │
+        └──────────────────────────────────────────────┘
 ```
 
 ---
 
 ### Pattern 3: Palindrome Check
 
-**Dùng khi:** Kiểm tra chuỗi/số có đọc ngược giống như đọc xuôi không.
+**🤔 Tư duy:** Palindrome là chuỗi đọc xuôi = đọc ngược. Ta không cần so sánh với reversed string (tốn O(n) space). Thay vào đó, với 2 pointers từ hai đầu, chỉ cần so sánh từng cặp characters từ ngoài vào trong. Nếu tất cả các cặp đều giống nhau → palindrome.
+
+**🔍 Dùng khi:**
+- Kiểm tra string là palindrome (bỏ spaces, punctuation, case)
+- Kiểm tra số nguyên là palindrome (không dùng string)
+- Đề bài hỏi "is this a palindrome?"
+- Xử lý chuỗi đã normalize (lowercase, alphanumeric)
+
+**📝 Tại sao nó hoạt động:** Nếu s[i] = s[n-1-i] với mọi i từ 0 → n/2, thì đọc xuôi = đọc ngược. Two pointers đảm bảo ta so sánh đúng từng cặp đối xứng mà không cần tạo reversed copy. Điều kiện dừng là left >= right nghĩa là đã so sánh hết các cặp.
 
 ```javascript
-// ❌ Brute Force: Reverse rồi so sánh → O(n) space
-function isPalindrome(s) {
-  const reversed = s.split('').reverse().join('');
-  return s === reversed;
-}
-
 // ✅ Two Pointers: O(1) space
 function isPalindrome(s) {
+  // Normalize: bỏ non-alphanumeric, lowercase
+  const clean = s.toLowerCase().replace(/[^a-z0-9]/g, '');
   let left = 0;
-  let right = s.length - 1;
+  let right = clean.length - 1;
 
   while (left < right) {
-    if (s[left] !== s[right]) {
-      return false;
-    }
+    if (clean[left] !== clean[right]) return false;
     left++;
     right--;
   }
   return true;
 }
 
-// ✅ Two Pointers (cho số nguyên - không chuyển thành string)
+// ✅ Two Pointers (số nguyên — không chuyển string)
 function isPalindromeNumber(x) {
   if (x < 0) return false;
-
-  let reversed = 0;
-  let original = x;
-
+  let reversed = 0, original = x;
   while (x > 0) {
     reversed = reversed * 10 + (x % 10);
     x = Math.floor(x / 10);
   }
-
   return original === reversed;
 }
 ```
 
-**Visual — Palindrome với Two Pointers:**
+**🔍 Visual — Trace với `"A man, a plan, a canal: Panama"`:**
+
 ```
-Input: "A man, a plan, a canal: Panama"
+Step 0: Clean string = "amanaplanacanalpanama" (length=21)
+        ┌──────────────────────────────────────────┐
+        │  a  m  a  n  a  p  l  a  n  a  c  a  n  a  l  p  a  n  a  m  a  │
+        │  ↑                                               ↑               │
+        │ left=0                                           right=20           │
+        │ 'a' == 'a' ✓  → left=1, right=19                          │
+        └──────────────────────────────────────────┘
 
-Bước 1: Normalize (bỏ non-alphanumeric, lowercase)
-  → "amanaplanacanalpanama"
+Step 1: left=1, right=19
+        ┌──────────────────────────────────────────┐
+        │  a  m  a  n  a  p  l  a  n  a  c  a  n  a  l  p  a  n  a  m  a  │
+        │      ↑                                       ↑                │
+        │   left=1                                  right=19             │
+        │ 'm' == 'm' ✓  → left=2, right=18                          │
+        └──────────────────────────────────────────┘
 
-Bước 2: Two Pointers
-  a m a n a p l a n a c a n a l p a n a m a
-  ↑                                     ↑
- left                                 right
+... tiếp tục cho đến left=10, right=10
+(Tất cả 10 cặp đều match)
 
-  a m a n a p l a n a c a n a l p a n a m a
-      ↑                               ↑
-    left                            right
-
-  → So sánh từng cặp, tất cả match → PALINDROME ✓
+Result: PALINDROME ✓
 ```
 
 ---
 
 ### Pattern 4: Remove Duplicates (Slow & Fast)
 
-**Dùng khi:** Xóa duplicates từ sorted array, giữ unique elements.
+**🤔 Tư duy:** Slow pointer đánh dấu **vị trí cuối cùng** của unique elements (kết quả tính đến thời điểm hiện tại). Fast pointer duyệt toàn bộ mảng. Khi `nums[fast] ≠ nums[slow]`, ta tìm thấy một unique element mới → đẩy nó vào vị trí `slow + 1`. Các duplicates sẽ bị skip tự động.
+
+**🔍 Dùng khi:**
+- Mảng **đã sorted**, cần xóa duplicates in-place
+- Đề bài hỏi "remove duplicates from sorted array"
+- Giữ kết quả trong cùng mảng (không dùng extra array/Set)
+- Đếm số unique elements trong sorted array
+
+**📝 Tại sao nó hoạt động:** Trong sorted array, duplicates luôn nằm **liền kề nhau**. Khi `nums[fast]` khác `nums[slow]`, ta biết chắc `nums[fast]` là một giá trị mới chưa xuất hiện (vì mảng sorted). Việc đặt nó tại `slow + 1` đảm bảo thứ tự tăng dần được bảo toàn mà không cần shift cả mảng.
 
 ```javascript
-// ❌ Brute Force: Dùng Set → O(n) space
-function removeDuplicatesBrute(nums) {
-  return [...new Set(nums)].length;
-}
-
 // ✅ Two Pointers (in-place): O(1) space
 function removeDuplicates(nums) {
   if (nums.length === 0) return 0;
@@ -354,38 +387,147 @@ function removeDuplicates(nums) {
   let slow = 0; // Vị trí cuối cùng của unique elements
 
   for (let fast = 1; fast < nums.length; fast++) {
-    // Nếu fast khác slow → tìm thấy unique mới
     if (nums[fast] !== nums[slow]) {
       slow++;
-      nums[slow] = nums[fast]; // Đưa unique vào vị trí slow
+      nums[slow] = nums[fast];
     }
-    // Nếu bằng → skip (duplicate)
   }
 
-  return slow + 1; // Số lượng unique elements
+  return slow + 1;
 }
 ```
 
-**Visual — Remove Duplicates:**
-```
-Input:  [1, 1, 2, 2, 3, 4, 4, 5]
-        slow=0, fast=1
+**🔍 Visual — Trace với `nums = [1, 1, 2, 2, 3, 4, 4, 5]`:**
 
-fast=1: nums[1]=1 == nums[0]=1 → skip (duplicate)
-fast=2: nums[2]=2 != nums[0]=1 → slow=1 → nums[1]=2
-        [1, 2, 2, 2, 3, 4, 4, 5]  (đè lên vị trí 1)
-fast=3: nums[3]=2 == nums[1]=2 → skip
-fast=4: nums[4]=3 != nums[1]=2 → slow=2 → nums[2]=3
-        [1, 2, 3, 2, 3, 4, 4, 5]
-fast=5: nums[5]=4 != nums[2]=3 → slow=3 → nums[3]=4
-        [1, 2, 3, 4, 3, 4, 4, 5]
-fast=6: nums[6]=4 == nums[3]=4 → skip
-fast=7: nums[7]=5 != nums[3]=4 → slow=4 → nums[4]=5
-        [1, 2, 3, 4, 5, 4, 4, 5]
+```
+Index:    [ 0  1  2  3  4  5  6  7 ]
+Value:    [ 1, 1, 2, 2, 3, 4, 4, 5 ]
+          slow=0, fast=1
+
+Step     fast    nums[fast]   nums[slow]   Equal?   Action       Array
+───────────────────────────────────────────────────────────────────────────────
+init      1         1           1          ✓        skip        [1, 1, 2, 2, 3, 4, 4, 5]
+          2         2           1          ✗        slow=1       [1, 2, 2, 2, 3, 4, 4, 5]
+                                                    nums[1]=2
+          3         2           2          ✓        skip
+          4         3           2          ✗        slow=2       [1, 2, 3, 2, 3, 4, 4, 5]
+                                                    nums[2]=3
+          5         4           3          ✗        slow=3       [1, 2, 3, 4, 3, 4, 4, 5]
+                                                    nums[3]=4
+          6         4           4          ✓        skip
+          7         5           4          ✗        slow=4       [1, 2, 3, 4, 5, 4, 4, 5]
+                                                    nums[4]=5
 
 Return slow+1 = 5
-Unique array: [1, 2, 3, 4, 5]
+Unique array (first 5 elements): [1, 2, 3, 4, 5] ✓
 ```
+
+---
+
+### Pattern 5: Container With Most Water (Two Pointers — Opposite Direction)
+
+**🤔 Tư duy:** Diện tích container = `chiều cao nhỏ hơn × khoảng cách`. Vì khoảng cách giữa 2 walls càng xa thì tiềm năng diện tích càng lớn, nhưng chiều cao bị giới hạn bởi **wall thấp hơn**. Tại mỗi bước, nếu ta di chuyển wall cao hơn → diện tích **không thể tăng** (khoảng cách giảm, chiều cao không tăng). Nên **luôn di chuyển wall thấp hơn** để có cơ hội tìm được wall cao hơn.
+
+**🔍 Dùng khi:**
+- Đề bài hỏi "maximum area between two lines/containers"
+- Đề bài hỏi "max water container"
+- Tìm 2 điểm trên đồ thị tạo diện tích lớn nhất với constraint `area = min(height[i], height[j]) × |i - j|`
+
+**📝 Tại sao di chuyển pointer nhỏ hơn:** Giả sử left nhỏ hơn right. Nếu giữ left và di chuyển right, diện tích mới = `min(left, newRight) × (newDistance)`. Vì newRight ≤ right và min(left, newRight) ≤ left, nên area **giảm hoặc không đổi**. Ngược lại, di chuyển left có thể tìm được wall cao hơn → area tăng.
+
+```javascript
+function maxArea(height) {
+  let left = 0, right = height.length - 1;
+  let maxArea = 0;
+
+  while (left < right) {
+    const w = right - left;
+    const h = Math.min(height[left], height[right]);
+    maxArea = Math.max(maxArea, h * w);
+
+    // Luôn di chuyển pointer có chiều cao NHỎ HƠN
+    if (height[left] < height[right]) {
+      left++;
+    } else {
+      right--;
+    }
+  }
+
+  return maxArea;
+}
+```
+
+**🔍 Visual — Trace với `height = [1, 8, 6, 2, 5, 4, 8, 9, 3]`:**
+
+```
+Step 1: left=1, right=3  →  area = min(1,3)×8 = 8
+        ┌──────────────────────────────────────────┐
+        │  [1, 8, 6, 2, 5, 4, 8, 9, 3]           │
+        │   ↑                           ↑          │
+        │ left=1                       right=3        │
+        │ h=min(1,3)=1, w=8 → area=8              │
+        │ left=1 < right=3 → LEFT++                    │
+        └──────────────────────────────────────────┘
+
+Step 2: left=8, right=3  →  area = min(8,3)×7 = 21
+        ┌──────────────────────────────────────────┐
+        │  [1, 8, 6, 2, 5, 4, 8, 9, 3]           │
+        │       ↑                       ↑          │
+        │    left=8                     right=3       │
+        │ h=min(8,3)=3, w=7 → area=21 ← MAX           │
+        │ right=3 < left=8 → RIGHT--                    │
+        └──────────────────────────────────────────┘
+
+Step 3: left=8, right=8  →  area = min(8,8)×5 = 40 ← NEW MAX!
+        (giải thích: 8×5=40)
+        ...
+```
+
+---
+
+### Pattern 6: Stack vs Two Pointers vs Slow & Fast — Khi nào dùng cái nào?
+
+**🤔 Tư duy:** Ba kỹ thuật này đều dùng 2 "con trỏ" nhưng với tư duy hoàn toàn khác nhau. Stack dùng cho **matching pairs theo thứ tự** (LIFO), Two Pointers dùng cho **tìm cặp với sorted array**, còn Slow & Fast dùng cho **duyệt cùng hướng** với khoảng cách cố định.
+
+**📝 Decision Tree:**
+
+```
+Bài toán của bạn
+    │
+    ├── Cần matching pairs theo thứ tự? ──→ STACK (LIFO)
+    │     (parentheses, tags, undo history, DFS)
+    │
+    ├── Mảng ĐÃ SORTED?
+    │     ├── Tìm cặp/tổng? ──────────────→ TWO POINTERS (Opposite)
+    │     │   (Two Sum, Container With Most Water)
+    │     ├── Palindrome check? ───────────→ TWO POINTERS (Opposite)
+    │     └── Xóa duplicates in-place? ───→ SLOW & FAST (Same Direction)
+    │
+    ├── Tìm middle / cycle detection? ────→ SLOW & FAST
+    │     (Linked List)
+    │
+    └── Không sorted, cần expand/shrink? ─→ SLIDING WINDOW
+          (Longest substring, max subarray sum)
+```
+
+**📝 Khi nào Stack:**
+- Parentheses/brackets validation
+- DFS traversal (explicit stack thay recursion)
+- Undo/Redo operations
+- Monotonic stack (Next Greater Element)
+- Expression evaluation
+
+**📝 Khi nào Two Pointers (Opposite Directions):**
+- Sorted array + pair finding
+- Palindrome checking
+- Container area
+- Trapping rain water
+
+**📝 Khi nào Slow & Fast:**
+- Remove duplicates (sorted array)
+- Find middle of list
+- Cycle detection (Floyd's algorithm)
+- Reorder list
 
 ---
 

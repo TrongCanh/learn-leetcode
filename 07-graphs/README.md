@@ -289,7 +289,617 @@ BFS (queue):  A → B → C → D → E → F → G
 
 ### Pattern 1: Number of Islands (DFS/BFS Flood Fill)
 
-**Dùng khi:** Đếm số vùng liên thông trong grid.
+**🤔 Tư duy:** Grid là graph 2D. Mỗi ô `'1'` là một node. Khi tìm thấy `'1'`, ta "lan tràn" (flood fill) tất cả các ô `'1'` liền kề (4 directions) bằng cách đánh dấu chúng thành `'0'`. Đếm số lần bắt đầu flood fill = số islands.
+
+**🔍 Dùng khi:**
+- Đếm số islands (vùng đất liền kề) trong grid
+- Flood fill ( Paint tool, image processing)
+- Đếm số regions trong binary matrix
+- "Number of provinces", "Number of closed islands"
+
+**📝 Tại sao flood fill hoạt động:** Khi ta đánh dấu `'1'` → `'0'` tại một điểm, ta đảm bảo không đếm lại island đó lần thứ hai. Mỗi `'1'` được visited đúng 1 lần. Flood fill đệ quy/iterative đảm bảo tất cả ô liền kề của cùng một island đều được đánh dấu.
+
+**💻 Code mẫu:**
+
+```javascript
+// LeetCode 200: Number of Islands
+
+// ✅ DFS — O(m·n) time, O(m·n) space (call stack)
+function numIslands(grid) {
+  if (!grid || grid.length === 0) return 0;
+
+  let count = 0;
+  const m = grid.length, n = grid[0].length;
+
+  function dfs(i, j) {
+    if (i < 0 || i >= m || j < 0 || j >= n || grid[i][j] === '0') {
+      return;
+    }
+
+    grid[i][j] = '0';  // Đánh dấu visited
+
+    dfs(i + 1, j);     // Flood fill 4 directions
+    dfs(i - 1, j);
+    dfs(i, j + 1);
+    dfs(i, j - 1);
+  }
+
+  for (let i = 0; i < m; i++) {
+    for (let j = 0; j < n; j++) {
+      if (grid[i][j] === '1') {
+        count++;
+        dfs(i, j);  // Flood fill cả island
+      }
+    }
+  }
+
+  return count;
+}
+
+// ✅ BFS — O(m·n) time, O(m·n) space (queue)
+function numIslandsBFS(grid) {
+  if (!grid || grid.length === 0) return 0;
+
+  let count = 0;
+  const m = grid.length, n = grid[0].length;
+  const queue = [];
+
+  for (let i = 0; i < m; i++) {
+    for (let j = 0; j < n; j++) {
+      if (grid[i][j] === '1') {
+        count++;
+        queue.push([i, j]);
+        grid[i][j] = '0';
+
+        while (queue.length > 0) {
+          const [r, c] = queue.shift();
+          const dirs = [[1,0], [-1,0], [0,1], [0,-1]];
+          for (const [dr, dc] of dirs) {
+            const nr = r + dr, nc = c + dc;
+            if (nr >= 0 && nr < m && nc >= 0 && nc < n && grid[nr][nc] === '1') {
+              grid[nr][nc] = '0';
+              queue.push([nr, nc]);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return count;
+}
+```
+
+**🔍 Visual — Trace với grid:**
+
+```
+Grid:
+  1 1 0 0 0
+  1 1 0 0 0
+  0 0 1 0 0
+  0 0 0 1 1
+
+Step 1: (0,0) = '1' → count=1 → dfs(0,0) → flood fill:
+        (0,0)→(0,1)→(1,0)→(1,1) → marked '0'
+        Island 1: (0,0)(0,1)(1,0)(1,1)
+
+Step 2: (0,2) = '0' → skip
+Step 3: (2,2) = '1' → count=2 → dfs(2,2) → flood fill
+        Island 2: (2,2)
+
+Step 4: (3,3) = '1' → count=3 → dfs(3,3) → flood fill
+        (3,3)→(3,4) → marked '0'
+        Island 3: (3,3)(3,4)
+
+Result: 3 islands ✓
+```
+
+---
+
+### Pattern 2: Clone Graph (BFS/DFS)
+
+**🤔 Tư duy:** Deep copy graph = tạo node mới cho mỗi node cũ, giữ nguyên kết nối. Dùng **HashMap** để map `oldNode → newNode`. Khi gặp neighbor, nếu chưa có trong map → tạo node mới. Nếu đã có → reuse.
+
+**🔍 Dùng khi:**
+- Deep copy graph với preserved connections
+- Clone linked structures
+- Tạo copy của data structure có references
+
+**📝 Tại sao dùng HashMap:** Mà không dùng visited Set thông thường? Vì visited Set chỉ cho biết node đã visited hay chưa. HashMap cho biết: (1) đã visited chưa, (2) node mới tương ứng với node cũ nào → để update neighbors. Không có map, không thể tạo đúng connections.
+
+**💻 Code mẫu:**
+
+```javascript
+// LeetCode 133: Clone Graph
+
+// ✅ BFS
+function cloneGraph(node) {
+  if (!node) return null;
+
+  const visited = new Map();  // oldNode → newNode
+  const queue = [node];
+  const cloneNode = new Node(node.val);
+  visited.set(node, cloneNode);
+
+  while (queue.length > 0) {
+    const curr = queue.shift();
+
+    for (const neighbor of curr.neighbors) {
+      if (!visited.has(neighbor)) {
+        visited.set(neighbor, new Node(neighbor.val));
+        queue.push(neighbor);
+      }
+      // Thêm neighbor vào clone
+      visited.get(curr).neighbors.push(visited.get(neighbor));
+    }
+  }
+
+  return cloneNode;
+}
+
+// ✅ DFS Recursive
+function cloneGraphDFS(node) {
+  if (!node) return null;
+  if (visited.has(node)) return visited.get(node);
+
+  const cloneNode = new Node(node.val);
+  visited.set(node, cloneNode);
+
+  for (const neighbor of node.neighbors) {
+    cloneNode.neighbors.push(cloneGraphDFS(neighbor));
+  }
+
+  return cloneNode;
+}
+```
+
+---
+
+### Pattern 3: Topological Sort
+
+**🤔 Tư duy:** Topological Sort sắp xếp các nodes theo thứ tự sao cho mọi edges đi từ trước → sau. Dùng **In-Degree**: đếm số prerequisites của mỗi node. Bắt đầu với nodes có in-degree = 0 (không có prerequisites) → remove khỏi graph → giảm in-degree của neighbors → lặp.
+
+**🔍 Dùng khi:**
+- Course Schedule (xem có thể hoàn thành tất cả courses không)
+- Build Order (thứ tự build files/packages)
+- Task Scheduling có dependencies
+- Kiểm tra cycle trong directed graph
+
+**📝 Tại sao dùng In-Degree:** In-degree = số edges đi vào một node = số prerequisites. Khi in-degree = 0, không có gì phụ thuộc vào node đó → có thể xử lý nó ngay. Sau khi xử lý, ta "loại bỏ" nó khỏi graph → giảm in-degree của nodes phụ thuộc nó.
+
+**💻 Code mẫu:**
+
+```javascript
+// LeetCode 207: Course Schedule — BFS + In-Degree
+function canFinish(numCourses, prerequisites) {
+  const graph = Array.from({ length: numCourses }, () => []);
+  const inDegree = Array(numCourses).fill(0);
+
+  for (const [course, prereq] of prerequisites) {
+    graph[prereq].push(course);
+    inDegree[course]++;
+  }
+
+  const queue = [];
+  for (let i = 0; i < numCourses; i++) {
+    if (inDegree[i] === 0) queue.push(i);
+  }
+
+  let completed = 0;
+
+  while (queue.length > 0) {
+    const course = queue.shift();
+    completed++;
+
+    for (const next of graph[course]) {
+      inDegree[next]--;
+      if (inDegree[next] === 0) queue.push(next);
+    }
+  }
+
+  return completed === numCourses;
+}
+```
+
+**🔍 Visual — Trace với `numCourses = 5`, `prerequisites = [[1,0],[2,0],[3,1],[3,2],[4,3]]`:**
+
+```
+Graph:
+  0 → 1 → 3 → 4
+  0 → 2 ↗
+         ↘ 3
+
+In-degree: [0, 1, 1, 2, 1]
+
+Step 1: queue = [0] (in-degree = 0)
+        complete 0 → in-degree[1]-- → 0 → queue=[1]
+                          in-degree[2]-- → 0 → queue=[1,2]
+        ┌──────────────────────────────────────────┐
+        │  Queue: [0] → [1,2]  Completed: 1        │
+        └──────────────────────────────────────────┘
+
+Step 2: process 1 → in-degree[3]-- → 1 → queue=[2]
+Step 3: process 2 → in-degree[3]-- → 0 → queue=[3]
+        ┌──────────────────────────────────────────┐
+        │  Queue: [2] → [3]  Completed: 3          │
+        └──────────────────────────────────────────┘
+
+Step 4: process 3 → in-degree[4]-- → 0 → queue=[4]
+Step 5: process 4 → completed=5
+
+Topological Order: 0 → 1 → 2 → 3 → 4 ✓
+All courses can be finished!
+```
+
+---
+
+### Pattern 4: Connected Components (DFS vs Union Find)
+
+**🤔 Tư duy:** Connected component = nhóm nodes có path giữa mọi cặp. DFS: duyệt tất cả nodes reachable từ một start → đánh dấu visited → đếm. Union Find: union các edges → count unique roots.
+
+**🔍 Dùng khi:**
+- Đếm số connected components
+- Number of Provinces (LeetCode 547)
+- Network connectivity
+- Accounts Merge
+
+**📝 Tại sao Union Find tốt cho connected components:**
+- Union Find: O(α(n)) ≈ O(1) amortized cho mỗi union/find
+- DFS: O(V+E) cho mỗi component → O(V+E) tổng
+- Union Find đặc biệt tốt khi có nhiều union operations (edges được thêm vào liên tục)
+- DFS trực quan và dễ implement hơn cho graph nhỏ
+
+**💻 Code mẫu:**
+
+```javascript
+// ✅ DFS — O(V+E)
+function countComponentsDFS(n, edges) {
+  const graph = Array.from({ length: n }, () => []);
+  for (const [a, b] of edges) {
+    graph[a].push(b);
+    graph[b].push(a);
+  }
+
+  let count = 0;
+  const visited = new Set();
+
+  function dfs(node) {
+    visited.add(node);
+    for (const neighbor of graph[node]) {
+      if (!visited.has(neighbor)) dfs(neighbor);
+    }
+  }
+
+  for (let i = 0; i < n; i++) {
+    if (!visited.has(i)) {
+      count++;
+      dfs(i);
+    }
+  }
+
+  return count;
+}
+
+// ✅ Union Find — O(V+E) với α(n) amortized
+function countComponentsUF(n, edges) {
+  const parent = Array.from({ length: n }, (_, i) => i);
+
+  function find(x) {
+    if (parent[x] !== x) parent[x] = find(parent[x]);
+    return parent[x];
+  }
+
+  function union(x, y) {
+    const px = find(x), py = find(y);
+    if (px === py) return;
+    parent[px] = py;
+  }
+
+  for (const [a, b] of edges) union(a, b);
+
+  return new Set(Array.from({ length: n }, (_, i) => find(i))).size;
+}
+```
+
+**🔍 Visual — Union Find với edges `[[0,1],[1,2],[3,4]]`:**
+
+```
+Edges: [[0,1], [1,2], [3,4]]
+
+Initial: parent[i] = i
+         [0] [1] [2] [3] [4]
+         ─── ─── ─── ─── ───
+         0   1   2   3   4
+
+Union(0,1): parent[1] = 0
+         [0] [1] [2] [3] [4]
+         ─── ─── ─── ─── ───
+         0   0   2   3   4
+
+Union(1,2): find(1) = 0, parent[0] = 0
+         [0] [1] [2] [3] [4]
+         ─── ─── ─── ─── ───
+         0   0   0   3   4
+
+Union(3,4): parent[4] = 3
+         [0] [1] [2] [3] [4]
+         ─── ─── ─── ─── ───
+         0   0   0   3   3
+
+Unique roots: {0, 3} → 2 components ✓
+```
+
+---
+
+### Pattern 5: BFS Shortest Path
+
+**🤔 Tư duy:** BFS duyệt graph theo từng **level** — tất cả nodes ở distance `d` được visited trước khi bất kỳ node nào ở distance `d+1`. Khi queue chứa nodes của level `d`, tất cả nodes trong queue được expand → tạo ra level `d+1`. Vậy: **level trong BFS = distance từ start**.
+
+**🔍 Dùng khi:**
+- Tìm đường đi ngắn nhất trong **unweighted graph**
+- Minimum number of steps
+- Spread of information (rotting oranges)
+- Multi-source BFS
+
+**📝 Tại sao BFS cho shortest path:** BFS đảm bảo khi lần đầu visited một node, đó là khoảng cách **ngắn nhất** từ start. Vì BFS expand theo level tăng dần, không có đường nào ngắn hơn mà chưa được khám phá.
+
+**💻 Code mẫu:**
+
+```javascript
+// BFS Shortest Path — O(V+E)
+function shortestPath(graph, start, end) {
+  const visited = new Set([start]);
+  const queue = [[start, 0]];  // [node, distance]
+
+  while (queue.length > 0) {
+    const [node, dist] = queue.shift();
+    if (node === end) return dist;
+
+    for (const neighbor of graph[node]) {
+      if (!visited.has(neighbor)) {
+        visited.add(neighbor);
+        queue.push([neighbor, dist + 1]);
+      }
+    }
+  }
+
+  return -1;  // Không có path
+}
+```
+
+---
+
+### Pattern 6: Pacific Atlantic Water Flow
+
+**🤔 Tư duy:** Nước chảy từ cao → thấp. Một cell có thể flow đến Pacific (trên/trái) nếu có path đi lên theo chiều cao không tăng. Tương tự Atlantic (dưới/phải). Cells có thể flow đến **cả hai** = giao của 2 reachable sets.
+
+**🔍 Dùng khi:**
+- Pacific Atlantic Water Flow (LeetCode 417)
+- Mô hình flow có 2 destinations
+- Tìm cells thỏa 2 điều kiện simultaneously
+
+**💻 Code mẫu:**
+
+```javascript
+// LeetCode 417: Pacific Atlantic Water Flow
+function pacificAtlantic(heights) {
+  if (!heights || heights.length === 0) return [];
+
+  const m = heights.length, n = heights[0].length;
+  const pacific = Array.from({ length: m }, () => Array(n).fill(false));
+  const atlantic = Array.from({ length: m }, () => Array(n).fill(false));
+
+  function dfs(i, j, visited, prevHeight) {
+    if (i < 0 || i >= m || j < 0 || j >= n) return;
+    if (visited[i][j]) return;
+    if (heights[i][j] < prevHeight) return;
+
+    visited[i][j] = true;
+
+    dfs(i + 1, j, visited, heights[i][j]);
+    dfs(i - 1, j, visited, heights[i][j]);
+    dfs(i, j + 1, visited, heights[i][j]);
+    dfs(i, j - 1, visited, heights[i][j]);
+  }
+
+  for (let j = 0; j < n; j++) dfs(0, j, pacific, -Infinity);
+  for (let i = 0; i < m; i++) dfs(i, 0, pacific, -Infinity);
+  for (let j = 0; j < n; j++) dfs(m - 1, j, atlantic, -Infinity);
+  for (let i = 0; i < m; i++) dfs(i, n - 1, atlantic, -Infinity);
+
+  const result = [];
+  for (let i = 0; i < m; i++) {
+    for (let j = 0; j < n; j++) {
+      if (pacific[i][j] && atlantic[i][j]) {
+        result.push([i, j]);
+      }
+    }
+  }
+
+  return result;
+}
+```
+
+---
+
+### Pattern 7: Minimum Knight Moves (BFS)
+
+**🤔 Tư duy:** BFS với các moves cố định (chess knight: 8 directions). Mỗi step = 1 BFS level. BFS từ origin → target → khoảng cách = số steps. Dùng symmetry và pruning để giảm space.
+
+**🔍 Dùng khi:**
+- Minimum Knight Moves (LeetCode 1197)
+- Chess moves problems
+- Grid movement với specific moves
+
+**💻 Code mẫu:**
+
+```javascript
+// LeetCode 1197: Minimum Knight Moves
+function minKnightMoves(x, y) {
+  x = Math.abs(x);
+  y = Math.abs(y);
+
+  if (x === 0 && y === 0) return 0;
+
+  const dirs = [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]];
+  const visited = new Set(['0,0']);
+  const queue = [[0, 0, 0]];
+
+  while (queue.length > 0) {
+    const [cx, cy, steps] = queue.shift();
+
+    for (const [dx, dy] of dirs) {
+      const nx = cx + dx, ny = cy + dy;
+      if (nx === x && ny === y) return steps + 1;
+      if (nx < -2 || ny < -2) continue;
+
+      const key = `${nx},${ny}`;
+      if (!visited.has(key)) {
+        visited.add(key);
+        queue.push([nx, ny, steps + 1]);
+      }
+    }
+  }
+
+  return -1;
+}
+```
+
+---
+
+### Pattern 8: Mô hình hóa bài toán thực tế thành Graph
+
+**🤔 Tư duy:** Nhiều bài toán có vẻ không phải graph nhưng thực ra là. Key insight: nếu có **entities** và có **relationships/edges** giữa chúng → có thể model bằng graph.
+
+**📝 3-4 ví dụ cụ thể:**
+
+```
+1. FRIEND CIRCLES (LeetCode 547)
+   → Input: Ma trận M[i][j] = 1 nếu i và j là friends
+   → Model: Undirected graph, mỗi người = node, friendship = edge
+   → Problem: Đếm số connected components (nhóm bạn không liên quan nhau)
+
+2. COURSE SCHEDULE
+   → Input: course A cần hoàn thành trước course B
+   → Model: Directed graph, course = node, prerequisite = directed edge
+   → Problem: Topological sort, kiểm tra cycle
+
+3. NEAREST EXIT FROM MAZE ENTRANCE (LeetCode 1926)
+   → Input: Maze grid với walls và passages
+   → Model: Grid graph — mỗi cell = node, 4-directional = edges
+   → Problem: BFS từ entrance → nearest exit
+
+4. WORD LADDER
+   → Input: beginWord, endWord, danh sách các words
+   → Model: Mỗi word = node, edges giữa words khác nhau 1 ký tự
+   → Problem: BFS shortest path (số transformations ít nhất)
+```
+
+---
+
+### Pattern 9: DFS vs BFS — Decision Tree
+
+**🤔 Tư duy:** Chọn DFS hay BFS phụ thuộc vào: (1) cần shortest path? → BFS, (2) cần memory hiệu quả? → tùy shape, (3) recursion natural? → DFS.
+
+**📝 Decision Tree:**
+
+```
+Bài toán Graph
+    │
+    ├── Cần SHORTEST PATH (unweighted)?
+    │     └── YES → BFS (Queue)
+    │         (Level = distance)
+    │
+    ├── Tìm CYCLE?
+    │     ├── DFS với 3 states ✓
+    │     └── Topological Sort? → BFS In-Degree ✓
+    │
+    ├── Flood Fill / Connected Components?
+    │     ├── DFS hoặc BFS đều được ✓
+    │     └── Union Find nếu cần nhiều unions ✓
+    │
+    ├── Tree RẤT SÂU (>1000 nodes)?
+    │     └── BFS (Iterative Queue) — tránh stack overflow
+    │
+    ├── Tree RẤT RỘNG?
+    │     └── DFS — O(h) vs O(w) cho BFS
+    │
+    └── DEFAULT?
+          └── DFS (Recursive) — code ngắn, trực quan
+```
+
+**📝 So sánh chi tiết:**
+
+| Tiêu chí | DFS | BFS |
+|-----------|-----|-----|
+| Data structure | Stack / Recursion | Queue |
+| Shortest path | ❌ Không đảm bảo | ✅ Đảm bảo |
+| Memory | O(h) height | O(w) width |
+| Stack overflow | ✅ Có thể (với deep recursion) | ❌ Không |
+|找到 solution đầu tiên | Có thể không optimal | Luôn shortest |
+| Level-order output | ❌ | ✅ |
+
+---
+
+### Pattern 10: Tại sao Union Find hoạt động?
+
+**🤔 Tư duy:** Union Find dựa trên 2 operations: **Union** (nối 2 nodes vào cùng component) và **Find** (tìm root/parent của một node). Một set là connected khi và chỉ khi tất cả nodes trong set có **cùng root**.
+
+**📝 Hai kỹ thuật tối ưu:**
+
+```
+Path Compression: Khi find(x), ta compress path bằng cách cho tất cả
+nodes trên đường đi trỏ trực tiếp vào root.
+
+Before find(2):    After find(2):
+    0                    0
+   /                    /|\
+  1                    1 2 3
+ /
+2
+→ Tất cả nodes 1,2,3 đều có root = 0
+
+Union by Rank: Khi union(0,1), gắn root nhỏ hơn vào lớn hơn.
+Cân bằng cây → giảm chiều cao → find nhanh hơn.
+```
+
+**📝 Tại sao Union Find tốt:** Với cả Path Compression và Union by Rank, `find()` và `union()` có độ phức tạp **α(n)** (inverse Ackermann function) — gần như **O(1)** trong thực tế. Với n = 1 tỷ, α(n) ≈ 4.
+
+**💻 Code mẫu:**
+
+```javascript
+class UnionFind {
+  constructor(n) {
+    this.parent = Array.from({ length: n }, (_, i) => i);
+    this.rank = Array(n).fill(0);
+  }
+
+  find(x) {
+    if (this.parent[x] !== x) {
+      this.parent[x] = this.find(this.parent[x]);  // Path compression
+    }
+    return this.parent[x];
+  }
+
+  union(x, y) {
+    const px = this.find(x), py = this.find(y);
+    if (px === py) return;
+
+    if (this.rank[px] < this.rank[py]) {
+      this.parent[px] = py;
+    } else if (this.rank[px] > this.rank[py]) {
+      this.parent[py] = px;
+    } else {
+      this.parent[py] = px;
+      this.rank[px]++;
+    }
+  }
+
+  connected(x, y) {
+    return this.find(x) === this.find(y);
+  }
+}
+```
 
 ```javascript
 // LeetCode 200: Number of Islands

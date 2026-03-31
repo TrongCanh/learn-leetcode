@@ -516,6 +516,10 @@
       .modal-title { max-width: 100%; }
       .preview-content .table-wrapper { margin: 18px 0; }
       .preview-content table { font-size: 13px; }
+      .modal-nav button { padding: 8px 12px; font-size: 0; }
+      .modal-nav button::after { font-size: 14px; }
+      #prevBtn::after { content: "◀"; }
+      #nextBtn::after { content: "▶"; }
     }
 
     footer {
@@ -559,8 +563,8 @@
       <div class="modal-header">
         <div class="modal-title" id="modalTitle">Loading...</div>
         <div class="modal-nav">
-          <button id="prevBtn" onclick="prevProblem()">← Prev</button>
-          <button id="nextBtn" onclick="nextProblem()">Next →</button>
+          <button id="prevBtn" onclick="prevProblem()">◀</button>
+          <button id="nextBtn" onclick="nextProblem()">▶</button>
         </div>
         <button class="modal-close" onclick="closeModal()">×</button>
       </div>

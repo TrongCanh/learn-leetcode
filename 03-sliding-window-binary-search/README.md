@@ -213,7 +213,327 @@ Upper Bound (last ≤):    return 3  ↑
 
 ### Pattern 1: Fixed Sliding Window — Max Sum Subarray
 
-**Dùng khi:** Tìm maximum sum của subarray có kích thước cố định k.
+**🤔 Tư duy:** Window có kích thước cố định `k` trượt từ trái sang phải. Tại mỗi step, ta bỏ phần tử rời khỏi window (bên trái) và thêm phần tử mới vào (bên phải). Sum mới = Sum cũ − phần tử rời + phần tử mới. Không cần tính lại tổng từ đầu mỗi window.
+
+**🔍 Dùng khi:**
+- Đề bài cho kích thước window cố định `k`
+- Tìm maximum/minimum/average sum của mọi subarray k elements
+- Đề bài hỏi "maximum subarray of size k", "longest substring with at most k distinct characters" (k cố định)
+- Network packet processing, moving average
+
+**📝 Tại sao O(n) thay vì O(n·k):** Brute force tính sum mỗi window từ đầu → O(k) cho mỗi window × O(n) windows = O(n·k). Sliding window chỉ cần 2 phép toán: `-arr[left]` và `+arr[right]` → O(1) cho mỗi slide × O(n) slides = O(n). Mỗi phần tử được cộng/trừ đúng 1 lần.
+
+**💻 Code mẫu:**
+
+```javascript
+// ❌ Brute Force: O(n·k)
+function maxSumSubarrayBrute(arr, k) {
+  let maxSum = -Infinity;
+  for (let i = 0; i <= arr.length - k; i++) {
+    let sum = 0;
+    for (let j = i; j < i + k; j++) {
+      sum += arr[j];
+    }
+    maxSum = Math.max(maxSum, sum);
+  }
+  return maxSum;
+}
+
+// ✅ Sliding Window: O(n)
+function maxSumSubarray(arr, k) {
+  let windowSum = 0;
+
+  // 1. Tính sum của window đầu tiên
+  for (let i = 0; i < k; i++) {
+    windowSum += arr[i];
+  }
+  let maxSum = windowSum;
+
+  // 2. Slide window: bỏ trái, thêm phải
+  for (let i = k; i < arr.length; i++) {
+    windowSum = windowSum - arr[i - k] + arr[i];
+    maxSum = Math.max(maxSum, windowSum);
+  }
+
+  return maxSum;
+}
+```
+
+**🔍 Visual — Trace với `arr = [2, 1, 5, 1, 3, 2]`, `k = 3`:**
+
+```
+arr: [2,  1,  5,  1,  3,  2]
+      ─────────
+       window 1: sum = 2+1+5 = 8     max = 8
+            ─────────
+             window 2: sum = 8-2+1 = 7   max = 8
+                  ─────────
+                   window 3: sum = 7-1+3 = 9   max = 9 ✓
+                        ─────────
+                         window 4: sum = 9-5+2 = 6   max = 9
+
+Step-by-step:
+  Step 0: sum first k elements = 2+1+5 = 8
+  Step 1: i=3 → sum = 8 - arr[0] + arr[3] = 8 - 2 + 1 = 7
+  Step 2: i=4 → sum = 7 - arr[1] + arr[4] = 7 - 1 + 3 = 9  ← NEW MAX
+  Step 3: i=5 → sum = 9 - arr[2] + arr[5] = 9 - 5 + 2 = 6
+
+Answer: 9 (window [5, 1, 3])
+```
+
+---
+
+### Pattern 2: Dynamic Sliding Window — Longest Substring
+
+**🤔 Tư duy:** Window mở rộng (right tăng) cho đến khi gặp điều kiện vi phạm (ví dụ: duplicate character). Khi vi phạm, thu nhỏ window từ bên trái (left tăng) cho đến khi điều kiện hợp lệ trở lại. Window **động** — không có kích thước cố định, tự điều chỉnh.
+
+**🔍 Dùng khi:**
+- Đề bài hỏi longest substring/subarray **thỏa điều kiện** (không có kích thước cho trước)
+- "Longest substring without repeating characters"
+- "Minimum window substring" (tìm window nhỏ nhất thỏa điều kiện)
+- Expand khi thỏa → shrink khi vi phạm
+
+**📝 Tại sao O(n):** Mỗi phần tử được `right` duyệt đúng 1 lần (O(n)). Left chỉ di chuyển tổng cộng tối đa n lần trong toàn bộ quá trình (không có nested loop cả hai cùng duyệt O(n²)). Tổng = O(n) + O(n) = O(n).
+
+**💻 Code mẫu:**
+
+```javascript
+// ✅ Dynamic Sliding Window: O(n)
+function lengthOfLongestSubstring(s) {
+  const set = new Set();
+  let left = 0;
+  let maxLen = 0;
+
+  for (let right = 0; right < s.length; right++) {
+    // Expand: thêm s[right] vào window
+    while (set.has(s[right])) {
+      // Shrink: remove s[left] cho đến khi không trùng
+      set.delete(s[left]);
+      left++;
+    }
+    set.add(s[right]);
+    maxLen = Math.max(maxLen, right - left + 1);
+  }
+
+  return maxLen;
+}
+```
+
+**🔍 Visual — Trace với `s = "abcabcbb"`:**
+
+```
+Step  right  char   Action              Set               len  max
+──────────────────────────────────────────────────────────────────
+init    0      a     add                 {a}               1    1
+  1     1      b     add                 {a,b}             2    2
+  2     2      c     add                 {a,b,c}           3    3
+  3     3      a     dup! shrink         delete 'a'        2    3
+                  shrink←'a' gone→      {b,c}             2    3
+  4     4      b     dup! shrink         delete 'b'        1    3
+                  shrink←'b' gone→      {c}               1    3
+  5     5      c     dup! shrink         delete 'c'        0    3
+                  shrink←'c' gone→      {}                0    3
+  6     6      b     add                 {b}               1    3
+  7     7      b     dup! shrink         delete 'b'        0    3
+                  shrink←'b' gone→      {}                0    3
+
+Window states at key steps:
+  "abc" (len=3) → "abca" duplicate 'a' → shrink to "bca" (len=3)
+  "bca" (len=3) → "bcab" duplicate 'b' → shrink to "cab" (len=3)
+
+Answer: 3 ("abc" or "bca" or "cab")
+```
+
+---
+
+### Pattern 3: Binary Search — Tìm giá trị nhỏ nhất thỏa điều kiện
+
+**🤔 Tư duy:** Binary search không chỉ tìm **giá trị**, mà còn tìm **boundary** (ranh giới). Bài toán dạng "minimum X such that..." → tìm giá trị nhỏ nhất thỏa điều kiện. Hàm `can(mid)` phải là **monotonic** (nếu true cho X thì true cho mọi Y ≥ X).
+
+**🔍 Dùng khi:**
+- Đề bài hỏi "minimum/maximum X such that..."
+- "Find the minimum speed to finish in H hours"
+- "Find the smallest divisor such that sum ≤ threshold"
+- Tìm giá trị nhỏ nhất/lớn nhất thỏa điều kiện (not the exact value)
+
+**📝 Tại sao nó hoạt động:** Nếu một giá trị `mid` thỏa điều kiện, thì mọi giá trị **lớn hơn** `mid` cũng thỏa (monotonic). Ngược lại, nếu `mid` không thỏa, mọi giá trị **nhỏ hơn** cũng không thỏa. Vậy ta có thể loại bỏ nửa không thỏa qua mỗi bước → O(log range).
+
+**💻 Code mẫu:**
+
+```javascript
+// LeetCode 875: Koko Eating Bananas — Tìm minimum speed K để ăn hết trong H giờ
+function minEatingSpeed(piles, H) {
+  let left = 1;
+  let right = Math.max(...piles);  // max possible speed
+  let result = right;
+
+  while (left <= right) {
+    const speed = Math.floor((left + right) / 2);
+    let hours = 0;
+
+    for (const pile of piles) {
+      hours += Math.ceil(pile / speed);
+    }
+
+    if (hours <= H) {
+      // Ăn kịp → thử speed nhỏ hơn
+      result = speed;
+      right = speed - 1;
+    } else {
+      // Không kịp → cần speed lớn hơn
+      left = speed + 1;
+    }
+  }
+
+  return result;
+}
+```
+
+**🔍 Visual — Trace với `piles = [3, 6, 7, 11]`, `H = 8`:**
+
+```
+Range: [1, 11]
+
+Binary Search Trace:
+┌──────────────────────────────────────────────────────────┐
+│ Step │  left  │  right  │  mid  │  Hours  │  Decision     │
+├──────────────────────────────────────────────────────────┤
+│  1   │    1   │   11    │   6   │  1+1+2+2=6 │ ≤8 → right=5 │
+│  2   │    1   │    5    │   3   │  1+2+3+4=10│ >8 → left=4 │
+│  3   │    4   │    5    │   4   │  1+2+2+3=8 │ ≤8 → result=4, right=3 │
+│  4   │    4   │    3    │  STOP │    left > right          │
+└──────────────────────────────────────────────────────────┘
+
+can(mid) monotonic: nếu speed=4 kịp → speed=5,6,7... cũng kịp
+Result: 4 (kiểm tra: ceil(3/4)+ceil(6/4)+ceil(7/4)+ceil(11/4) = 1+2+2+3 = 8 ✓)
+```
+
+---
+
+### Pattern 4: Binary Search — Rotated Sorted Array
+
+**🤔 Tư duy:** Rotated sorted array là mảng đã sorted rồi rotated. Nó có tính chất: **luôn có một nửa sorted** tại mỗi bước. Tại mỗi bước, ta xác định nửa nào đang sorted, rồi kiểm tra target có nằm trong nửa sorted đó không để thu hẹp phạm vi.
+
+**🔍 Dùng khi:**
+- Đề bài hỏi "search in rotated sorted array"
+- Mảng ban đầu sorted, đã rotated đi một số vị trí
+- Tìm min/max trong rotated array
+- Đề bài có từ khóa "sorted but rotated"
+
+**📝 Tại sao nó hoạt động:** Trong mảng `[4, 5, 6, 7, 0, 1, 2]`, tại mỗi mid, ta có thể xác định: nếu `nums[left] ≤ nums[mid]` thì nửa trái [left..mid] sorted; ngược lại nửa phải [mid..right] sorted. Vì sorted half có rõ ràng boundary, ta có thể quyết định chắc chắn target nằm ở đâu.
+
+**💻 Code mẫu:**
+
+```javascript
+// LeetCode 33: Search in Rotated Sorted Array
+function search(nums, target) {
+  let left = 0;
+  let right = nums.length - 1;
+
+  while (left <= right) {
+    const mid = Math.floor((left + right) / 2);
+
+    if (nums[mid] === target) return mid;
+
+    // Xác định nửa nào sorted
+    if (nums[left] <= nums[mid]) {
+      // Nửa trái [left..mid] sorted
+      if (nums[left] <= target && target < nums[mid]) {
+        right = mid - 1;  // target trong nửa trái
+      } else {
+        left = mid + 1;   // target trong nửa phải
+      }
+    } else {
+      // Nửa phải [mid..right] sorted
+      if (nums[mid] < target && target <= nums[right]) {
+        left = mid + 1;   // target trong nửa phải
+      } else {
+        right = mid - 1;  // target trong nửa trái
+      }
+    }
+  }
+
+  return -1;
+}
+```
+
+**🔍 Visual — Trace với `nums = [4, 5, 6, 7, 0, 1, 2]`, `target = 0`:**
+
+```
+Original: [0, 1, 2, 4, 5, 6, 7]
+Rotated:  [4, 5, 6, 7, 0, 1, 2]
+
+Step 1: left=0, right=6, mid=3
+        ┌──────────────────────────────────────────┐
+        │  [4, 5, 6, 7, 0, 1, 2]               │
+        │   ↑         ↑         ↑                  │
+        │ left=0   mid=3     right=6               │
+        │ nums[left]=4 ≤ nums[mid]=7 → LEFT sorted │
+        │ 4 ≤ 0? NO → target không trong [4,5,6,7]│
+        │ → left = 4                                │
+        └──────────────────────────────────────────┘
+
+Step 2: left=4, right=6, mid=5
+        ┌──────────────────────────────────────────┐
+        │  [4, 5, 6, 7, 0, 1, 2]               │
+        │               ↑     ↑   ↑               │
+        │            left=4  mid=5 right=6        │
+        │ nums[left]=0 ≤ nums[mid]=1 → LEFT sorted│
+        │ 0 ≤ 0? YES, và 0 < 1? YES              │
+        │ → target trong [0,1] → right = 4        │
+        └──────────────────────────────────────────┘
+
+Step 3: left=4, right=4, mid=4
+        nums[4] = 0 = target → FOUND! ✓ (return 4)
+```
+
+---
+
+### Pattern 5: Tại sao Sliding Window O(n)?
+
+**🤔 Tư duy:** Sliding Window đạt O(n) vì **mỗi phần tử** được duyệt **tối đa 2 lần**: 1 lần bởi `right` (expand) và tối đa 1 lần bởi `left` (shrink). `left` không bao giờ quay lại phía sau. Tổng số operations = O(n) + O(n) = O(n).
+
+**📝 Phân biệt O(n·k) vs O(n):**
+
+```
+BRUTE FORCE: O(n·k)
+  for each starting position i:
+    for each ending position j:
+      compute sum of arr[i..j]
+
+  = n windows × k operations per window
+  = n × k operations
+
+SLIDING WINDOW: O(n)
+  right trượt từ 0 → n-1: n steps
+  left trượt từ 0 → n-1: ≤ n steps
+  = 2n steps = O(n)
+
+  Key insight: KHÔNG có nested loop duyệt cùng lúc
+  Trong lúc right di chuyển, left chỉ di chuyển thôi
+```
+
+**📝 Checklist — Fixed vs Dynamic Sliding Window:**
+
+| Tiêu chí | Fixed Window | Dynamic Window |
+|-----------|-------------|---------------|
+| Kích thước cho trước? | ✅ Có (`k` cố định) | ❌ Không |
+| Điều kiện dừng | `right - left + 1 === k` | `!isValid(window)` |
+| Shrink khi nào | Sau mỗi slide (đủ k) | Khi điều kiện vi phạm |
+| Expand | Luôn +1 mỗi step | Tùy điều kiện |
+| Template chính | `sum - arr[left++] + arr[right++]` | `while (!valid) { delete arr[left++] }` |
+
+**📝 Checklist — Khi nào dùng Binary Search biến thể nào?**
+
+| Đề bài hỏi | Template | Key |
+|-----------|----------|-----|
+| Tìm giá trị `x` chính xác | Standard `while (l ≤ r)` | Return mid |
+| First position ≥ target | Left Bound `while (l < r)` | `r = mid` |
+| Last position ≤ target | Right Bound `while (l < r)` | `l = mid + 1` |
+| Minimum X such that can() | BS on Answer `while (l < r)` | `can(mid) → r = mid` |
+| Maximum X such that can() | BS on Answer `while (l < r)` | `can(mid) → l = mid + 1` |
+| Rotated array tìm min | Compare with right | `l < r`, `r = mid` |
+| Rotated array tìm target | Check sorted half | `l ≤ r`, xác định half |
 
 ```javascript
 // ❌ Brute Force: O(n·k)
