@@ -144,6 +144,7 @@
       transition: all 0.2s;
       font-size: 0.85rem;
       white-space: nowrap;
+      display: inline-block;
     }
 
     .concept-btn:hover {
@@ -457,13 +458,24 @@
       color: #dc2626;
     }
 
-    /* Remove visited link color */
-    .preview-content a, .concept-btn, .view-btn, .check-btn {
-      color: inherit;
+    /* Links in preview content */
+    .preview-content a {
+      color: #667eea;
+      text-decoration: none;
     }
 
     .preview-content a:visited {
       color: #667eea;
+    }
+
+    /* Inline code links */
+    .preview-content a:visited code {
+      color: #d63384;
+    }
+
+    /* concept-btn, view-btn, check-btn inherit from parent */
+    .concept-btn, .view-btn, .check-btn {
+      color: inherit;
     }
 
     /* Mobile */
