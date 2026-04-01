@@ -679,6 +679,7 @@ let activeTrackId = null;   // track đang mở chi tiết
 let openChapters = {};      // { [trackId]: Set<chapterIdx> }
 let currentItem = null;     // { trackId, chapterIdx, problemIdx }
 let progress = JSON.parse(localStorage.getItem('study_progress') || '{}');
+let lastActivity = JSON.parse(localStorage.getItem('last_activity') || '{}');
 
 // ─────────────────────────────────────────────────
 // Theme (dark/light)
@@ -744,7 +745,10 @@ function countTrack(track) {
 
 function saveDone(key, val) {
   progress[key] = val;
+  if (val) lastActivity[key] = Date.now();
+  else delete lastActivity[key];
   localStorage.setItem('study_progress', JSON.stringify(progress));
+  localStorage.setItem('last_activity', JSON.stringify(lastActivity));
   renderView();
 }
 
@@ -825,9 +829,32 @@ function switchTab(domain) {
 // ─────────────────────────────────────────────────
 // View: Track list
 // ─────────────────────────────────────────────────
+function getTrackLastActivity(track) {
+  let last = 0;
+  track.chapters.forEach((ch, ci) => {
+    ch.problems.forEach((_, pi) => {
+      const key = `${track.id}|${ci}|${pi}`;
+      if (lastActivity[key] && lastActivity[key] > last) {
+        last = lastActivity[key];
+      }
+    });
+  });
+  return last;
+}
+
 function renderList() {
   const main = document.getElementById('main');
   const filtered = TRACKS.filter(t => activeDomain === 'all' || t.domain === activeDomain);
+
+  // Sort: recent activity first, then alphabetical
+  filtered.sort((a, b) => {
+    const aLast = getTrackLastActivity(a);
+    const bLast = getTrackLastActivity(b);
+    if (aLast === 0 && bLast === 0) return a.name.localeCompare(b.name);
+    if (aLast === 0) return 1;
+    if (bLast === 0) return -1;
+    return bLast - aLast; // most recent first
+  });
 
   if (filtered.length === 0) {
     main.innerHTML = `
