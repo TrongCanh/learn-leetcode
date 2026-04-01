@@ -324,6 +324,89 @@ const TRACKS = [
   },
 
   {
+    id: 'react',
+    name: 'React Deep Dive',
+    icon: '⚛️',
+    domain: 'cs',
+    path: 'cs/react',
+    readme: 'README.md',
+    chapters: [
+      {
+        name: '📖 Overview',
+        path: 'cs/react',
+        readme: 'README.md',
+        problems: []
+      },
+      {
+        name: '01 — Core React',
+        path: 'cs/react/01-core-react',
+        readme: 'README.md',
+        problems: [
+          { name: 'JSX',                file: '001-jsx.md',               difficulty: 'Easy' },
+          { name: 'Components',         file: '002-components.md',        difficulty: 'Easy' },
+          { name: 'Props',             file: '003-props.md',             difficulty: 'Easy' },
+          { name: 'State',             file: '004-state.md',             difficulty: 'Easy' },
+          { name: 'Rendering',         file: '005-rendering.md',         difficulty: 'Medium' },
+          { name: 'VDOM & Reconciler', file: '006-vdom-reconciler.md',   difficulty: 'Hard' },
+        ]
+      },
+      {
+        name: '02 — Hooks & Lifecycle',
+        path: 'cs/react/02-hooks-lifecycle',
+        readme: 'README.md',
+        problems: [
+          { name: 'useState & useEffect',          file: '001-usestate-useeffect.md',           difficulty: 'Medium' },
+          { name: 'Stale Closure',                  file: '002-stale-closure.md',               difficulty: 'Medium' },
+          { name: 'useRef, useMemo, useCallback',  file: '003-useref-usememo-usecallback.md',  difficulty: 'Medium' },
+          { name: 'useReducer & Custom Hooks',     file: '004-usereducer-custom-hooks.md',      difficulty: 'Medium' },
+          { name: 'Advanced Hooks',                 file: '005-advanced-hooks.md',               difficulty: 'Hard' },
+        ]
+      },
+      {
+        name: '03 — State Management',
+        path: 'cs/react/03-state-management',
+        readme: 'README.md',
+        problems: [
+          { name: 'Context API',                  file: '001-context-api.md',      difficulty: 'Medium' },
+          { name: 'Redux Toolkit vs Zustand',     file: '002-redux-zustand.md',    difficulty: 'Medium' },
+          { name: 'Lifting State & Migration',    file: '003-lifting-state-migration.md', difficulty: 'Medium' },
+        ]
+      },
+      {
+        name: '04 — Performance',
+        path: 'cs/react/04-performance',
+        readme: 'README.md',
+        problems: [
+          { name: 'React.memo Patterns',          file: '001-memo-usememo-usecallback.md',     difficulty: 'Medium' },
+          { name: 'Code Splitting',                file: '002-code-splitting.md',                 difficulty: 'Medium' },
+          { name: 'Profiling & Optimization',      file: '003-profiling-optimization.md',         difficulty: 'Hard' },
+          { name: 'Optimization Patterns',         file: '004-optimization-patterns.md',         difficulty: 'Hard' },
+        ]
+      },
+      {
+        name: '05 — Architecture',
+        path: 'cs/react/05-architecture',
+        readme: 'README.md',
+        problems: [
+          { name: 'Component Patterns',            file: '001-component-patterns.md',    difficulty: 'Medium' },
+          { name: 'Folder Structure',              file: '002-folder-structure.md',     difficulty: 'Medium' },
+          { name: 'API Layer',                    file: '003-api-layer.md',            difficulty: 'Medium' },
+          { name: 'Testing & Debugging',          file: '004-testing-debugging.md',    difficulty: 'Medium' },
+        ]
+      },
+      {
+        name: '06 — Deep Dive',
+        path: 'cs/react/06-deep-dive',
+        readme: 'README.md',
+        problems: [
+          { name: 'React Internals',              file: '001-react-internals.md',   difficulty: 'Hard' },
+          { name: 'Interview Prep',               file: '002-interview-prep.md',    difficulty: 'Hard' },
+        ]
+      },
+    ]
+  },
+
+  {
     id: 'redis',
     name: 'Redis',
     icon: '🔴',
