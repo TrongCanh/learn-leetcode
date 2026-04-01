@@ -422,6 +422,154 @@ const TRACKS = [
   },
 
   {
+    id: 'javascript',
+    name: 'JavaScript Deep Dive',
+    icon: '🟨',
+    domain: 'cs',
+    path: 'cs/javascript',
+    readme: 'README.md',
+    chapters: [
+      {
+        name: '📖 Overview',
+        path: 'cs/javascript',
+        readme: 'README.md',
+        problems: []
+      },
+      {
+        name: '01 — JavaScript Core',
+        path: 'cs/javascript/01-js-core',
+        readme: 'README.md',
+        problems: [
+          { name: 'Scope',                   file: '001-scope.md',              difficulty: 'Easy' },
+          { name: 'Closure',                 file: '002-closure.md',            difficulty: 'Easy' },
+          { name: 'Hoisting',                file: '003-hoisting.md',           difficulty: 'Easy' },
+          { name: 'this Binding',            file: '004-this.md',              difficulty: 'Medium' },
+          { name: 'Data Types',              file: '005-data-types.md',         difficulty: 'Easy' },
+          { name: 'Execution Context',      file: '006-execution-context.md',  difficulty: 'Medium' },
+          { name: 'Spread & Rest',           file: '007-spread-rest.md',        difficulty: 'Easy' },
+          { name: 'Destructuring',            file: '008-destructuring.md',      difficulty: 'Easy' },
+          { name: 'Type Coercion',           file: '009-type-coercion.md',      difficulty: 'Medium' },
+          { name: 'Equality',                file: '010-equality.md',           difficulty: 'Medium' },
+        ]
+      },
+      {
+        name: '02 — Prototype & OOP',
+        path: 'cs/javascript/02-prototype-oop',
+        readme: 'README.md',
+        problems: [
+          { name: 'Prototype Chain',         file: '001-prototype-chain.md',   difficulty: 'Medium' },
+          { name: 'ES6 Class Syntax',        file: '002-class-syntax.md',       difficulty: 'Medium' },
+          { name: 'Inheritance Patterns',    file: '003-inheritance-patterns.md', difficulty: 'Medium' },
+          { name: 'Mixins',                  file: '004-mixins.md',            difficulty: 'Medium' },
+          { name: 'Object Patterns',         file: '005-object-patterns.md',  difficulty: 'Medium' },
+          { name: 'Symbols & Well-known',   file: '006-symbols-wells.md',     difficulty: 'Hard' },
+        ]
+      },
+      {
+        name: '03 — Async & Event Loop',
+        path: 'cs/javascript/03-async-event-loop',
+        readme: 'README.md',
+        problems: [
+          { name: 'Call Stack',               file: '001-call-stack.md',        difficulty: 'Hard' },
+          { name: 'Event Loop',               file: '002-event-loop.md',       difficulty: 'Hard' },
+          { name: 'Microtask & Macrotask',   file: '003-microtask-macrotask.md', difficulty: 'Hard' },
+          { name: 'Promise',                  file: '004-promise.md',          difficulty: 'Medium' },
+          { name: 'async/await',              file: '005-async-await.md',       difficulty: 'Medium' },
+          { name: 'Error Handling',           file: '006-error-handling.md',    difficulty: 'Medium' },
+          { name: 'Parallel Patterns',        file: '007-parallel-patterns.md', difficulty: 'Medium' },
+          { name: 'Advanced Promise',         file: '008-promise-patterns.md',  difficulty: 'Hard' },
+        ]
+      },
+      {
+        name: '04 — Concurrency',
+        path: 'cs/javascript/04-concurrency',
+        readme: 'README.md',
+        problems: [
+          { name: 'Thread vs Process',        file: '001-thread-vs-process.md',      difficulty: 'Hard' },
+          { name: 'Web Workers',             file: '002-web-workers.md',           difficulty: 'Hard' },
+          { name: 'Worker Threads',           file: '003-worker-threads.md',        difficulty: 'Hard' },
+          { name: 'Cluster',                  file: '004-cluster.md',               difficulty: 'Hard' },
+          { name: 'SharedArrayBuffer',        file: '005-sharedarraybuffer.md',     difficulty: 'Hard' },
+        ]
+      },
+      {
+        name: '05 — Memory & Performance',
+        path: 'cs/javascript/05-memory-performance',
+        readme: 'README.md',
+        problems: [
+          { name: 'Stack vs Heap',            file: '001-stack-heap.md',             difficulty: 'Hard' },
+          { name: 'Garbage Collection',      file: '002-garbage-collection.md',     difficulty: 'Hard' },
+          { name: 'Memory Leaks',             file: '003-memory-leaks.md',          difficulty: 'Hard' },
+          { name: 'Memory Profiling',         file: '004-memory-profiling.md',      difficulty: 'Hard' },
+          { name: 'V8 Internals',             file: '005-v8-internals.md',         difficulty: 'Hard' },
+        ]
+      },
+      {
+        name: '06 — Modules',
+        path: 'cs/javascript/06-modules',
+        readme: 'README.md',
+        problems: [
+          { name: 'ESM vs CommonJS',           file: '001-esm-cjs.md',               difficulty: 'Medium' },
+          { name: 'Dynamic Import',           file: '002-dynamic-import.md',        difficulty: 'Medium' },
+          { name: 'Module Patterns',          file: '003-module-patterns.md',       difficulty: 'Medium' },
+          { name: 'Tree Shaking',             file: '004-tree-shaking.md',         difficulty: 'Medium' },
+        ]
+      },
+      {
+        name: '07 — Runtime Environment',
+        path: 'cs/javascript/07-runtime-environment',
+        readme: 'README.md',
+        problems: [
+          { name: 'Browser APIs',              file: '001-browser-apis.md',          difficulty: 'Medium' },
+          { name: 'DOM API',                   file: '002-dom-api.md',              difficulty: 'Medium' },
+          { name: 'Node.js Runtime',          file: '003-nodejs-runtime.md',       difficulty: 'Medium' },
+          { name: 'Browser Engine',           file: '004-browser-engine.md',       difficulty: 'Medium' },
+          { name: 'Security Model',            file: '005-security-model.md',       difficulty: 'Medium' },
+          { name: 'WebAssembly',              file: '006-web-assembly.md',        difficulty: 'Hard' },
+          { name: 'Cross-Platform JS',         file: '007-cross-platform.md',      difficulty: 'Medium' },
+        ]
+      },
+      {
+        name: '08 — Architecture & Patterns',
+        path: 'cs/javascript/08-architecture-patterns',
+        readme: 'README.md',
+        problems: [
+          { name: 'OOP Fundamentals',          file: '001-oop-fundamentals.md',     difficulty: 'Medium' },
+          { name: 'Functional Programming',    file: '002-functional-programming.md', difficulty: 'Medium' },
+          { name: 'Design Patterns in JS',     file: '003-design-patterns-js.md',   difficulty: 'Hard' },
+          { name: 'Observable Pattern',        file: '004-observable-pattern.md',   difficulty: 'Hard' },
+          { name: 'Dependency Injection',       file: '005-dependency-injection.md', difficulty: 'Hard' },
+          { name: 'Clean Architecture',        file: '006-clean-architecture.md',   difficulty: 'Hard' },
+        ]
+      },
+      {
+        name: '09 — Performance Optimization',
+        path: 'cs/javascript/09-performance-optimization',
+        readme: 'README.md',
+        problems: [
+          { name: 'Debounce & Throttle',       file: '001-debounce-throttle.md',    difficulty: 'Medium' },
+          { name: 'Lazy Loading',              file: '002-lazy-loading.md',         difficulty: 'Medium' },
+          { name: 'Code Splitting',            file: '003-code-splitting.md',       difficulty: 'Hard' },
+          { name: 'Rendering Performance',     file: '004-rendering-perf.md',       difficulty: 'Hard' },
+          { name: 'Caching Strategies',         file: '005-caching.md',              difficulty: 'Hard' },
+        ]
+      },
+      {
+        name: '10 — System Design',
+        path: 'cs/javascript/10-system-design',
+        readme: 'README.md',
+        problems: [
+          { name: 'Event-Driven Architecture', file: '001-event-driven.md',         difficulty: 'Hard' },
+          { name: 'Scaling Techniques',        file: '002-scaling.md',              difficulty: 'Hard' },
+          { name: 'Background Jobs',           file: '003-background-jobs.md',     difficulty: 'Hard' },
+          { name: 'CDN & Caching Layers',      file: '004-cdn-caching.md',          difficulty: 'Hard' },
+          { name: 'State Management Arch',     file: '005-state-management-arch.md', difficulty: 'Hard' },
+        ]
+      },
+    ]
+  },
+
+  {
     id: 'english',
     name: 'English',
     icon: '🇬🇧',

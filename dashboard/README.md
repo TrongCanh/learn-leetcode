@@ -54,3 +54,16 @@ npx serve .
 - [x] Dark/Light mode
 - [x] Mobile responsive
 - [x] Navigation giữa các bài
+
+## 📊 Các Tracks
+
+| Track | Trạng thái |
+|-------|------------|
+| 🧠 NeetCode 75 | ✅ Hoàn thành (75/75 bài) |
+| 🏗️ Design Patterns | 🚧 Đang xây dựng (0/12 patterns) |
+| 🟨 JavaScript Deep Dive | 🚧 Đang xây dựng (0/70 topics) |
+| 🗄️ Database | 🚧 Đang xây dựng |
+| 🟦 TypeScript | 🚧 Đang xây dựng |
+| 🔴 Redis | 🚧 Đang xây dựng (15/32 topics) |
+| 🔌 Socket Programming | 🚧 Đang xây dựng (0/17 topics) |
+| 🇬🇧 English | 🚧 Đang xây dựng |
