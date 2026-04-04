@@ -1,0 +1,11 @@
+{
+  "name": "🌳 Tree",
+  "problems": [
+    {
+      "name": "Tree",
+      "file": "/visualizations/algorithms/05-tree/tree.html",
+      "type": "viz",
+      "difficulty": "Medium"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "name": "🔗 Graph",
+  "problems": [
+    {
+      "name": "Graph",
+      "file": "/visualizations/algorithms/06-graph/graph.html",
+      "type": "viz",
+      "difficulty": "Medium"
+    }
+  ]
+}

@@ -1,0 +1,1269 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trực Quan Hóa Cấu Trúc Dữ Liệu Tree (Cây)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .hide-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      .tree-node {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .tree-line {
+        transition: all 0.3s ease;
+      }
+
+      @keyframes pulse-node {
+        0% {
+          box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+        }
+        70% {
+          box-shadow: 0 0 0 12px rgba(16, 185, 129, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+        }
+      }
+      .node-active {
+        animation: pulse-node 1.5s infinite;
+        border-color: #10b981;
+        background-color: #064e3b;
+        color: white;
+        transform: translate(-50%, -50%) scale(1.15) !important;
+        z-index: 20;
+      }
+      .node-visited {
+        background-color: #0f172a;
+        border-color: #3f3f46;
+        color: #94a3b8;
+      }
+      .node-found {
+        background-color: #047857;
+        border-color: #34d399;
+        color: white;
+        box-shadow: 0 0 15px rgba(52, 211, 153, 0.8);
+        z-index: 20;
+        transform: translate(-50%, -50%) scale(1.2) !important;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-slate-50 text-slate-900 font-sans min-h-screen p-4 sm:p-6 lg:p-8"
+  >
+    <div class="max-w-7xl mx-auto space-y-8">
+      <!-- HEADER -->
+      <header class="text-center space-y-4 mb-10">
+        <div
+          class="inline-flex items-center justify-center p-3 bg-emerald-100 text-emerald-600 rounded-full mb-2 shadow-sm"
+        >
+          <i data-lucide="network" class="w-8 h-8"></i>
+        </div>
+        <h1
+          class="text-3xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-emerald-700 to-teal-600"
+        >
+          Tree (Cây Phân Cấp)
+        </h1>
+        <p class="text-lg text-slate-600 max-w-3xl mx-auto">
+          Tuyệt kỹ quản lý dữ liệu phân cấp. Sân chơi của
+          <b>Đệ quy (Recursion)</b> và <b>Divide & Conquer</b>.<br />
+          <span
+            class="inline-block mt-2 px-3 py-1 bg-amber-100 text-amber-800 rounded-lg text-sm font-semibold border border-amber-200"
+          >
+            🔥 Insight: Nghĩ về Tree là nghĩ về [Root] + [Subtree Trái] +
+            [Subtree Phải]
+          </span>
+        </p>
+      </header>
+
+      <!-- LÝ THUYẾT TRỌNG TÂM -->
+      <div
+        class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 overflow-hidden"
+      >
+        <div class="flex items-center mb-6">
+          <i data-lucide="book-open" class="w-6 h-6 text-emerald-500 mr-2"></i>
+          <h2 class="text-xl font-bold text-slate-800">Lý thuyết Trọng tâm</h2>
+        </div>
+        <div
+          class="grid grid-cols-1 lg:grid-cols-2 gap-8 text-sm text-slate-700 items-start"
+        >
+          <div class="space-y-4">
+            <div
+              class="bg-slate-900 p-4 rounded-xl border border-slate-700 flex flex-col text-white h-full justify-center"
+            >
+              <span
+                class="text-slate-400 text-xs uppercase tracking-wider mb-3 text-center"
+                >Bản chất: Recursion (Đệ quy)</span
+              >
+              <p class="text-center text-slate-300 mb-4">
+                Tree không phải cấu trúc tuyến tính. Mỗi Node trong Tree bản
+                thân nó lại là <b>Gốc (Root) của một Tree nhỏ hơn</b> bên dưới.
+                Giải bài toán Tree là giải bài toán nhỏ ở nhánh Trái/Phải rồi
+                tổng hợp lại.
+              </p>
+
+              <div
+                class="flex justify-center gap-8 text-xs font-mono font-bold"
+              >
+                <div class="text-center">
+                  <span class="text-cyan-400 text-lg block">Pre-order</span>
+                  Root ➔ Left ➔ Right
+                </div>
+                <div class="text-center">
+                  <span class="text-emerald-400 text-lg block">In-order</span>
+                  Left ➔ Root ➔ Right
+                </div>
+                <div class="text-center">
+                  <span class="text-rose-400 text-lg block">Post-order</span>
+                  Left ➔ Right ➔ Root
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Các Pattern -->
+          <div class="space-y-4">
+            <div
+              class="bg-slate-50 p-4 rounded-xl border border-slate-100 h-full"
+            >
+              <h3 class="font-bold text-slate-800 mb-3 flex items-center">
+                <i data-lucide="zap" class="w-4 h-4 mr-1 text-amber-500"></i>
+                Các Pattern Cốt Lõi
+              </h3>
+              <ul class="space-y-3">
+                <li class="flex items-start">
+                  <span
+                    class="flex items-center justify-center bg-emerald-500 text-white w-5 h-5 rounded text-xs font-bold mr-2 shrink-0"
+                    >1</span
+                  >
+                  <span
+                    ><b>DFS Traversal:</b> Duyệt sâu. Đi sâu hết cỡ xuống 1
+                    nhánh lá rồi mới quay lại (Backtrack). Dùng Stack của hệ
+                    thống (Đệ quy).</span
+                  >
+                </li>
+                <li class="flex items-start">
+                  <span
+                    class="flex items-center justify-center bg-emerald-500 text-white w-5 h-5 rounded text-xs font-bold mr-2 shrink-0"
+                    >2</span
+                  >
+                  <span
+                    ><b>Divide & Conquer:</b> Trả về kết quả từ dưới lên. Hàm ở
+                    Node Cha sẽ chờ kết quả từ <code>dfs(left)</code> và
+                    <code>dfs(right)</code> để tính toán tiếp (VD: Tính độ sâu
+                    Max Depth).</span
+                  >
+                </li>
+                <li class="flex items-start">
+                  <span
+                    class="flex items-center justify-center bg-emerald-500 text-white w-5 h-5 rounded text-xs font-bold mr-2 shrink-0"
+                    >3</span
+                  >
+                  <span
+                    ><b>Binary Search Tree (BST):</b> Node Trái < Node Cha <
+                    Node Phải. Tra cứu/Chèn/Xóa siêu tốc độ O(log n). Việc duyệt
+                    In-order trên BST sẽ cho ra mảng ĐÃ SẮP XẾP.</span
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BẢNG ĐÁNH GIÁ -->
+      <div
+        class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 overflow-hidden flex flex-col"
+      >
+        <div class="flex items-center mb-6">
+          <i data-lucide="award" class="w-6 h-6 text-emerald-500 mr-2"></i>
+          <h2 class="text-xl font-bold text-slate-800">
+            Các Dạng Bài Tiêu Biểu
+          </h2>
+        </div>
+        <div class="overflow-x-auto">
+          <table
+            class="w-full text-left border-collapse whitespace-nowrap min-w-[600px]"
+          >
+            <thead>
+              <tr class="bg-slate-50">
+                <th class="p-4 font-semibold text-slate-700 rounded-tl-xl">
+                  Dạng bài
+                </th>
+                <th class="p-4 font-semibold text-slate-700">Pattern Chính</th>
+                <th class="p-4 font-semibold text-slate-700">
+                  Kỹ thuật / Mục đích
+                </th>
+                <th class="p-4 font-semibold text-slate-700 rounded-tr-xl">
+                  Độ Phức Tạp
+                </th>
+              </tr>
+            </thead>
+            <tbody id="comparison-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- MAIN UI -->
+      <div
+        class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden"
+      >
+        <div
+          id="tabs-container"
+          class="flex overflow-x-auto border-b border-slate-200 hide-scrollbar bg-slate-50"
+        ></div>
+
+        <div
+          class="p-4 sm:p-6 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start"
+        >
+          <div class="lg:col-span-4 space-y-6" id="info-container"></div>
+
+          <div class="lg:col-span-8 w-full flex flex-col space-y-6">
+            <div
+              class="bg-slate-900 rounded-2xl p-4 sm:p-6 shadow-inner border border-slate-800"
+            >
+              <div
+                class="flex flex-wrap gap-4 items-center justify-between mb-4 pb-4 border-b border-slate-700"
+              >
+                <div class="flex gap-2">
+                  <button
+                    id="btn-play"
+                    class="flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-semibold transition disabled:opacity-50 text-sm"
+                  >
+                    <i data-lucide="play" class="w-4 h-4 mr-2"></i>
+                    <span id="btn-play-text">Chạy Mô Phỏng</span>
+                  </button>
+                  <button
+                    id="btn-reset"
+                    class="flex items-center px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition text-sm"
+                  >
+                    <i data-lucide="rotate-ccw" class="w-4 h-4 mr-2"></i> Dữ
+                    liệu mới
+                  </button>
+                </div>
+                <div class="flex items-center gap-3 text-slate-300 text-sm">
+                  <i data-lucide="settings-2" class="w-4 h-4"></i>
+                  <label class="font-medium hidden sm:block">Tốc độ:</label>
+                  <input
+                    type="range"
+                    id="speed-slider"
+                    min="50"
+                    max="1500"
+                    value="800"
+                    class="w-24 accent-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <!-- Khối Đề Bài -->
+              <div
+                id="problem-statement"
+                class="bg-emerald-900/40 border border-emerald-500/30 rounded-xl p-4 mb-4 text-sm sm:text-base text-emerald-100 flex items-start gap-3 hidden"
+              >
+                <i
+                  data-lucide="target"
+                  class="w-5 h-5 text-emerald-400 shrink-0 mt-0.5"
+                ></i>
+                <div id="problem-text" class="leading-relaxed"></div>
+              </div>
+
+              <!-- Bảng tính toán Logic Realtime -->
+              <div
+                id="math-computation"
+                class="bg-slate-800 rounded-xl p-3 mb-6 text-center font-mono text-sm sm:text-base border border-slate-600 text-slate-300 min-h-[48px] flex items-center justify-center"
+              >
+                Sẵn sàng mô phỏng.
+              </div>
+
+              <!-- Vùng Hiển Thị Cây -->
+              <div
+                class="flex flex-col items-center justify-center w-full relative mb-4"
+              >
+                <!-- Khu vực Canvas vẽ Cây -->
+                <div
+                  id="tree-canvas"
+                  class="relative w-full h-[250px] sm:h-[300px] border border-slate-700 rounded-xl bg-slate-950 shadow-inner overflow-hidden"
+                >
+                  <!-- SVG Lines (Vẽ cành cây) -->
+                  <svg
+                    id="tree-lines"
+                    class="absolute top-0 left-0 w-full h-full z-0"
+                  ></svg>
+                  <!-- Các Node HTML -->
+                  <div
+                    id="tree-nodes"
+                    class="absolute top-0 left-0 w-full h-full z-10 pointer-events-none"
+                  ></div>
+                </div>
+
+                <!-- Khu vực Bổ sung (Output Array / Biến) -->
+                <div
+                  id="output-wrapper"
+                  class="flex flex-col items-center w-full mt-6 hidden"
+                >
+                  <div
+                    id="output-title"
+                    class="text-emerald-400 font-mono text-sm font-bold mb-2 uppercase tracking-wider"
+                  >
+                    OUTPUT (Kết quả)
+                  </div>
+                  <div
+                    id="output-container"
+                    class="flex flex-wrap items-center justify-center gap-1 sm:gap-2 min-h-[48px] min-w-[200px] p-2 border border-dashed border-slate-600 rounded bg-slate-800/30"
+                  ></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Code Block -->
+            <div
+              class="relative rounded-2xl overflow-hidden shadow-lg border border-slate-700 bg-[#0f172a]"
+            >
+              <div
+                class="w-full px-4 py-3 bg-[#1e293b] border-b border-slate-700 flex items-center justify-between"
+              >
+                <div class="flex space-x-2">
+                  <div class="w-3 h-3 rounded-full bg-rose-500"></div>
+                  <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+                  <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                </div>
+                <div class="flex items-center text-slate-400 text-xs font-mono">
+                  <i data-lucide="code" class="w-4 h-4 mr-1.5"></i> javascript
+                </div>
+              </div>
+              <pre
+                class="p-4 sm:p-6 overflow-auto text-xs sm:text-sm font-mono leading-relaxed max-h-72"
+              ><code id="code-container" class="text-slate-200"></code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // === DỮ LIỆU PATTERNS TREE ===
+      const ALGO_DATA = [
+        {
+          id: "dfs_preorder",
+          name: "1. Traversal (Duyệt)",
+          vnName: "DFS Pre-order",
+          tech: "Recursion (DFS)",
+          space: "O(n) / O(h)",
+          code: `// Bài toán: Duyệt cây theo chiều sâu (Pre-order: Root -> Left -> Right)\nfunction preorderTraversal(root) {\n  let result = [];\n  \n  function dfs(node) {\n    if (!node) return; // Base case: Lá rỗng thì quay lui\n    \n    // 1. Xử lý Node hiện tại (Root)\n    result.push(node.val);\n    \n    // 2. Đệ quy xuống nhánh Trái\n    dfs(node.left);\n    \n    // 3. Đệ quy xuống nhánh Phải\n    dfs(node.right);\n  }\n  \n  dfs(root);\n  return result;\n}`,
+          desc: "Khác với Mảng chỉ có 1 hướng đi, Tree chia nhánh. DFS (Depth First Search) sẽ ưu tiên đi sâu tít mù tắp xuống nhánh bên trái cho đến khi đụng Null, sau đó mới lùi lại (Backtrack) để thăm nhánh phải. Pre-order luôn ghi nhận giá trị của Gốc trước khi xét con.",
+          characteristics: [
+            "Đệ quy là công cụ hoàn hảo cho Tree",
+            "Stack đệ quy sẽ tiêu tốn bộ nhớ O(h) với h là chiều cao của cây",
+          ],
+        },
+        {
+          id: "max_depth",
+          name: "2. Path / Depth",
+          vnName: "Divide & Conquer",
+          tech: "Recursion từ dưới lên",
+          space: "O(n) / O(h)",
+          code: `// Bài toán: Tìm chiều sâu lớn nhất (Max Depth) của Cây Nhị Phân\nfunction maxDepth(root) {\n  // Base case: Cây rỗng có độ sâu = 0\n  if (!root) return 0;\n\n  // Chia bài toán: Đi hỏi nhánh Trái và Phải xem tụi nó sâu bao nhiêu\n  let leftDepth = maxDepth(root.left);\n  let rightDepth = maxDepth(root.right);\n\n  // Trị bài toán: Chiều sâu của mình = 1 (chính mình) + đứa con sâu hơn\n  return 1 + Math.max(leftDepth, rightDepth);\n}`,
+          desc: 'Một ví dụ tuyệt đẹp của Divide & Conquer (Chia để trị). Bạn không cần tính toán toàn bộ cây. Bạn chỉ cần hỏi "Con Trái sâu bao nhiêu?", "Con Phải sâu bao nhiêu?". Khi 2 đứa con trả lời xong, bạn cộng thêm 1 (là bản thân bạn) và trả kết quả cho Cha của bạn.',
+          characteristics: [
+            "Kết quả được tính toán từ các node Lá cuộn ngược lên node Gốc",
+            "Cũng chính là phép duyệt Post-order (Left -> Right -> Root)",
+          ],
+        },
+        {
+          id: "lca",
+          name: "3. Quan hệ (LCA)",
+          vnName: "Lowest Common Ancestor",
+          tech: "DFS Backtracking",
+          space: "O(n) / O(h)",
+          code: `// Bài toán: Tìm Tổ Tiên Chung Gần Nhất của 2 node P và Q\nfunction lowestCommonAncestor(root, p, q) {\n  // Nếu đụng đáy hoặc tìm thấy P/Q, báo cáo về cho Cha\n  if (!root || root === p || root === q) {\n    return root;\n  }\n\n  // Sai con đi tìm P và Q ở 2 nhánh\n  let left = lowestCommonAncestor(root.left, p, q);\n  let right = lowestCommonAncestor(root.right, p, q);\n\n  // Nếu cả 2 nhánh đều báo tìm thấy -> Ta chính là Tổ Tiên Chung!\n  if (left !== null && right !== null) {\n    return root;\n  }\n\n  // Nếu chỉ 1 nhánh tìm thấy, truyền kết quả đó lên trên tiếp\n  return left !== null ? left : right;\n}`,
+          desc: "LCA là bài toán kiểm tra độ hiểu đệ quy cực tốt. Ta ném tín hiệu tìm kiếm xuống đáy. Khi các lá báo về (Return P hoặc Q), Node nào nhận được TÍN HIỆU TỪ CẢ 2 NHÁNH Trái và Phải, Node đó chính là ngã ba giao nhau (Tổ tiên chung).",
+          characteristics: [
+            "Phép thuật Backtracking (Quay lui)",
+            "Xử lý logic sau khi hàm đệ quy con đã chạy xong (Post-order)",
+          ],
+        },
+        {
+          id: "bst_search",
+          name: "4. Cây Nhị Phân Tìm Kiếm",
+          vnName: "BST (Binary Search Tree)",
+          tech: "Binary Search",
+          space: "O(log n) / O(h)",
+          code: `// Bài toán: Tìm một giá trị Target trong Cây Nhị Phân Tìm Kiếm (BST)\nfunction searchBST(root, val) {\n  // Không tìm thấy hoặc đã tìm trúng đích\n  if (!root || root.val === val) {\n    return root;\n  }\n\n  // Nếu Target nhỏ hơn Gốc -> Chắc chắn nó nằm bên Trái\n  if (val < root.val) {\n    return searchBST(root.left, val);\n  }\n  // Ngược lại, Target lớn hơn -> Chắc chắn nằm bên Phải\n  else {\n    return searchBST(root.right, val);\n  }\n}`,
+          desc: "BST là một cái cây ĐÃ SẮP XẾP. Mọi node bên Trái đều Nhỏ hơn Cha, mọi node bên Phải đều Lớn hơn Cha. Nhờ cấu trúc thần kỳ này, mỗi bước đi xuống ta vứt bỏ được một nửa cái cây, giảm độ phức tạp xuống O(log n) y hệt Binary Search trên mảng.",
+          characteristics: [
+            "Cực nhanh: Thời gian O(log n) tương đương chiều cao cây",
+            "Không cần đi hết mọi nhánh, chỉ cần đi 1 đường chéo xuống lá.",
+          ],
+        },
+        {
+          id: "bfs_level_order",
+          name: "5. Duyệt theo Tầng",
+          vnName: "BFS (Level Order)",
+          tech: "Queue (Hàng đợi)",
+          space: "O(n) / O(w)",
+          code: `// Bài toán: Duyệt cây theo từng tầng từ trên xuống dưới\nfunction levelOrder(root) {\n  if (!root) return [];\n  let result = [], queue = [root];\n\n  while (queue.length > 0) {\n    let levelSize = queue.length;\n    let currentLevel = [];\n    \n    for (let i = 0; i < levelSize; i++) {\n      let node = queue.shift();\n      currentLevel.push(node.val);\n      if (node.left) queue.push(node.left);\n      if (node.right) queue.push(node.right);\n    }\n    result.push(currentLevel);\n  }\n  return result;\n}`,
+          desc: "BFS (Breadth-First Search) duyệt cây theo từng lớp ngang. Thay vì Đệ quy (Stack), BFS dùng Hàng đợi (Queue). Node nào vào trước sẽ được xét trước, sinh ra các con của nó ở lớp tiếp theo.",
+          characteristics: [
+            "Không dùng đệ quy, dùng Queue",
+            "Bộ nhớ tốn nhiều nhất ở tầng rộng nhất của cây (O(w))",
+          ],
+        },
+        {
+          id: "validate_bst",
+          name: "6. Kiểm tra BST",
+          vnName: "Validate BST",
+          tech: "DFS + Constraints",
+          space: "O(n) / O(h)",
+          code: `// Bài toán: Kiểm tra xem cây có phải là Cây Nhị Phân Tìm Kiếm hợp lệ?\nfunction isValidBST(root, min = -Infinity, max = Infinity) {\n  if (!root) return true;\n\n  // Kiểm tra điều kiện BST tại Node hiện tại\n  if (root.val <= min || root.val >= max) {\n    return false;\n  }\n\n  // Truyền khoảng giới hạn (min, max) xuống 2 nhánh con\n  return isValidBST(root.left, min, root.val) && \n         isValidBST(root.right, root.val, max);\n}`,
+          desc: "Một lỗi sai kinh điển là chỉ kiểm tra Trái < Cha < Phải. Thực tế, toàn bộ nhánh Trái phải nhỏ hơn Cha, và toàn bộ nhánh Phải phải lớn hơn Cha. Ta phải truyền giới hạn [Min, Max] từ trên xuống để ép các Node con tuân thủ.",
+          characteristics: [
+            "Top-down DFS: Truyền thông tin từ Cha xuống Con",
+            "Giới hạn [min, max] hẹp dần khi đi sâu xuống lá",
+          ],
+        },
+        {
+          id: "diameter",
+          name: "7. Đường kính Cây",
+          vnName: "Diameter of Tree",
+          tech: "Post-order DFS",
+          space: "O(n) / O(h)",
+          code: `// Bài toán: Tìm khoảng cách dài nhất giữa 2 node bất kỳ\nfunction diameterOfBinaryTree(root) {\n  let maxDiameter = 0;\n\n  function dfs(node) {\n    if (!node) return 0;\n    \n    let leftDepth = dfs(node.left);\n    let rightDepth = dfs(node.right);\n    \n    // Cập nhật kỷ lục đường kính đi qua node hiện tại\n    maxDiameter = Math.max(maxDiameter, leftDepth + rightDepth);\n    \n    // Trả về chiều sâu lớn nhất cho Cha\n    return 1 + Math.max(leftDepth, rightDepth);\n  }\n\n  dfs(root);\n  return maxDiameter;\n}`,
+          desc: 'Đường kính không nhất thiết phải đi qua Root. Tại mỗi Node, đường kính cục bộ = Chiều sâu nhánh Trái + Chiều sâu nhánh Phải. Ta dùng DFS để tính chiều sâu, đồng thời "lén" cập nhật một biến toàn cục lưu Đường kính Max.',
+          characteristics: [
+            "Cập nhật biến toàn cục trong lúc chạy đệ quy",
+            "Hàm đệ quy trả về chiều sâu (Depth), nhưng mục đích thực sự là tính Đường kính",
+          ],
+        },
+      ];
+
+      let currentTabId = ALGO_DATA[0].id;
+      let isRunning = false;
+      let currentProcessId = 0;
+      let currentSpeed = 800;
+
+      // --- State Của Cây ---
+      // Mảng lưu giá trị của cây (Level-order). Index 0 là Root. Left: 2i+1, Right: 2i+2
+      let treeData = [];
+      let outputData = []; // Dùng lưu kết quả
+      let targetNodes = []; // Dùng cho bài LCA (p, q) hoặc BST Search (val)
+
+      // Tọa độ vẽ cây (Giả lập Cây nhị phân 3 tầng = 7 node)
+      // X, Y tính bằng phần trăm (%) của Box chứa
+      const treeCoords = [
+        { id: 0, x: 50, y: 15 },
+        { id: 1, x: 25, y: 45 },
+        { id: 2, x: 75, y: 45 },
+        { id: 3, x: 12.5, y: 80 },
+        { id: 4, x: 37.5, y: 80 },
+        { id: 5, x: 62.5, y: 80 },
+        { id: 6, x: 87.5, y: 80 },
+      ];
+
+      // Tiện ích UI
+      const renderBadgeHTML = (text) => {
+        let c = "bg-slate-100 text-slate-800 border-slate-300";
+        if (text.includes("O(1)") || text.includes("O(log n)"))
+          c = "bg-emerald-100 text-emerald-800 border-emerald-300";
+        if (text.includes("O(n)") || text.includes("O(h)"))
+          c = "bg-teal-100 text-teal-800 border-teal-300";
+        return `<span class="px-3 py-1 rounded-full border text-sm font-semibold shadow-sm inline-block ${c}">${text}</span>`;
+      };
+
+      const highlightJS = (code) => {
+        let esc = code.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const c = [];
+        esc = esc.replace(/(\/\/.*)/g, (m) => {
+          c.push(m);
+          return `___C_${c.length - 1}___`;
+        });
+        esc = esc.replace(
+          /\b(\d+)\b/g,
+          '<span class="text-orange-300">$1</span>',
+        );
+        esc = esc
+          .replace(
+            /\b(function|let|const|var|if|else|for|while|return|break|continue|class|constructor)\b/g,
+            '<span class="text-pink-400 font-semibold">$1</span>',
+          )
+          .replace(
+            /\b(true|false|null|isNaN|Number)\b/g,
+            '<span class="text-purple-400">$1</span>',
+          )
+          .replace(
+            /\b(Math|this|push|val|left|right)\b/g,
+            '<span class="text-yellow-300">$1</span>',
+          )
+          .replace(/\b(new|Array)\b/g, '<span class="text-cyan-300">$1</span>');
+        c.forEach(
+          (com, i) =>
+            (esc = esc.replace(
+              `___C_${i}___`,
+              `<span class="text-slate-500 italic">${com}</span>`,
+            )),
+        );
+        return esc;
+      };
+
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+      const isAborted = (id) => id !== currentProcessId;
+
+      function renderTabs() {
+        document.getElementById("tabs-container").innerHTML = ALGO_DATA.map(
+          (a) =>
+            `<button onclick="changeTab('${a.id}')" class="px-5 py-4 font-bold whitespace-nowrap transition-all duration-200 border-b-2 flex-1 text-center ${a.id === currentTabId ? "text-emerald-600 border-emerald-600 bg-white" : "text-slate-500 hover:text-slate-800 hover:bg-slate-100/50 border-transparent cursor-pointer"} text-sm sm:text-base">${a.name}</button>`,
+        ).join("");
+      }
+
+      function initUI() {
+        document.getElementById("comparison-table-body").innerHTML =
+          ALGO_DATA.map(
+            (a) =>
+              `<tr class="border-b border-slate-100 hover:bg-slate-50/50"><td class="p-4 font-bold text-slate-800">${a.name}</td><td class="p-4 text-slate-700 text-sm font-semibold text-emerald-700">${a.vnName}</td><td class="p-4 text-slate-700 text-sm italic">${a.tech}</td><td class="p-4">${renderBadgeHTML(a.space)}</td></tr>`,
+          ).join("");
+        renderTabs();
+        updateInfoAndCode();
+        generateNewData();
+        lucide.createIcons();
+      }
+
+      function updateInfoAndCode() {
+        const a = ALGO_DATA.find((x) => x.id === currentTabId);
+        if (!a) return;
+        document.getElementById("info-container").innerHTML =
+          `<div><h3 class="text-3xl font-extrabold text-slate-900 mb-1">${a.name}</h3><div class="inline-flex items-center px-3 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-sm font-medium">${a.vnName}</div></div><p class="text-slate-600 leading-relaxed text-sm">${a.desc}</p><ul class="space-y-2 text-sm text-slate-700 mt-4">${a.characteristics.map((c) => `<li class="flex items-start"><i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500 mr-2 shrink-0 mt-0.5"></i><span>${c}</span></li>`).join("")}</ul>`;
+        document.getElementById("code-container").innerHTML = highlightJS(
+          a.code,
+        );
+        lucide.createIcons();
+      }
+
+      function setMathHTML(htmlContent) {
+        document.getElementById("math-computation").innerHTML = htmlContent;
+      }
+
+      // --- RENDER TREE GRAPHICS ---
+      function renderTreeUI(
+        activeIdx = -1,
+        visitedIndices = [],
+        specialPaths = [],
+        additionalNodeInfo = {},
+      ) {
+        const nodesContainer = document.getElementById("tree-nodes");
+        const linesContainer = document.getElementById("tree-lines");
+
+        let htmlNodes = "";
+        let htmlLines = "";
+
+        // Vẽ Đường thẳng (Lines) trước để nằm dưới
+        for (let i = 0; i < treeData.length; i++) {
+          if (treeData[i] === null) continue;
+
+          let leftChild = 2 * i + 1;
+          let rightChild = 2 * i + 2;
+
+          const drawLine = (childIdx) => {
+            if (childIdx < treeData.length && treeData[childIdx] !== null) {
+              let parentCoord = treeCoords[i];
+              let childCoord = treeCoords[childIdx];
+
+              let strokeColor = "#334155"; // slate-700
+              let strokeWidth = "2";
+              let cssClass = "tree-line";
+
+              // Nếu cả cha và con đều đã được visited, tô màu đoạn nối
+              if (
+                visitedIndices.includes(i) &&
+                visitedIndices.includes(childIdx)
+              ) {
+                strokeColor = "#10b981"; // emerald-500
+                strokeWidth = "3";
+              }
+
+              // Highlight đặc biệt cho đường dẫn (như LCA)
+              if (
+                specialPaths.includes(`${i}-${childIdx}`) ||
+                specialPaths.includes(`${childIdx}-${i}`)
+              ) {
+                strokeColor = "#f43f5e"; // rose-500
+                strokeWidth = "4";
+                cssClass += " drop-shadow-[0_0_5px_rgba(244,63,94,0.8)]";
+              }
+
+              htmlLines += `<line x1="${parentCoord.x}%" y1="${parentCoord.y}%" x2="${childCoord.x}%" y2="${childCoord.y}%" stroke="${strokeColor}" stroke-width="${strokeWidth}" class="${cssClass}" />`;
+            }
+          };
+
+          drawLine(leftChild);
+          drawLine(rightChild);
+        }
+        linesContainer.innerHTML = htmlLines;
+
+        // Vẽ Nodes
+        for (let i = 0; i < treeData.length; i++) {
+          if (treeData[i] === null) continue;
+
+          let coord = treeCoords[i];
+          let val = treeData[i];
+
+          let bgClass = "bg-slate-800 border-slate-600 text-slate-300"; // Mặc định
+          let transformClass = "transform translate(-50%, -50%)";
+
+          if (visitedIndices.includes(i)) bgClass = "node-visited";
+          if (activeIdx === i) bgClass = "node-active";
+          if (targetNodes.includes(val) || targetNodes.includes(i))
+            bgClass = "node-found";
+
+          // Bổ sung thông tin nổi trên Node (VD: Return Max Depth)
+          let badgeHTML = "";
+          if (additionalNodeInfo[i] !== undefined) {
+            badgeHTML = `<span class="absolute -top-6 left-1/2 -translate-x-1/2 bg-yellow-500 text-slate-900 text-[10px] font-bold px-1.5 py-0.5 rounded shadow-md whitespace-nowrap z-30">${additionalNodeInfo[i]}</span>`;
+          }
+
+          // Target Label (P/Q)
+          if (currentTabId === "lca") {
+            if (i === targetNodes[0])
+              badgeHTML += `<span class="absolute -right-5 -bottom-2 bg-rose-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full z-30">P</span>`;
+            if (i === targetNodes[1])
+              badgeHTML += `<span class="absolute -left-5 -bottom-2 bg-cyan-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full z-30">Q</span>`;
+          }
+
+          htmlNodes += `
+           <div class="tree-node absolute w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-full border-2 font-bold text-sm sm:text-base shadow-lg cursor-pointer ${bgClass}" 
+                style="left: ${coord.x}%; top: ${coord.y}%; transform: translate(-50%, -50%);">
+              ${badgeHTML}
+              ${val}
+           </div>
+         `;
+        }
+        nodesContainer.innerHTML = htmlNodes;
+      }
+
+      function renderOutputUI(activeVal = null) {
+        const wrapper = document.getElementById("output-wrapper");
+        if (
+          currentTabId !== "dfs_preorder" &&
+          currentTabId !== "bfs_level_order"
+        ) {
+          wrapper.classList.add("hidden");
+          return;
+        }
+        wrapper.classList.remove("hidden");
+        const container = document.getElementById("output-container");
+        let html = "";
+
+        if (currentTabId === "bfs_level_order") {
+          document.getElementById("output-title").innerText =
+            "KẾT QUẢ THEO TẦNG (Level Order)";
+          outputData.forEach((levelArr) => {
+            html += `<div class="px-3 py-1 bg-slate-700 border border-slate-500 rounded font-mono text-emerald-300 text-sm">[${levelArr.join(", ")}]</div>`;
+          });
+        } else {
+          document.getElementById("output-title").innerText =
+            "OUTPUT (Kết quả)";
+          outputData.forEach((val) => {
+            let bg =
+              val === activeVal
+                ? "bg-emerald-500 border-emerald-400 text-white scale-110 shadow-md"
+                : "bg-slate-700 border-slate-600 text-emerald-300";
+            html += `<div class="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded border font-bold text-sm transition-all duration-300 ${bg}">${val}</div>`;
+          });
+        }
+
+        container.innerHTML = html;
+      }
+
+      function changeTab(id) {
+        if (isRunning) {
+          currentProcessId++;
+          isRunning = false;
+          toggleBtn(false);
+        }
+        currentTabId = id;
+        renderTabs();
+        updateInfoAndCode();
+        generateNewData();
+      }
+
+      function generateNewData() {
+        if (isRunning) return;
+        let problemHTML = "";
+        outputData = [];
+        targetNodes = [];
+
+        if (currentTabId === "dfs_preorder" || currentTabId === "max_depth") {
+          // Cây nhị phân ngẫu nhiên bình thường
+          treeData = [1, 2, 3, 4, 5, null, 7]; // Cố tình để thiếu 1 node cho tự nhiên
+          // Đảo ngẫu nhiên giá trị
+          for (let i = 0; i < treeData.length; i++) {
+            if (treeData[i]) treeData[i] = Math.floor(Math.random() * 50) + 1;
+          }
+
+          if (currentTabId === "dfs_preorder") {
+            problemHTML = `<b class="text-white">Pre-order Traversal:</b> Duyệt sâu DFS. Thứ tự ưu tiên: <b class="text-yellow-400">Root ➔ Trái ➔ Phải</b>. Mọi Node đi ngang qua đều được ghi lại ngay lập tức.`;
+          } else {
+            problemHTML = `<b class="text-white">Max Depth (Divide & Conquer):</b> Đệ quy tìm độ sâu. Hỏi xem Trái sâu bao nhiêu, Phải sâu bao nhiêu. Chiều sâu Node hiện tại = <b class="text-yellow-400">1 + Max(Trái, Phải)</b>.`;
+          }
+        } else if (currentTabId === "lca") {
+          treeData = [3, 5, 1, 6, 2, 0, 8];
+          targetNodes = [4, 6]; // Index của p và q trong mảng treeData (Node 2 và Node 8)
+          let pVal = treeData[targetNodes[0]];
+          let qVal = treeData[targetNodes[1]];
+          problemHTML = `<b class="text-white">Lowest Common Ancestor:</b> Tìm tổ tiên chung gần nhất của <b class="text-rose-400">P = ${pVal}</b> và <b class="text-cyan-400">Q = ${qVal}</b>. Các nhánh khi gặp P hoặc Q sẽ Return tín hiệu dội ngược lên trên.`;
+        } else if (currentTabId === "bst_search") {
+          // Cây BST (Đã sắp xếp Trái < Cha < Phải)
+          treeData = [20, 10, 30, 5, 15, 25, 35];
+          let pickIdx = [0, 1, 2, 3, 4, 5, 6];
+          let targetIdx = pickIdx[Math.floor(Math.random() * pickIdx.length)];
+          targetNodes = [treeData[targetIdx]]; // Lưu Value
+
+          problemHTML = `<b class="text-white">Binary Search Tree:</b> Cây đã thỏa mãn Trái < Cha < Phải. Tìm <b class="text-yellow-400 text-lg px-1 bg-slate-800 rounded">Target = ${targetNodes[0]}</b>. Mỗi bước chỉ cần so sánh và chọn đi 1 nhánh, bỏ qua 1 nửa cây (O(log n)).`;
+        } else if (currentTabId === "bfs_level_order") {
+          treeData = [1, 2, 3, 4, 5, null, 7];
+          for (let i = 0; i < treeData.length; i++)
+            if (treeData[i]) treeData[i] = Math.floor(Math.random() * 50) + 1;
+          problemHTML = `<b class="text-white">Duyệt theo Tầng (BFS):</b> Dùng một Queue để chứa các Node. Ưu tiên quét hết các anh em cùng tầng trước khi xuống tầng dưới.`;
+        } else if (currentTabId === "validate_bst") {
+          let isInvalid = Math.random() > 0.5;
+          if (isInvalid) {
+            treeData = [20, 10, 30, 5, 25, 25, 35]; // Lỗi: 25 thuộc nhánh Trái của 20 nên phải < 20
+            problemHTML = `<b class="text-white">Validate BST (Cố tình làm Cây Lỗi):</b> Node <b class="text-rose-400">25</b> là con phải của 10 (hợp lệ), nhưng nó thuộc nhánh Trái của Root 20 nên đáng lẽ phải NHỎ HƠN 20. Phép thử đệ quy sẽ bắt được lỗi này.`;
+          } else {
+            treeData = [20, 10, 30, 5, 15, 25, 35];
+            problemHTML = `<b class="text-white">Validate BST (Cây Hợp Lệ):</b> Truyền khoảng giới hạn <b class="text-yellow-400">[Min, Max]</b> từ trên xuống. Các nhánh con phải nằm gọn trong giới hạn của Tổ Tiên truyền xuống.`;
+          }
+        } else if (currentTabId === "diameter") {
+          treeData = [1, 2, 3, 4, 5, null, 7];
+          problemHTML = `<b class="text-white">Đường kính Cây:</b> Tìm khoảng cách dài nhất. Dùng DFS tính chiều sâu Trái/Phải, đồng thời cập nhật kỷ lục Đường kính = <b class="text-yellow-400">Trái + Phải</b>.`;
+        }
+
+        document.getElementById("problem-text").innerHTML = problemHTML;
+        document.getElementById("problem-statement").classList.remove("hidden");
+        document.getElementById("output-wrapper").classList.add("hidden");
+        lucide.createIcons();
+
+        renderTreeUI();
+        renderOutputUI();
+        setMathHTML('Nhấn "Chạy Mô Phỏng" để bắt đầu đệ quy.');
+      }
+
+      function toggleBtn(s) {
+        isRunning = s;
+        document.getElementById("btn-play").disabled = s;
+        document.getElementById("btn-play-text").innerText = s
+          ? "Đang chạy Đệ quy..."
+          : "Chạy Mô Phỏng";
+      }
+
+      document
+        .getElementById("btn-reset")
+        .addEventListener("click", generateNewData);
+      document
+        .getElementById("speed-slider")
+        .addEventListener(
+          "input",
+          (e) => (currentSpeed = 1550 - Number(e.target.value)),
+        );
+      document.getElementById("btn-play").addEventListener("click", () => {
+        if (!isRunning) handleSimulation();
+      });
+
+      async function handleSimulation() {
+        toggleBtn(true);
+        currentProcessId++;
+        let sid = currentProcessId;
+        try {
+          if (currentTabId === "dfs_preorder") {
+            await startDFSPreorder(0, sid, []);
+            if (sid === currentProcessId) {
+              renderTreeUI(
+                -1,
+                treeData.map((v, i) => i).filter((i) => treeData[i] !== null),
+              );
+              setMathHTML(
+                `<span class="text-emerald-400 font-bold text-xl">🎉 Duyệt DFS Pre-order hoàn tất!</span>`,
+              );
+            }
+          } else if (currentTabId === "max_depth") {
+            let depth = await startMaxDepth(0, sid, []);
+            if (sid === currentProcessId) {
+              renderTreeUI(
+                -1,
+                treeData.map((v, i) => i).filter((i) => treeData[i] !== null),
+                [],
+                { 0: `Max Depth = ${depth}` },
+              );
+              setMathHTML(
+                `<span class="text-emerald-400 font-bold text-xl">🎉 Hoàn tất! Chiều sâu Max của Root là ${depth}.</span>`,
+              );
+            }
+          } else if (currentTabId === "lca") {
+            let lca = await startLCA(0, sid, [], []);
+            if (sid === currentProcessId) {
+              if (lca !== null && lca !== -1) {
+                renderTreeUI(
+                  lca,
+                  treeData.map((v, i) => i).filter((i) => treeData[i] !== null),
+                  [],
+                  { [lca]: "Tổ tiên chung!" },
+                );
+                setMathHTML(
+                  `<span class="text-emerald-400 font-bold text-xl">🎉 Tìm thấy Tổ tiên chung gần nhất (LCA) là Node ${treeData[lca]}!</span>`,
+                );
+              }
+            }
+          } else if (currentTabId === "bst_search") {
+            await startBSTSearch(0, sid, []);
+          } else if (currentTabId === "bfs_level_order") {
+            await startBFSLevelOrder(sid);
+          } else if (currentTabId === "validate_bst") {
+            let infoObj = {};
+            let isValid = await startValidateBST(
+              0,
+              -Infinity,
+              Infinity,
+              sid,
+              [],
+              infoObj,
+            );
+            if (sid === currentProcessId) {
+              setMathHTML(
+                `<span class="text-emerald-400 font-bold text-xl">🎉 Kiểm tra xong! Cây này là BST ${isValid ? "HỢP LỆ" : '<span class="text-rose-400">KHÔNG HỢP LỆ</span>'}.</span>`,
+              );
+            }
+          } else if (currentTabId === "diameter") {
+            let maxDia = { val: 0 };
+            let infoObj = {};
+            await startDiameter(0, sid, [], infoObj, maxDia);
+            if (sid === currentProcessId) {
+              setMathHTML(
+                `<span class="text-emerald-400 font-bold text-xl">🎉 Hoàn tất! Đường kính lớn nhất của Cây là ${maxDia.val}.</span>`,
+              );
+            }
+          }
+        } catch (e) {
+          console.error(e);
+        }
+        if (sid === currentProcessId) toggleBtn(false);
+      }
+
+      // === 1. DFS PRE-ORDER ===
+      async function startDFSPreorder(idx, id, visited) {
+        if (isAborted(id)) return;
+        if (idx >= treeData.length || treeData[idx] === null) {
+          setMathHTML(
+            `<span class="text-slate-400">Chạm null. Quay lui (Backtrack) ⮐</span>`,
+          );
+          await sleep(currentSpeed * 0.8);
+          return;
+        }
+
+        // Visit Node (Pre-order)
+        let val = treeData[idx];
+        outputData.push(val);
+        visited.push(idx);
+        renderTreeUI(idx, visited);
+        renderOutputUI(val);
+        setMathHTML(
+          `Đang ở Node <b class="text-emerald-400">${val}</b>. Đưa vào kết quả. Chuẩn bị gọi <code>dfs(Left)</code>...`,
+        );
+        await sleep(currentSpeed * 1.5);
+
+        // Traverse Left
+        if (isAborted(id)) return;
+        let leftIdx = 2 * idx + 1;
+        await startDFSPreorder(leftIdx, id, visited);
+
+        // Traverse Right
+        if (isAborted(id)) return;
+        setMathHTML(
+          `Đã xong nhánh Trái của <b class="text-emerald-400">${val}</b>. Quay lại và gọi <code>dfs(Right)</code>...`,
+        );
+        renderTreeUI(idx, visited); // Highlight again when returning to parent
+        await sleep(currentSpeed);
+
+        let rightIdx = 2 * idx + 2;
+        await startDFSPreorder(rightIdx, id, visited);
+
+        if (isAborted(id)) return;
+        setMathHTML(
+          `Đã duyệt xong cả 2 nhánh của <b class="text-emerald-400">${val}</b>. Kết thúc hàm ⮐`,
+        );
+        await sleep(currentSpeed * 0.8);
+      }
+
+      // === 2. MAX DEPTH (DIVIDE & CONQUER) ===
+      async function startMaxDepth(idx, id, visited) {
+        if (isAborted(id)) return 0;
+        if (idx >= treeData.length || treeData[idx] === null) {
+          setMathHTML(
+            `<span class="text-slate-400">Node null -> Trả về Depth = 0 ⮐</span>`,
+          );
+          await sleep(currentSpeed * 0.8);
+          return 0;
+        }
+
+        let val = treeData[idx];
+        visited.push(idx);
+        renderTreeUI(idx, visited);
+        setMathHTML(
+          `Tại Node <b class="text-emerald-400">${val}</b>. Gọi đệ quy hỏi nhánh Trái...`,
+        );
+        await sleep(currentSpeed * 1.2);
+
+        // Divide Left
+        let leftDepth = await startMaxDepth(2 * idx + 1, id, visited);
+        if (isAborted(id)) return 0;
+
+        // Divide Right
+        renderTreeUI(idx, visited);
+        setMathHTML(
+          `Tại Node <b class="text-emerald-400">${val}</b>. Nhánh trái báo về độ sâu = <b class="text-cyan-400">${leftDepth}</b>. Giờ hỏi nhánh Phải...`,
+        );
+        await sleep(currentSpeed * 1.5);
+
+        let rightDepth = await startMaxDepth(2 * idx + 2, id, visited);
+        if (isAborted(id)) return 0;
+
+        // Conquer (Tính toán kết quả)
+        let myDepth = 1 + Math.max(leftDepth, rightDepth);
+        let info = {};
+        info[idx] = `d=${myDepth}`;
+
+        renderTreeUI(idx, visited, [], info);
+        setMathHTML(`
+          <div class="flex flex-col items-center">
+             <span class="text-emerald-400 mb-1">Tính toán tại Node ${val}:</span>
+             <span class="bg-slate-900 px-3 py-1 rounded border border-slate-700">1 + Max(Trái: <b class="text-cyan-400">${leftDepth}</b>, Phải: <b class="text-rose-400">${rightDepth}</b>) = <b class="text-yellow-400 text-lg">${myDepth}</b></span>
+             <span class="text-slate-400 mt-1">Trả kết quả này lên trên ⮐</span>
+          </div>
+        `);
+        await sleep(currentSpeed * 2.5);
+
+        return myDepth;
+      }
+
+      // === 3. LOWEST COMMON ANCESTOR (LCA) ===
+      async function startLCA(idx, id, visited, highlightPaths) {
+        if (isAborted(id)) return -1;
+        if (idx >= treeData.length || treeData[idx] === null) {
+          return null; // Trả về null cho nhánh không có
+        }
+
+        let val = treeData[idx];
+        visited.push(idx);
+        renderTreeUI(idx, visited, highlightPaths);
+
+        // Base case: Nếu chạm P hoặc Q, trả về chính nó ngay!
+        if (idx === targetNodes[0] || idx === targetNodes[1]) {
+          let label = idx === targetNodes[0] ? "P" : "Q";
+          setMathHTML(
+            `Phát hiện mục tiêu <b class="text-rose-400">${label} (${val})</b>! Trả Tín hiệu về cho Cha ⮐`,
+          );
+          await sleep(currentSpeed * 2);
+          return idx; // Trả về index của node tìm thấy
+        }
+
+        setMathHTML(
+          `Tại Node <b class="text-emerald-400">${val}</b>. Truyền lệnh tìm kiếm P và Q xuống 2 nhánh.`,
+        );
+        await sleep(currentSpeed);
+
+        let leftRes = await startLCA(2 * idx + 1, id, visited, highlightPaths);
+        if (isAborted(id)) return -1;
+
+        if (leftRes !== null) {
+          highlightPaths.push(`${idx}-${2 * idx + 1}`); // Vẽ đường path đỏ từ con lên cha
+        }
+
+        renderTreeUI(idx, visited, highlightPaths);
+        setMathHTML(
+          `Tại Node <b class="text-emerald-400">${val}</b>. Nhánh Trái báo cáo: <b class="text-yellow-400">${leftRes !== null ? "Tìm thấy " + treeData[leftRes] : "Không có gì (Null)"}</b>.`,
+        );
+        await sleep(currentSpeed * 1.5);
+
+        let rightRes = await startLCA(2 * idx + 2, id, visited, highlightPaths);
+        if (isAborted(id)) return -1;
+
+        if (rightRes !== null) {
+          highlightPaths.push(`${idx}-${2 * idx + 2}`);
+        }
+
+        renderTreeUI(idx, visited, highlightPaths);
+        await sleep(currentSpeed);
+
+        // Core LCA Logic
+        if (leftRes !== null && rightRes !== null) {
+          setMathHTML(`
+              <div class="flex flex-col items-center">
+                 <span class="text-emerald-400 font-bold text-lg">⚠️ TÍN HIỆU TỪ CẢ 2 NHÁNH!</span>
+                 <span class="bg-slate-900 px-3 py-1 rounded border border-slate-700">Trái tìm thấy ${treeData[leftRes]}, Phải tìm thấy ${treeData[rightRes]}. Suy ra Node <b class="text-yellow-400">${val}</b> chính là <b>LCA</b>!</span>
+              </div>
+            `);
+          await sleep(currentSpeed * 3);
+          return idx; // Ta chính là LCA
+        } else if (leftRes !== null) {
+          setMathHTML(
+            `Chỉ nhánh Trái có hàng. Truyền tín hiệu (Node ${treeData[leftRes]}) ngược lên trên ⮐`,
+          );
+          await sleep(currentSpeed * 1.5);
+          return leftRes;
+        } else if (rightRes !== null) {
+          setMathHTML(
+            `Chỉ nhánh Phải có hàng. Truyền tín hiệu (Node ${treeData[rightRes]}) ngược lên trên ⮐`,
+          );
+          await sleep(currentSpeed * 1.5);
+          return rightRes;
+        } else {
+          setMathHTML(
+            `Cả 2 nhánh của <b class="text-emerald-400">${val}</b> đều vô vọng. Trả về Null ⮐`,
+          );
+          await sleep(currentSpeed);
+          return null;
+        }
+      }
+
+      // === 4. BST SEARCH ===
+      async function startBSTSearch(idx, id, visited) {
+        if (isAborted(id)) return;
+        if (idx >= treeData.length || treeData[idx] === null) {
+          setMathHTML(
+            `<span class="text-rose-400 font-bold text-xl">❌ Tìm đến đường cùng (Null). Target không tồn tại!</span>`,
+          );
+          return;
+        }
+
+        let val = treeData[idx];
+        let target = targetNodes[0];
+        visited.push(idx);
+        renderTreeUI(idx, visited);
+
+        setMathHTML(
+          `Đang đứng tại Node <b class="text-emerald-400 text-lg">${val}</b>. So sánh với Target = <b class="text-yellow-400">${target}</b>.`,
+        );
+        await sleep(currentSpeed * 2);
+
+        if (val === target) {
+          setMathHTML(
+            `<span class="text-emerald-400 font-bold text-xl">🎉 ${val} == ${target}. Đã tìm thấy (O(log n))! Thuật toán kết thúc.</span>`,
+          );
+          renderTreeUI(idx, visited, [], { [idx]: "Found!" });
+          return;
+        } else if (target < val) {
+          setMathHTML(
+            `Vì <b class="text-yellow-400">${target}</b> < <b class="text-emerald-400">${val}</b>. Bỏ qua nhánh Phải. Đi xuống <b class="text-cyan-400">nhánh Trái</b>!`,
+          );
+          await sleep(currentSpeed * 1.5);
+          await startBSTSearch(2 * idx + 1, id, visited);
+        } else {
+          setMathHTML(
+            `Vì <b class="text-yellow-400">${target}</b> > <b class="text-emerald-400">${val}</b>. Bỏ qua nhánh Trái. Đi xuống <b class="text-rose-400">nhánh Phải</b>!`,
+          );
+          await sleep(currentSpeed * 1.5);
+          await startBSTSearch(2 * idx + 2, id, visited);
+        }
+      }
+
+      // === 5. BFS LEVEL ORDER ===
+      async function startBFSLevelOrder(id) {
+        let queue = [0];
+        let visited = [];
+        outputData = [];
+
+        setMathHTML(
+          `<span class="text-cyan-400">Đẩy Root (Index 0) vào Queue. Bắt đầu duyệt BFS.</span>`,
+        );
+        await sleep(currentSpeed);
+
+        let level = 0;
+        while (queue.length > 0) {
+          if (isAborted(id)) return;
+          let levelSize = queue.length;
+          let currentLevelVals = [];
+
+          setMathHTML(
+            `<span class="text-emerald-400 font-bold">Bắt đầu Tầng ${level}. Kích thước hàng đợi (Queue) = ${levelSize}.</span>`,
+          );
+          await sleep(currentSpeed);
+
+          for (let i = 0; i < levelSize; i++) {
+            if (isAborted(id)) return;
+            let currIdx = queue.shift();
+            let val = treeData[currIdx];
+
+            visited.push(currIdx);
+            currentLevelVals.push(val);
+            renderTreeUI(currIdx, visited);
+            setMathHTML(
+              `Lấy Node <b class="text-yellow-400">${val}</b> khỏi Queue. Thêm các con của nó vào cuối Queue.`,
+            );
+            await sleep(currentSpeed);
+
+            let leftIdx = 2 * currIdx + 1;
+            let rightIdx = 2 * currIdx + 2;
+
+            if (leftIdx < treeData.length && treeData[leftIdx] !== null) {
+              queue.push(leftIdx);
+              setMathHTML(
+                `Đẩy nhánh Trái (<b class="text-cyan-400">${treeData[leftIdx]}</b>) vào Queue.`,
+              );
+              renderTreeUI(leftIdx, visited, [], { [leftIdx]: "Q" });
+              await sleep(currentSpeed * 0.8);
+            }
+            if (rightIdx < treeData.length && treeData[rightIdx] !== null) {
+              queue.push(rightIdx);
+              setMathHTML(
+                `Đẩy nhánh Phải (<b class="text-rose-400">${treeData[rightIdx]}</b>) vào Queue.`,
+              );
+              renderTreeUI(rightIdx, visited, [], { [rightIdx]: "Q" });
+              await sleep(currentSpeed * 0.8);
+            }
+          }
+
+          outputData.push(currentLevelVals);
+          renderOutputUI();
+          setMathHTML(
+            `<span class="text-emerald-400">Hoàn thành Tầng ${level}. Kết quả: [${currentLevelVals.join(", ")}].</span>`,
+          );
+          await sleep(currentSpeed * 1.5);
+          level++;
+        }
+        renderTreeUI(-1, visited);
+        setMathHTML(
+          `<span class="text-emerald-400 font-bold text-xl">🎉 Đã duyệt xong toàn bộ các tầng bằng BFS!</span>`,
+        );
+      }
+
+      // === 6. VALIDATE BST ===
+      async function startValidateBST(idx, min, max, id, visited, infoObj) {
+        if (isAborted(id)) return true;
+        if (idx >= treeData.length || treeData[idx] === null) {
+          setMathHTML(
+            `<span class="text-slate-400">Node null. Tự động thỏa mãn điều kiện. Quay lui ⮐</span>`,
+          );
+          await sleep(currentSpeed * 0.8);
+          return true;
+        }
+
+        let val = treeData[idx];
+        visited.push(idx);
+
+        let minStr = min === -Infinity ? "-∞" : min;
+        let maxStr = max === Infinity ? "+∞" : max;
+        infoObj[idx] = `[${minStr}, ${maxStr}]`;
+
+        renderTreeUI(idx, visited, [], infoObj);
+        setMathHTML(
+          `Tại Node <b class="text-emerald-400">${val}</b>. Khoảng hợp lệ bắt buộc là <b class="text-yellow-400">(${minStr} < x < ${maxStr})</b>.`,
+        );
+        await sleep(currentSpeed * 2);
+
+        if (val <= min || val >= max) {
+          renderTreeUI(idx, visited, [], { [idx]: "LỖI!" });
+          setMathHTML(
+            `<span class="text-rose-500 font-bold text-lg">❌ VI PHẠM! Giá trị ${val} KHÔNG nằm trong khoảng (${minStr}, ${maxStr}). Cây KHÔNG phải là BST hợp lệ!</span>`,
+          );
+          await sleep(currentSpeed * 3);
+          return false;
+        }
+
+        setMathHTML(
+          `Hợp lệ! Kiểm tra nhánh Trái (Max ép thành ${val}) và nhánh Phải (Min ép thành ${val})...`,
+        );
+        await sleep(currentSpeed * 1.5);
+
+        let leftValid = await startValidateBST(
+          2 * idx + 1,
+          min,
+          val,
+          id,
+          visited,
+          infoObj,
+        );
+        if (!leftValid || isAborted(id)) return false;
+
+        renderTreeUI(idx, visited, [], infoObj); // Re-highlight parent
+        let rightValid = await startValidateBST(
+          2 * idx + 2,
+          val,
+          max,
+          id,
+          visited,
+          infoObj,
+        );
+
+        return rightValid;
+      }
+
+      // === 7. DIAMETER OF BINARY TREE ===
+      async function startDiameter(idx, id, visited, infoObj, maxDia) {
+        if (isAborted(id)) return 0;
+        if (idx >= treeData.length || treeData[idx] === null) {
+          return 0;
+        }
+
+        let val = treeData[idx];
+        visited.push(idx);
+        renderTreeUI(idx, visited, [], infoObj);
+        setMathHTML(
+          `Tại Node <b class="text-emerald-400">${val}</b>. Đi xuống tính chiều sâu nhánh Trái...`,
+        );
+        await sleep(currentSpeed);
+
+        let leftDepth = await startDiameter(
+          2 * idx + 1,
+          id,
+          visited,
+          infoObj,
+          maxDia,
+        );
+        if (isAborted(id)) return 0;
+
+        renderTreeUI(idx, visited, [], infoObj);
+        setMathHTML(
+          `Tại Node <b class="text-emerald-400">${val}</b>. Nhánh Trái sâu <b class="text-cyan-400">${leftDepth}</b>. Đi xuống nhánh Phải...`,
+        );
+        await sleep(currentSpeed * 1.2);
+
+        let rightDepth = await startDiameter(
+          2 * idx + 2,
+          id,
+          visited,
+          infoObj,
+          maxDia,
+        );
+        if (isAborted(id)) return 0;
+
+        let localDiameter = leftDepth + rightDepth;
+        let myDepth = 1 + Math.max(leftDepth, rightDepth);
+
+        if (localDiameter > maxDia.val) {
+          maxDia.val = localDiameter;
+        }
+
+        infoObj[idx] = `Dia=${localDiameter}`;
+        renderTreeUI(idx, visited, [], infoObj);
+
+        setMathHTML(`
+          <div class="flex flex-col items-center">
+             <span class="text-emerald-400 mb-1">Tại Node ${val}:</span>
+             <span class="bg-slate-900 px-3 py-1 rounded border border-slate-700">Đường kính cục bộ = Trái(${leftDepth}) + Phải(${rightDepth}) = <b class="text-rose-400 text-lg">${localDiameter}</b></span>
+             <span class="text-slate-300 mt-1">Đường kính MAX toàn cục hiện tại = <b class="text-yellow-400">${maxDia.val}</b></span>
+          </div>
+        `);
+        await sleep(currentSpeed * 2.5);
+
+        return myDepth;
+      }
+
+      window.onload = initUI;
+    </script>
+  </body>
+</html>

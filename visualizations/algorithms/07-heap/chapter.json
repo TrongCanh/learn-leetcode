@@ -1,0 +1,11 @@
+{
+  "name": "🧱 Heap",
+  "problems": [
+    {
+      "name": "Heap",
+      "file": "/visualizations/algorithms/07-heap/heap.html",
+      "type": "viz",
+      "difficulty": "Medium"
+    }
+  ]
+}

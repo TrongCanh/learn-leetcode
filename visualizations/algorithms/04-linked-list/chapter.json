@@ -1,0 +1,11 @@
+{
+  "name": "🔗 Linked List",
+  "problems": [
+    {
+      "name": "Linked List",
+      "file": "/visualizations/algorithms/04-linked-list/linked-list.html",
+      "type": "viz",
+      "difficulty": "Easy"
+    }
+  ]
+}

@@ -3,19 +3,19 @@
   "problems": [
     {
       "name": "Sorting Algorithms",
-      "file": "/visualizations/algorithms/01-visualizations/sorting-algorithms.html",
+      "file": "/visualizations/algorithms/01-array/sorting-algorithms.html",
       "type": "viz",
       "difficulty": "Easy"
     },
     {
       "name": "Search Algorithms",
-      "file": "/visualizations/algorithms/01-visualizations/search-algorithms.html",
+      "file": "/visualizations/algorithms/01-array/search-algorithms.html",
       "type": "viz",
       "difficulty": "Easy"
     },
     {
       "name": "Two Pointers, Sliding Window & Prefix Sum",
-      "file": "/visualizations/algorithms/01-visualizations/two-pointers.html",
+      "file": "/visualizations/algorithms/01-array/two-pointers.html",
       "type": "viz",
       "difficulty": "Medium"
     }

@@ -1,0 +1,1078 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trực Quan Hóa Cấu Trúc Dữ Liệu Heap (Đống)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .hide-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      .node-box {
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .tree-node {
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .tree-line {
+        transition: all 0.4s ease;
+      }
+
+      @keyframes pulse-node-rose {
+        0% {
+          box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.7);
+        }
+        70% {
+          box-shadow: 0 0 0 15px rgba(244, 63, 94, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(244, 63, 94, 0);
+        }
+      }
+
+      .active-compare {
+        animation: pulse-node-rose 1.5s infinite;
+        border-color: #f43f5e !important;
+        background-color: #881337 !important;
+        color: white;
+        transform: scale(1.15) !important;
+        z-index: 20;
+      }
+      .active-swap {
+        border-color: #fbbf24 !important;
+        background-color: #78350f !important;
+        color: #fbbf24 !important;
+        transform: scale(1.2) !important;
+        z-index: 30;
+        box-shadow: 0 0 20px rgba(251, 191, 36, 0.6);
+      }
+      .node-sorted {
+        background-color: #064e3b !important;
+        border-color: #10b981 !important;
+        color: #6ee7b7 !important;
+        opacity: 0.6;
+      }
+
+      /* Vị trí trên cây nhị phân 4 tầng (Max 15 nodes) */
+      .pos-0 {
+        left: 50%;
+        top: 15%;
+      }
+      .pos-1 {
+        left: 25%;
+        top: 40%;
+      }
+      .pos-2 {
+        left: 75%;
+        top: 40%;
+      }
+      .pos-3 {
+        left: 12.5%;
+        top: 65%;
+      }
+      .pos-4 {
+        left: 37.5%;
+        top: 65%;
+      }
+      .pos-5 {
+        left: 62.5%;
+        top: 65%;
+      }
+      .pos-6 {
+        left: 87.5%;
+        top: 65%;
+      }
+      .pos-7 {
+        left: 6.25%;
+        top: 90%;
+      }
+      .pos-8 {
+        left: 18.75%;
+        top: 90%;
+      }
+      .pos-9 {
+        left: 31.25%;
+        top: 90%;
+      }
+      .pos-10 {
+        left: 43.75%;
+        top: 90%;
+      }
+      .pos-11 {
+        left: 56.25%;
+        top: 90%;
+      }
+      .pos-12 {
+        left: 68.75%;
+        top: 90%;
+      }
+      .pos-13 {
+        left: 81.25%;
+        top: 90%;
+      }
+      .pos-14 {
+        left: 93.75%;
+        top: 90%;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-slate-50 text-slate-900 font-sans min-h-screen p-4 sm:p-6 lg:p-8"
+  >
+    <div class="max-w-7xl mx-auto space-y-8">
+      <!-- HEADER -->
+      <header class="text-center space-y-4 mb-10">
+        <div
+          class="inline-flex items-center justify-center p-3 bg-rose-100 text-rose-600 rounded-full mb-2 shadow-sm"
+        >
+          <i data-lucide="triangle" class="w-8 h-8"></i>
+        </div>
+        <h1
+          class="text-3xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-rose-600 to-pink-600"
+        >
+          Heap & Priority Queue
+        </h1>
+        <p class="text-lg text-slate-600 max-w-3xl mx-auto">
+          Cấu trúc Cây Nhị Phân Hoàn Chỉnh được cất giấu trong một Mảng.<br />
+          <span
+            class="inline-block mt-2 px-3 py-1 bg-indigo-100 text-indigo-800 rounded-lg text-sm font-semibold border border-indigo-200"
+          >
+            🔥 Insight: Heap giúp tìm Min/Max siêu tốc O(1) và Thêm/Xóa cực
+            nhanh O(log n).
+          </span>
+        </p>
+      </header>
+
+      <!-- LÝ THUYẾT TRỌNG TÂM -->
+      <div
+        class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 overflow-hidden"
+      >
+        <div class="flex items-center mb-6">
+          <i data-lucide="book-open" class="w-6 h-6 text-rose-500 mr-2"></i>
+          <h2 class="text-xl font-bold text-slate-800">Lý thuyết Trọng tâm</h2>
+        </div>
+        <div
+          class="grid grid-cols-1 lg:grid-cols-2 gap-8 text-sm text-slate-700 items-start"
+        >
+          <div class="space-y-4">
+            <div
+              class="bg-slate-900 p-4 rounded-xl border border-slate-700 flex flex-col text-white h-full justify-center relative overflow-hidden"
+            >
+              <span
+                class="text-slate-400 text-xs uppercase tracking-wider mb-3 text-center z-10"
+                >Toán học đằng sau Heap</span
+              >
+              <p class="text-center text-slate-300 mb-4 z-10">
+                Heap được lưu thẳng vào một mảng 1 chiều liên tục. Không cần con
+                trỏ `.left` hay `.right`. Mọi thứ được định vị bằng
+                <b>Công thức Toán học</b>:
+              </p>
+
+              <div class="flex flex-col gap-3 font-mono font-bold z-10">
+                <div
+                  class="bg-slate-800 p-2 rounded border border-slate-600 text-center"
+                >
+                  <span class="text-cyan-400">Node hiện tại:</span> i
+                </div>
+                <div
+                  class="bg-slate-800 p-2 rounded border border-slate-600 text-center"
+                >
+                  <span class="text-emerald-400">Node Con Trái:</span> 2*i + 1
+                </div>
+                <div
+                  class="bg-slate-800 p-2 rounded border border-slate-600 text-center"
+                >
+                  <span class="text-emerald-400">Node Con Phải:</span> 2*i + 2
+                </div>
+                <div
+                  class="bg-slate-800 p-2 rounded border border-slate-600 text-center"
+                >
+                  <span class="text-rose-400">Node Cha:</span> Math.floor((i -
+                  1) / 2)
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <div
+              class="bg-slate-50 p-4 rounded-xl border border-slate-100 h-full"
+            >
+              <h3 class="font-bold text-slate-800 mb-3 flex items-center">
+                <i data-lucide="zap" class="w-4 h-4 mr-1 text-amber-500"></i>
+                Các Pattern Cốt Lõi
+              </h3>
+              <ul class="space-y-3">
+                <li class="flex items-start">
+                  <span
+                    class="flex items-center justify-center bg-rose-500 text-white w-5 h-5 rounded text-xs font-bold mr-2 shrink-0"
+                    >1</span
+                  >
+                  <span
+                    ><b>Min-Heap / Max-Heap:</b> Min-Heap luôn giữ số nhỏ nhất ở
+                    Gốc (Root). Max-Heap thì giữ số lớn nhất. Mọi Node cha đều
+                    phải tuân thủ nghiêm ngặt điều kiện lớn hơn/nhỏ hơn các con
+                    của nó.</span
+                  >
+                </li>
+                <li class="flex items-start">
+                  <span
+                    class="flex items-center justify-center bg-rose-500 text-white w-5 h-5 rounded text-xs font-bold mr-2 shrink-0"
+                    >2</span
+                  >
+                  <span
+                    ><b>Heapify Up & Down (Vun Đống):</b> Khi thêm phần tử vào
+                    cuối mảng, ta <i>Bubble Up</i> (nổi lên) nếu nó mạnh hơn
+                    cha. Khi rút Gốc ra, ta lấy phần tử cuối thế chỗ Gốc rồi
+                    <i>Bubble Down</i> (chìm xuống) để lập lại trật tự.</span
+                  >
+                </li>
+                <li class="flex items-start">
+                  <span
+                    class="flex items-center justify-center bg-rose-500 text-white w-5 h-5 rounded text-xs font-bold mr-2 shrink-0"
+                    >3</span
+                  >
+                  <span
+                    ><b>Top K Elements:</b> Tuyệt kỹ giải bài toán "Tìm K phần
+                    tử lớn nhất/nhỏ nhất" trong O(N log K). Dùng Min-Heap size
+                    K, ai lớn hơn thì tống kẻ nhỏ nhất ở Gốc ra ngoài.</span
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BẢNG ĐÁNH GIÁ -->
+      <div
+        class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 overflow-hidden flex flex-col"
+      >
+        <div class="flex items-center mb-6">
+          <i data-lucide="award" class="w-6 h-6 text-rose-500 mr-2"></i>
+          <h2 class="text-xl font-bold text-slate-800">
+            Các Dạng Bài Tiêu Biểu
+          </h2>
+        </div>
+        <div class="overflow-x-auto">
+          <table
+            class="w-full text-left border-collapse whitespace-nowrap min-w-[600px]"
+          >
+            <thead>
+              <tr class="bg-slate-50">
+                <th class="p-4 font-semibold text-slate-700 rounded-tl-xl">
+                  Thao tác / Dạng bài
+                </th>
+                <th class="p-4 font-semibold text-slate-700">Thuật toán</th>
+                <th class="p-4 font-semibold text-slate-700">
+                  Kỹ thuật / Mục đích
+                </th>
+                <th class="p-4 font-semibold text-slate-700 rounded-tr-xl">
+                  Thời gian (Time)
+                </th>
+              </tr>
+            </thead>
+            <tbody id="comparison-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- MAIN UI -->
+      <div
+        class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden"
+      >
+        <div
+          id="tabs-container"
+          class="flex overflow-x-auto border-b border-slate-200 hide-scrollbar bg-slate-50"
+        ></div>
+
+        <div
+          class="p-4 sm:p-6 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start"
+        >
+          <div class="lg:col-span-4 space-y-6" id="info-container"></div>
+
+          <div class="lg:col-span-8 w-full flex flex-col space-y-6">
+            <div
+              class="bg-slate-900 rounded-2xl p-4 sm:p-6 shadow-inner border border-slate-800"
+            >
+              <div
+                class="flex flex-wrap gap-4 items-center justify-between mb-4 pb-4 border-b border-slate-700"
+              >
+                <div class="flex gap-2">
+                  <button
+                    id="btn-play"
+                    class="flex items-center px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg font-semibold transition disabled:opacity-50 text-sm"
+                  >
+                    <i data-lucide="play" class="w-4 h-4 mr-2"></i>
+                    <span id="btn-play-text">Chạy Mô Phỏng</span>
+                  </button>
+                  <button
+                    id="btn-reset"
+                    class="flex items-center px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition text-sm"
+                  >
+                    <i data-lucide="rotate-ccw" class="w-4 h-4 mr-2"></i> Trạng
+                    thái ban đầu
+                  </button>
+                </div>
+                <div class="flex items-center gap-3 text-slate-300 text-sm">
+                  <i data-lucide="settings-2" class="w-4 h-4"></i>
+                  <label class="font-medium hidden sm:block">Tốc độ:</label>
+                  <input
+                    type="range"
+                    id="speed-slider"
+                    min="50"
+                    max="1500"
+                    value="800"
+                    class="w-24 accent-rose-500"
+                  />
+                </div>
+              </div>
+
+              <div
+                id="problem-statement"
+                class="bg-rose-900/40 border border-rose-500/30 rounded-xl p-4 mb-4 text-sm sm:text-base text-rose-100 flex items-start gap-3 hidden"
+              >
+                <i
+                  data-lucide="target"
+                  class="w-5 h-5 text-rose-400 shrink-0 mt-0.5"
+                ></i>
+                <div id="problem-text" class="leading-relaxed"></div>
+              </div>
+
+              <div
+                id="math-computation"
+                class="bg-slate-800 rounded-xl p-3 mb-6 text-center font-mono text-sm sm:text-base border border-slate-600 text-slate-300 min-h-[48px] flex items-center justify-center"
+              >
+                Sẵn sàng mô phỏng.
+              </div>
+
+              <!-- Vùng Hiển Thị Mảng (Array View) -->
+              <div class="w-full mb-6">
+                <div
+                  class="text-xs text-cyan-400 mb-2 font-semibold uppercase tracking-wider flex items-center gap-2"
+                >
+                  <i data-lucide="list" class="w-4 h-4"></i> Lưu trữ thực tế
+                  (Array)
+                </div>
+                <div
+                  id="array-container"
+                  class="w-full flex flex-wrap items-center justify-start sm:justify-center gap-1 sm:gap-2 p-3 bg-slate-800/50 rounded-xl border border-slate-700 min-h-[60px]"
+                ></div>
+              </div>
+
+              <!-- Vùng Hiển Thị Cây (Tree View) -->
+              <div
+                class="flex flex-col items-center justify-center w-full relative mb-4"
+              >
+                <div
+                  class="text-xs text-emerald-400 mb-2 font-semibold uppercase tracking-wider flex items-center gap-2 w-full text-left"
+                >
+                  <i data-lucide="network" class="w-4 h-4"></i> Góc nhìn Logic
+                  (Complete Binary Tree)
+                </div>
+                <div
+                  id="tree-canvas"
+                  class="relative w-full h-[250px] sm:h-[300px] border border-slate-700 rounded-xl bg-slate-950 shadow-inner overflow-hidden"
+                >
+                  <svg
+                    id="tree-lines"
+                    class="absolute top-0 left-0 w-full h-full z-0"
+                  ></svg>
+                  <div
+                    id="tree-nodes"
+                    class="absolute top-0 left-0 w-full h-full z-10 pointer-events-none"
+                  ></div>
+                </div>
+              </div>
+
+              <!-- Vùng Output (Cho Extract / Sort) -->
+              <div
+                id="output-wrapper"
+                class="flex flex-col items-center w-full mt-6 hidden"
+              >
+                <div
+                  id="output-title"
+                  class="text-amber-400 font-mono text-sm font-bold mb-2 uppercase tracking-wider"
+                >
+                  Mảng Kết Quả / Đã Sắp Xếp
+                </div>
+                <div
+                  id="output-container"
+                  class="flex flex-wrap items-center justify-center gap-1 sm:gap-2 min-h-[48px] min-w-[200px] p-2 border border-dashed border-slate-600 rounded bg-slate-800/30"
+                ></div>
+              </div>
+            </div>
+
+            <!-- Code Block -->
+            <div
+              class="relative rounded-2xl overflow-hidden shadow-lg border border-slate-700 bg-[#0f172a]"
+            >
+              <div
+                class="w-full px-4 py-3 bg-[#1e293b] border-b border-slate-700 flex items-center justify-between"
+              >
+                <div class="flex space-x-2">
+                  <div class="w-3 h-3 rounded-full bg-rose-500"></div>
+                  <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+                  <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                </div>
+                <div class="flex items-center text-slate-400 text-xs font-mono">
+                  <i data-lucide="code" class="w-4 h-4 mr-1.5"></i> javascript
+                </div>
+              </div>
+              <pre
+                class="p-4 sm:p-6 overflow-auto text-xs sm:text-sm font-mono leading-relaxed max-h-72"
+              ><code id="code-container" class="text-slate-200"></code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // === DỮ LIỆU PATTERNS HEAP ===
+      const ALGO_DATA = [
+        {
+          id: "heap_insert",
+          name: "1. Thêm (Insert)",
+          vnName: "Push / Heapify Up",
+          tech: "Nổi bọt lên trên (Bubble Up)",
+          space: "O(log n)",
+          code: `// Bài toán: Thêm phần tử x vào Max-Heap\nfunction insert(heap, x) {\n  // 1. Thêm vào cuối mảng (Chiếc lá cuối cùng của cây)\n  heap.push(x);\n  \n  // 2. Kích hoạt Heapify Up từ vị trí cuối\n  let i = heap.length - 1;\n  \n  while (i > 0) {\n    let parent = Math.floor((i - 1) / 2);\n    \n    // Max-Heap: Nếu Con lớn hơn Cha thì phải hoán đổi!\n    if (heap[i] > heap[parent]) {\n      [heap[i], heap[parent]] = [heap[parent], heap[i]];\n      i = parent; // Tiếp tục xét ngược lên trên\n    } else {\n      break; // Trật tự đã đúng, dừng lại\n    }\n  }\n}`,
+          desc: 'Để duy trì cấu trúc của Cây Nhị Phân Hoàn Chỉnh, phần tử mới LUÔN được thêm vào đuôi của mảng. Sau đó, nó sẽ liên tục so sánh với Cha của nó <code>(i - 1) / 2</code>. Nếu nó "mạnh" hơn Cha, nó sẽ hoán đổi và nổi bong bóng (Bubble Up) lên trên cho đến khi trật tự được lặp lại.',
+          characteristics: [
+            "Thao tác thêm cực nhanh O(log n) tương đương chiều cao cây.",
+            "Mảng tự động giãn kích thước.",
+          ],
+        },
+        {
+          id: "heap_extract",
+          name: "2. Rút Gốc (Extract Max)",
+          vnName: "Pop / Heapify Down",
+          tech: "Chìm xuống (Bubble Down)",
+          space: "O(log n)",
+          code: `// Bài toán: Rút phần tử lớn nhất (ở Gốc) ra khỏi Max-Heap\nfunction extractMax(heap) {\n  if (heap.length === 0) return null;\n  if (heap.length === 1) return heap.pop();\n\n  let max = heap[0];\n  // 1. Lấy phần tử CÙI BẮP NHẤT (ở cuối mảng) thế chỗ lên Gốc\n  heap[0] = heap.pop();\n  \n  // 2. Kích hoạt Heapify Down từ Gốc\n  let i = 0;\n  while (true) {\n    let left = 2 * i + 1, right = 2 * i + 2;\n    let largest = i;\n\n    // Tìm ra đứa Con lớn nhất\n    if (left < heap.length && heap[left] > heap[largest]) largest = left;\n    if (right < heap.length && heap[right] > heap[largest]) largest = right;\n\n    // Đổi chỗ với Con lớn nhất để "chìm" xuống\n    if (largest !== i) {\n      [heap[i], heap[largest]] = [heap[largest], heap[i]];\n      i = largest;\n    } else break;\n  }\n  return max;\n}`,
+          desc: "Bạn không thể rút Gốc rồi đẩy toàn bộ mảng lên 1 nấc (sẽ tốn O(n) và phá nát Cây). Thay vào đó, ta lấy chiếc Lá cuối cùng đưa lên làm Gốc. Vì kẻ lùn này đang ở đỉnh, nó sẽ liên tục bị các đứa con cao to hơn kéo chìm xuống (Bubble Down) cho đến đúng vị trí.",
+          characteristics: [
+            "LUÔN so sánh và đổi chỗ với đứa con MẠNH HƠN trong 2 đứa.",
+            "Đảm bảo thời gian O(log n).",
+          ],
+        },
+        {
+          id: "build_heap",
+          name: "3. Vun đống (Build Heap)",
+          vnName: "Tiền xử lý (O(n))",
+          tech: "Bottom-up Heapify",
+          space: "O(n)",
+          code: `// Bài toán: Biến một mảng lộn xộn bất kỳ thành Max-Heap\nfunction buildMaxHeap(arr) {\n  let n = arr.length;\n  \n  // Bắt đầu từ Node Cha cuối cùng của cây\n  let startIdx = Math.floor((n / 2) - 1);\n\n  // Chạy ngược lên Root, gọi Heapify Down cho từng Node\n  for (let i = startIdx; i >= 0; i--) {\n    heapifyDown(arr, i, n);\n  }\n  return arr;\n}\n\n// Hàm heapifyDown y hệt như lúc Extract Max`,
+          desc: "Nhiều người nghĩ xây Heap bằng cách Insert N phần tử sẽ tốn O(N log N). Sai! Toán học chứng minh rằng, nếu ta bỏ qua các Node Lá (chiếm một nửa số lượng mảng), và chỉ gọi Heapify Down từ các Node Cha ngược lên Gốc, ta có thể xây dựng toàn bộ Heap trong thời gian cực sốc <b>O(N)</b>.",
+          characteristics: [
+            "Tối ưu siêu hạng O(n) thay vì O(n log n).",
+            "Dùng khi có sẵn một mảng tĩnh cần chuyển thành Heap.",
+          ],
+        },
+        {
+          id: "heap_sort",
+          name: "4. Heap Sort",
+          vnName: "Sắp xếp Vun đống",
+          tech: "Build Heap + Extract All",
+          space: "O(n log n)",
+          code: `// Bài toán: Sắp xếp mảng tăng dần bằng Max-Heap In-place\nfunction heapSort(arr) {\n  let n = arr.length;\n  \n  // 1. Vun đống O(n) tạo thành Max-Heap\n  buildMaxHeap(arr);\n\n  // 2. Rút Max liên tục và giấu vào cuối mảng\n  for (let i = n - 1; i > 0; i--) {\n    // Hoán đổi Root (Max) với phần tử ở cuối mảng chưa sắp xếp\n    [arr[0], arr[i]] = [arr[i], arr[0]];\n    \n    // Gọi Heapify Down ở Root, nhưng GIẢM kích thước mảng xét đi 1\n    heapifyDown(arr, 0, i);\n  }\n  return arr;\n}`,
+          desc: "Một thuật toán sắp xếp thiên tài. Bước 1: Biến mảng thành Max-Heap (phần tử lớn nhất nằm ở arr[0]). Bước 2: Lấy arr[0] hoán đổi với ô cuối cùng của mảng, coi như ô cuối đã được sắp xếp và cách ly. Lại Vun đống phần còn lại. Cứ thế, mảng sẽ được sắp xếp tăng dần hoàn hảo (In-place).",
+          characteristics: [
+            "In-place (Không tốn thêm bộ nhớ mảng phụ O(1) Space)",
+            "Hiệu suất O(n log n) ổn định không bị dở chứng như Quick Sort.",
+          ],
+        },
+        {
+          id: "top_k",
+          name: "5. Top K Elements",
+          vnName: "Dùng Min-Heap size K",
+          tech: "Giữ lại kẻ mạnh",
+          space: "O(N log K)",
+          code: `// Bài toán: Tìm K phần tử LỚN NHẤT trong mảng (Data Stream)\nfunction findTopK(arr, k) {\n  let minHeap = new MinHeap(); // Lưu ý: Dùng MIN-HEAP!\n\n  for (let val of arr) {\n    // Bỏ phần tử vào Heap\n    minHeap.insert(val);\n\n    // Nếu giỏ chứa quá K người, đuổi kẻ YẾU NHẤT (Min ở Gốc) đi!\n    if (minHeap.size() > k) {\n      minHeap.extractMin();\n    }\n  }\n  \n  // Sau khi duyệt hết, K người trụ lại trong Min-Heap chính là mạnh nhất!\n  return minHeap.toArray();\n}`,
+          desc: "Tại sao tìm K người mạnh nhất lại dùng Min-Heap? Hãy tưởng tượng Min-Heap là một võ đài chứa K người. Người yếu nhất luôn bị đứng ở Cửa (Gốc). Khi có người mới đến, nếu đấu trường quá tải, ta đá ngay kẻ lùn nhất ở Cửa ra ngoài. Cuối cùng, những kẻ sống sót chắc chắn là Top K lớn nhất.",
+          characteristics: [
+            "Cực kỳ tối ưu cho luồng dữ liệu liên tục (Streaming Data).",
+            "Độ phức tạp O(N log K) nhanh hơn nhiều so với Sort toàn bộ mảng O(N log N).",
+          ],
+        },
+      ];
+
+      let currentTabId = ALGO_DATA[0].id;
+      let isRunning = false;
+      let currentProcessId = 0;
+      let currentSpeed = 800;
+
+      // --- Heap State ---
+      let heapData = []; // Mảng lưu giá trị Heap
+      let sortedData = []; // Lưu trữ các phần tử đã sort (Cho Heap Sort/Extract)
+      let streamData = []; // Dữ liệu còn chờ (Cho Top K)
+      let maxK = 3; // K for Top K
+      let isMinHeap = false; // Flag quy định Max hay Min heap
+
+      // Tọa độ tĩnh (Static Coordinates) cho cây 4 tầng (Max 15 nodes)
+      const treeCoords = []; // Generated dynamically below for CSS pos-*
+
+      // Tiện ích UI
+      const renderBadgeHTML = (text) => {
+        let c = "bg-slate-100 text-slate-800 border-slate-300";
+        if (text.includes("O(1)"))
+          c = "bg-emerald-100 text-emerald-800 border-emerald-300";
+        if (text.includes("O(n)"))
+          c = "bg-rose-100 text-rose-800 border-rose-300";
+        if (text.includes("O(log n)") || text.includes("log K"))
+          c = "bg-amber-100 text-amber-800 border-amber-300";
+        return `<span class="px-3 py-1 rounded-full border text-sm font-semibold shadow-sm inline-block ${c}">${text}</span>`;
+      };
+
+      const highlightJS = (code) => {
+        let esc = code.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const c = [];
+        esc = esc.replace(/(\/\/.*)/g, (m) => {
+          c.push(m);
+          return `___C_${c.length - 1}___`;
+        });
+        esc = esc.replace(
+          /\b(\d+)\b/g,
+          '<span class="text-slate-300">$1</span>',
+        );
+        esc = esc
+          .replace(
+            /\b(function|let|const|var|if|else|for|while|return|break|continue|class|constructor)\b/g,
+            '<span class="text-pink-400 font-semibold">$1</span>',
+          )
+          .replace(
+            /\b(true|false|null|isNaN|Number|Infinity)\b/g,
+            '<span class="text-purple-400">$1</span>',
+          )
+          .replace(
+            /\b(Math|floor|push|pop|length|size|insert|extractMax|extractMin|heapifyDown)\b/g,
+            '<span class="text-yellow-300">$1</span>',
+          )
+          .replace(
+            /\b(new|Array|Set|MinHeap)\b/g,
+            '<span class="text-cyan-300">$1</span>',
+          );
+        c.forEach(
+          (com, i) =>
+            (esc = esc.replace(
+              `___C_${i}___`,
+              `<span class="text-slate-500 italic">${com}</span>`,
+            )),
+        );
+        return esc;
+      };
+
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+      const isAborted = (id) => id !== currentProcessId;
+
+      function renderTabs() {
+        document.getElementById("tabs-container").innerHTML = ALGO_DATA.map(
+          (a) =>
+            `<button onclick="changeTab('${a.id}')" class="px-5 py-4 font-bold whitespace-nowrap transition-all duration-200 border-b-2 flex-1 text-center ${a.id === currentTabId ? "text-rose-600 border-rose-600 bg-white" : "text-slate-500 hover:text-slate-800 hover:bg-slate-100/50 border-transparent cursor-pointer"} text-sm sm:text-base">${a.name}</button>`,
+        ).join("");
+      }
+
+      function initUI() {
+        document.getElementById("comparison-table-body").innerHTML =
+          ALGO_DATA.map(
+            (a) =>
+              `<tr class="border-b border-slate-100 hover:bg-slate-50/50"><td class="p-4 font-bold text-slate-800">${a.name}</td><td class="p-4 text-slate-700 text-sm font-semibold text-rose-600">${a.vnName}</td><td class="p-4 text-slate-700 text-sm italic">${a.tech}</td><td class="p-4">${renderBadgeHTML(a.space)}</td></tr>`,
+          ).join("");
+        renderTabs();
+        updateInfoAndCode();
+        generateNewData();
+        lucide.createIcons();
+      }
+
+      function updateInfoAndCode() {
+        const a = ALGO_DATA.find((x) => x.id === currentTabId);
+        if (!a) return;
+        document.getElementById("info-container").innerHTML =
+          `<div><h3 class="text-3xl font-extrabold text-slate-900 mb-1">${a.name}</h3><div class="inline-flex items-center px-3 py-1 bg-rose-100 text-rose-700 rounded-lg text-sm font-medium">${a.vnName}</div></div><p class="text-slate-600 leading-relaxed text-sm">${a.desc}</p><ul class="space-y-2 text-sm text-slate-700 mt-4">${a.characteristics.map((c) => `<li class="flex items-start"><i data-lucide="check-circle-2" class="w-4 h-4 text-rose-500 mr-2 shrink-0 mt-0.5"></i><span>${c}</span></li>`).join("")}</ul>`;
+        document.getElementById("code-container").innerHTML = highlightJS(
+          a.code,
+        );
+        lucide.createIcons();
+      }
+
+      function setMathHTML(htmlContent) {
+        document.getElementById("math-computation").innerHTML = htmlContent;
+      }
+
+      // --- RENDER HEAP UI (ARRAY + TREE) ---
+      function renderVisuals(
+        activeIdx = -1,
+        compareIdx = -1,
+        isSwap = false,
+        sortedBoundary = -1,
+      ) {
+        // 1. Render Array
+        const arrContainer = document.getElementById("array-container");
+        let arrHtml = "";
+
+        if (heapData.length === 0 && currentTabId !== "heap_sort") {
+          arrHtml =
+            '<div class="text-slate-500 italic text-sm w-full text-center">Mảng trống</div>';
+        } else {
+          heapData.forEach((val, i) => {
+            let bgClass = "bg-slate-700 border-slate-600 text-white";
+            let badge = `<span class="text-[10px] text-slate-400 absolute -top-4">${i}</span>`;
+
+            if (sortedBoundary !== -1 && i >= sortedBoundary) {
+              bgClass = "node-sorted";
+            } else if (isSwap && (i === activeIdx || i === compareIdx)) {
+              bgClass = "active-swap";
+            } else if (i === activeIdx) {
+              bgClass = "active-compare";
+            } else if (i === compareIdx) {
+              bgClass =
+                "bg-amber-600 border-amber-400 shadow-[0_0_10px_rgba(217,119,6,0.8)] scale-110 z-10 text-white";
+            }
+
+            arrHtml += `<div class="relative w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded border-2 font-bold text-sm transition-all duration-400 ${bgClass}">${badge}${val}</div>`;
+          });
+        }
+        arrContainer.innerHTML = arrHtml;
+
+        // 2. Render Tree
+        const treeNodes = document.getElementById("tree-nodes");
+        const treeLines = document.getElementById("tree-lines");
+        let tNodesHtml = "";
+        let tLinesHtml = "";
+
+        for (let i = 0; i < heapData.length; i++) {
+          // Bỏ qua vẽ tree nếu đã là sorted trong Heap Sort
+          if (sortedBoundary !== -1 && i >= sortedBoundary) continue;
+
+          let val = heapData[i];
+
+          // Vẽ lines
+          let leftChild = 2 * i + 1;
+          let rightChild = 2 * i + 2;
+
+          const drawLine = (cIdx) => {
+            if (
+              cIdx < heapData.length &&
+              (sortedBoundary === -1 || cIdx < sortedBoundary)
+            ) {
+              // Calculate % based on classes
+              tLinesHtml += `<line x1="var(--pos-x-${i})" y1="var(--pos-y-${i})" x2="var(--pos-x-${cIdx})" y2="var(--pos-y-${cIdx})" stroke="#475569" stroke-width="2" class="tree-line" />`;
+            }
+          };
+          drawLine(leftChild);
+          drawLine(rightChild);
+
+          // Vẽ Node
+          let bgClass = "bg-slate-800 border-slate-600 text-slate-200";
+          let badge = `<span class="absolute -bottom-4 bg-slate-800 text-slate-400 text-[9px] px-1 rounded border border-slate-700">${i}</span>`;
+
+          if (isSwap && (i === activeIdx || i === compareIdx)) {
+            bgClass = "active-swap";
+          } else if (i === activeIdx) {
+            bgClass = "active-compare";
+          } else if (i === compareIdx) {
+            bgClass =
+              "bg-amber-600 border-amber-400 shadow-[0_0_10px_rgba(217,119,6,0.8)] scale-110 z-10 text-white";
+          }
+
+          tNodesHtml += `
+             <div class="tree-node absolute w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full border-2 font-bold text-sm shadow-lg pos-${i} ${bgClass}" style="transform: translate(-50%, -50%);">
+                ${badge}
+                ${val}
+             </div>
+           `;
+        }
+        treeLines.innerHTML = tLinesHtml;
+        treeNodes.innerHTML = tNodesHtml;
+
+        // Render Output / Extra
+        const outWrap = document.getElementById("output-wrapper");
+        if (outputData.length > 0 || streamData.length > 0) {
+          outWrap.classList.remove("hidden");
+          let outHtml = "";
+
+          if (currentTabId === "top_k") {
+            document.getElementById("output-title").innerText =
+              "DỮ LIỆU ĐANG TỚI (Stream)";
+            streamData.forEach((v) => {
+              outHtml += `<div class="w-8 h-8 flex items-center justify-center rounded bg-slate-700 text-slate-300 font-bold border border-slate-600">${v}</div>`;
+            });
+          } else {
+            document.getElementById("output-title").innerText =
+              currentTabId === "heap_sort"
+                ? "MẢNG ĐÃ SẮP XẾP"
+                : "PHẦN TỬ ĐÃ RÚT (Extracted)";
+            outputData.forEach((v) => {
+              outHtml += `<div class="w-8 h-8 flex items-center justify-center rounded bg-emerald-600 text-white font-bold border-2 border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.5)]">${v}</div>`;
+            });
+          }
+          document.getElementById("output-container").innerHTML = outHtml;
+        } else {
+          outWrap.classList.add("hidden");
+        }
+      }
+
+      // CSS variables injection for tree lines
+      function initTreeLineCoords() {
+        const coords = [
+          { x: 50, y: 15 },
+          { x: 25, y: 40 },
+          { x: 75, y: 40 },
+          { x: 12.5, y: 65 },
+          { x: 37.5, y: 65 },
+          { x: 62.5, y: 65 },
+          { x: 87.5, y: 65 },
+          { x: 6.25, y: 90 },
+          { x: 18.75, y: 90 },
+          { x: 31.25, y: 90 },
+          { x: 43.75, y: 90 },
+          { x: 56.25, y: 90 },
+          { x: 68.75, y: 90 },
+          { x: 81.25, y: 90 },
+          { x: 93.75, y: 90 },
+        ];
+        let root = document.documentElement;
+        coords.forEach((c, i) => {
+          root.style.setProperty(`--pos-x-${i}`, `${c.x}%`);
+          root.style.setProperty(`--pos-y-${i}`, `${c.y}%`);
+        });
+      }
+
+      function changeTab(id) {
+        if (isRunning) {
+          currentProcessId++;
+          isRunning = false;
+          toggleBtn(false);
+        }
+        currentTabId = id;
+        renderTabs();
+        updateInfoAndCode();
+        generateNewData();
+      }
+
+      function generateNewData() {
+        if (isRunning) return;
+        let problemHTML = "";
+
+        heapData = [];
+        outputData = [];
+        streamData = [];
+        isMinHeap = false;
+
+        if (currentTabId === "heap_insert") {
+          heapData = [50, 40, 30, 20, 15, 10]; // Valid Max-Heap
+          isMinHeap = false;
+          problemHTML = `<b class="text-white">Thêm phần tử vào Max-Heap:</b> Sẽ thêm số <b class="text-rose-400 text-lg px-1 bg-slate-800 rounded">60</b> vào cuối mảng. Sau đó thực hiện <b class="text-amber-400">Bubble Up (Nổi bọt)</b> vì 60 lớn hơn Cha của nó.`;
+        } else if (currentTabId === "heap_extract") {
+          heapData = [90, 80, 70, 60, 50, 30, 40]; // Valid Max-Heap
+          isMinHeap = false;
+          problemHTML = `<b class="text-white">Rút Gốc (Extract Max):</b> Lấy số lớn nhất <b class="text-rose-400 text-lg px-1 bg-slate-800 rounded">90</b> ra ngoài. Đưa số cuối cùng lên làm Gốc, sau đó <b class="text-amber-400">Bubble Down (Chìm xuống)</b> để lập lại trật tự.`;
+        } else if (currentTabId === "build_heap") {
+          heapData = [10, 20, 30, 40, 50, 60, 70]; // Unsorted (Reverse)
+          isMinHeap = false;
+          problemHTML = `<b class="text-white">Vun Đống (Build Max-Heap):</b> Mảng hiện tại lộn xộn. Ta sẽ gọi <b class="text-amber-400">Heapify Down</b> lần lượt từ các Node Cha (từ dưới lên) để xây Heap cực nhanh trong O(n).`;
+        } else if (currentTabId === "heap_sort") {
+          heapData = [15, 10, 5, 8, 2, 3]; // Needs to be built first, let's start with a Max-Heap
+          heapData = [50, 40, 30, 20, 10, 5];
+          isMinHeap = false;
+          problemHTML = `<b class="text-white">Heap Sort:</b> Hoán đổi Gốc (Max) với đuôi mảng. Coi như phần Đuôi đã được sắp xếp (<span class="text-emerald-400">Cô lập</span>). Gọi Heapify Down ở Gốc cho phần Cây còn lại.`;
+        } else if (currentTabId === "top_k") {
+          heapData = []; // Start empty
+          streamData = [15, 30, 10, 50, 20, 60];
+          maxK = 3;
+          isMinHeap = true; // Bắt buộc dùng Min-Heap
+          problemHTML = `<b class="text-white">Top K Elements (K=${maxK}):</b> Luồng dữ liệu chạy vào liên tục. Dùng <b class="text-emerald-400">MIN-HEAP</b> kích thước K. Kẻ yếu nhất nằm ở Gốc, sẽ bị đá ra nếu có kẻ mạnh hơn đến!`;
+        }
+
+        document.getElementById("problem-text").innerHTML = problemHTML;
+        document.getElementById("problem-statement").classList.remove("hidden");
+        lucide.createIcons();
+
+        renderVisuals();
+        setMathHTML('Nhấn "Chạy Mô Phỏng" để bắt đầu.');
+      }
+
+      function toggleBtn(s) {
+        isRunning = s;
+        document.getElementById("btn-play").disabled = s;
+        document.getElementById("btn-play-text").innerText = s
+          ? "Đang chạy..."
+          : "Chạy Mô Phỏng";
+      }
+
+      document
+        .getElementById("btn-reset")
+        .addEventListener("click", generateNewData);
+      document
+        .getElementById("speed-slider")
+        .addEventListener(
+          "input",
+          (e) => (currentSpeed = 1550 - Number(e.target.value)),
+        );
+      document.getElementById("btn-play").addEventListener("click", () => {
+        if (!isRunning) handleSimulation();
+      });
+
+      // --- CORE HEAP LOGIC & ANIMATIONS ---
+      const parent = (i) => Math.floor((i - 1) / 2);
+      const left = (i) => 2 * i + 1;
+      const right = (i) => 2 * i + 2;
+
+      async function heapifyUp(idx, id) {
+        let curr = idx;
+        while (curr > 0) {
+          if (isAborted(id)) return;
+          let p = parent(curr);
+
+          renderVisuals(curr, p);
+          let pVal = heapData[p],
+            cVal = heapData[curr];
+          let conditionStr = isMinHeap
+            ? `${cVal} < ${pVal}`
+            : `${cVal} > ${pVal}`;
+          let needSwap = isMinHeap ? cVal < pVal : cVal > pVal;
+
+          setMathHTML(
+            `So sánh: ${isMinHeap ? "Min" : "Max"}-Heap. Node [${curr}] = <b class="text-rose-400">${cVal}</b> với Cha [${p}] = <b class="text-amber-400">${pVal}</b>.<br/>Điều kiện: ${conditionStr}? => ${needSwap ? '<b class="text-emerald-400">Có. Hoán đổi!</b>' : '<b class="text-slate-400">Không. Dừng lại.</b>'}`,
+          );
+          await sleep(currentSpeed * 2);
+
+          if (needSwap) {
+            renderVisuals(curr, p, true); // Highlight Swap
+            await sleep(currentSpeed * 0.8);
+
+            [heapData[curr], heapData[p]] = [heapData[p], heapData[curr]];
+            renderVisuals(p, curr); // Curr moves up
+            await sleep(currentSpeed);
+            curr = p;
+          } else {
+            break;
+          }
+        }
+        renderVisuals(); // clear highlight
+      }
+
+      async function heapifyDown(idx, limit, id) {
+        let curr = idx;
+        while (true) {
+          if (isAborted(id)) return;
+          let l = left(curr);
+          let r = right(curr);
+          let extreme = curr;
+
+          if (l < limit) {
+            let cond = isMinHeap
+              ? heapData[l] < heapData[extreme]
+              : heapData[l] > heapData[extreme];
+            if (cond) extreme = l;
+          }
+          if (r < limit) {
+            let cond = isMinHeap
+              ? heapData[r] < heapData[extreme]
+              : heapData[r] > heapData[extreme];
+            if (cond) extreme = r;
+          }
+
+          renderVisuals(
+            curr,
+            extreme === curr ? -1 : extreme,
+            false,
+            currentTabId === "heap_sort" ? limit : -1,
+          );
+
+          if (extreme !== curr) {
+            let eVal = heapData[extreme],
+              cVal = heapData[curr];
+            setMathHTML(
+              `Con [${extreme}] = <b class="text-amber-400">${eVal}</b> "mạnh" hơn Cha [${curr}] = <b class="text-rose-400">${cVal}</b>. <span class="text-rose-400 font-bold">Chìm xuống! (Swap)</span>`,
+            );
+            await sleep(currentSpeed * 2);
+
+            renderVisuals(
+              curr,
+              extreme,
+              true,
+              currentTabId === "heap_sort" ? limit : -1,
+            ); // Swap anim
+            await sleep(currentSpeed * 0.8);
+
+            [heapData[curr], heapData[extreme]] = [
+              heapData[extreme],
+              heapData[curr],
+            ];
+            renderVisuals(
+              extreme,
+              curr,
+              false,
+              currentTabId === "heap_sort" ? limit : -1,
+            );
+            await sleep(currentSpeed);
+
+            curr = extreme;
+          } else {
+            setMathHTML(
+              `Node [${curr}] đã mạnh hơn/bằng các con. <span class="text-emerald-400 font-bold">Dừng lại.</span>`,
+            );
+            await sleep(currentSpeed);
+            break;
+          }
+        }
+        renderVisuals(-1, -1, false, currentTabId === "heap_sort" ? limit : -1);
+      }
+
+      // --- ALGORITHMS ---
+      async function startSimulation(sid) {
+        if (currentTabId === "heap_insert") {
+          let newVal = 60;
+          setMathHTML(
+            `Bước 1: Thêm <b class="text-rose-400">${newVal}</b> vào đuôi mảng (Vị trí lá cuối cùng).`,
+          );
+          heapData.push(newVal);
+          renderVisuals(heapData.length - 1);
+          await sleep(currentSpeed * 2);
+          setMathHTML(
+            `Bước 2: Gọi <b class="text-amber-400">Heapify Up</b> từ vị trí cuối để nổi bọt.`,
+          );
+          await heapifyUp(heapData.length - 1, sid);
+          if (isAborted(sid)) return;
+          setMathHTML(
+            `<span class="text-emerald-400 font-bold text-xl">🎉 Thêm thành công trong thời gian O(log n)!</span>`,
+          );
+        } else if (currentTabId === "heap_extract") {
+          let max = heapData[0];
+          outputData.push(max);
+          setMathHTML(
+            `Bước 1: Rút Gốc <b class="text-rose-400">${max}</b> ra ngoài. Đưa Lá cuối <b class="text-cyan-400">${heapData[heapData.length - 1]}</b> lên thế chỗ Gốc.`,
+          );
+          renderVisuals(0, heapData.length - 1, true);
+          await sleep(currentSpeed * 2);
+
+          heapData[0] = heapData.pop();
+          renderVisuals(0);
+          await sleep(currentSpeed);
+
+          setMathHTML(
+            `Bước 2: Gốc mới quá yếu, gọi <b class="text-amber-400">Heapify Down</b> để nó chìm xuống đúng trật tự.`,
+          );
+          await sleep(currentSpeed);
+          await heapifyDown(0, heapData.length, sid);
+          if (isAborted(sid)) return;
+          setMathHTML(
+            `<span class="text-emerald-400 font-bold text-xl">🎉 Rút thành công trong thời gian O(log n)!</span>`,
+          );
+        } else if (currentTabId === "build_heap") {
+          let n = heapData.length;
+          let startIdx = Math.floor(n / 2 - 1);
+          setMathHTML(
+            `Vun đống O(n): Bắt đầu xét từ Node Cha cuối cùng ở Index = <b class="text-cyan-400">${startIdx}</b> đi ngược lên 0.`,
+          );
+          await sleep(currentSpeed * 2);
+
+          for (let i = startIdx; i >= 0; i--) {
+            if (isAborted(sid)) return;
+            setMathHTML(
+              `Gọi <b class="text-amber-400">Heapify Down</b> cho Node [${i}] = ${heapData[i]}`,
+            );
+            renderVisuals(i);
+            await sleep(currentSpeed);
+            await heapifyDown(i, n, sid);
+          }
+          if (isAborted(sid)) return;
+          setMathHTML(
+            `<span class="text-emerald-400 font-bold text-xl">🎉 Vun đống hoàn tất siêu tốc O(n)! Mảng đã trở thành Max-Heap hợp lệ.</span>`,
+          );
+        } else if (currentTabId === "heap_sort") {
+          let n = heapData.length;
+          setMathHTML(
+            `Đã có sẵn Max-Heap. Bắt đầu Heap Sort In-place O(n log n).`,
+          );
+          await sleep(currentSpeed);
+
+          for (let i = n - 1; i > 0; i--) {
+            if (isAborted(sid)) return;
+            setMathHTML(
+              `Hoán đổi Gốc (Max) <b class="text-rose-400">${heapData[0]}</b> với Đuôi chưa sắp xếp <b class="text-cyan-400">${heapData[i]}</b>.`,
+            );
+            renderVisuals(0, i, true, i + 1);
+            await sleep(currentSpeed * 2);
+
+            [heapData[0], heapData[i]] = [heapData[i], heapData[0]];
+            outputData.unshift(heapData[i]); // Visual only (accumulate at end)
+
+            setMathHTML(
+              `Cô lập <b class="text-emerald-400">${heapData[i]}</b> (Đã sắp xếp). Gọi Heapify Down cho Gốc mới trên vùng Cây còn lại.`,
+            );
+            renderVisuals(0, -1, false, i);
+            await sleep(currentSpeed * 1.5);
+
+            await heapifyDown(0, i, sid);
+          }
+          if (isAborted(sid)) return;
+          outputData.unshift(heapData[0]); // Push last one
+          renderVisuals(-1, -1, false, 0); // All sorted
+          setMathHTML(
+            `<span class="text-emerald-400 font-bold text-xl">🎉 Heap Sort hoàn tất xuất sắc!</span>`,
+          );
+        } else if (currentTabId === "top_k") {
+          while (streamData.length > 0) {
+            if (isAborted(sid)) return;
+            let val = streamData.shift();
+
+            setMathHTML(
+              `Đọc số <b class="text-rose-400">${val}</b> từ Stream. Nạp vào Min-Heap.`,
+            );
+            heapData.push(val);
+            renderVisuals(heapData.length - 1);
+            await sleep(currentSpeed);
+            await heapifyUp(heapData.length - 1, sid);
+
+            if (heapData.length > maxK) {
+              let minVal = heapData[0];
+              setMathHTML(
+                `⚠️ Heap chứa ${heapData.length} người, vượt quá K=${maxK}! Kẻ yếu nhất ở Gốc (<b class="text-rose-500">${minVal}</b>) sẽ bị BẬT BÃI.`,
+              );
+              renderVisuals(0, -1, true); // Highlight red
+              await sleep(currentSpeed * 2);
+
+              heapData[0] = heapData.pop();
+              renderVisuals(0);
+              await heapifyDown(0, heapData.length, sid);
+            } else {
+              setMathHTML(
+                `Heap chứa ${heapData.length}/${maxK} người. Đủ chỗ.`,
+              );
+              await sleep(currentSpeed);
+            }
+          }
+          if (isAborted(sid)) return;
+          setMathHTML(
+            `<span class="text-emerald-400 font-bold text-xl">🎉 Luồng kết thúc. Những kẻ trụ lại trong Min-Heap chính là Top ${maxK} phần tử lớn nhất!</span>`,
+          );
+        }
+      }
+
+      async function handleSimulation() {
+        toggleBtn(true);
+        currentProcessId++;
+        let sid = currentProcessId;
+        try {
+          await startSimulation(sid);
+        } catch (e) {
+          console.error(e);
+        }
+        if (sid === currentProcessId) toggleBtn(false);
+      }
+
+      initTreeLineCoords();
+      window.onload = initUI;
+    </script>
+  </body>
+</html>

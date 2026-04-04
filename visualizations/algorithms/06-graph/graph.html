@@ -1,0 +1,1397 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trực Quan Hóa Cấu Trúc Dữ Liệu Đồ Thị (Graph)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .hide-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      .graph-node {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .graph-edge {
+        transition: all 0.3s ease;
+        stroke-dasharray: 1000;
+        stroke-dashoffset: 0;
+      }
+
+      @keyframes pulse-node-orange {
+        0% {
+          box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+        }
+        70% {
+          box-shadow: 0 0 0 15px rgba(245, 158, 11, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+        }
+      }
+
+      @keyframes dash-anim {
+        to {
+          stroke-dashoffset: -20;
+        }
+      }
+
+      .node-active {
+        animation: pulse-node-orange 1.5s infinite;
+        border-color: #f59e0b;
+        background-color: #78350f;
+        color: white;
+        transform: translate(-50%, -50%) scale(1.2) !important;
+        z-index: 20;
+      }
+      .node-visited {
+        background-color: #1e293b;
+        border-color: #475569;
+        color: #94a3b8;
+      }
+      .node-color-1 {
+        background-color: #0369a1;
+        border-color: #22d3ee;
+        color: white;
+      } /* Xanh dương */
+      .node-color-2 {
+        background-color: #9f1239;
+        border-color: #fb7185;
+        color: white;
+      } /* Đỏ hồng */
+
+      .edge-active {
+        stroke: #f59e0b;
+        stroke-width: 4;
+        filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.8));
+        z-index: 10;
+      }
+      .edge-directed-anim {
+        stroke-dasharray: 10;
+        animation: dash-anim 1s linear infinite;
+      }
+      .edge-visited {
+        stroke: #10b981;
+        stroke-width: 3;
+      }
+      .edge-error {
+        stroke: #ef4444;
+        stroke-width: 4;
+        filter: drop-shadow(0 0 5px rgba(239, 68, 68, 0.8));
+      }
+
+      /* Mũi tên SVG */
+      #arrow-normal {
+        fill: #64748b;
+      }
+      #arrow-active {
+        fill: #f59e0b;
+      }
+      #arrow-visited {
+        fill: #10b981;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-slate-50 text-slate-900 font-sans min-h-screen p-4 sm:p-6 lg:p-8"
+  >
+    <div class="max-w-7xl mx-auto space-y-8">
+      <!-- HEADER -->
+      <header class="text-center space-y-4 mb-10">
+        <div
+          class="inline-flex items-center justify-center p-3 bg-orange-100 text-orange-600 rounded-full mb-2 shadow-sm"
+        >
+          <i data-lucide="share-2" class="w-8 h-8"></i>
+        </div>
+        <h1
+          class="text-3xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-orange-600 to-amber-500"
+        >
+          Graph (Đồ Thị)
+        </h1>
+        <p class="text-lg text-slate-600 max-w-3xl mx-auto">
+          Phiên bản tổng quát của Tree. Đỉnh cao của thuật toán dẫn đường, phân
+          tích mạng lưới và lập lịch.<br />
+          <span
+            class="inline-block mt-2 px-3 py-1 bg-indigo-100 text-indigo-800 rounded-lg text-sm font-semibold border border-indigo-200"
+          >
+            🔥 Insight: Đồ thị = Các Đỉnh (Nodes/Vertices) + Các Cạnh nối
+            (Edges). Coi chừng Vòng lặp!
+          </span>
+        </p>
+      </header>
+
+      <!-- LÝ THUYẾT TRỌNG TÂM -->
+      <div
+        class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 overflow-hidden"
+      >
+        <div class="flex items-center mb-6">
+          <i data-lucide="book-open" class="w-6 h-6 text-orange-500 mr-2"></i>
+          <h2 class="text-xl font-bold text-slate-800">Lý thuyết Trọng tâm</h2>
+        </div>
+        <div
+          class="grid grid-cols-1 lg:grid-cols-2 gap-8 text-sm text-slate-700 items-start"
+        >
+          <div class="space-y-4">
+            <div
+              class="bg-slate-900 p-4 rounded-xl border border-slate-700 flex flex-col text-white h-full justify-center"
+            >
+              <span
+                class="text-slate-400 text-xs uppercase tracking-wider mb-3 text-center"
+                >Biểu diễn Đồ thị (Graph Representation)</span
+              >
+              <p class="text-center text-slate-300 mb-4">
+                Làm sao để nạp Đồ thị vào Code? Có 2 cách phổ biến nhất:
+              </p>
+              <div class="space-y-3">
+                <div class="bg-slate-800 p-3 rounded border border-slate-600">
+                  <span class="text-emerald-400 font-bold block mb-1"
+                    >1. Adjacency List (Danh sách kề) - Rất Khuyên Dùng</span
+                  >
+                  <code class="text-xs text-slate-300"
+                    >graph[0] = [1, 3]<br />graph[1] = [0, 2, 4]</code
+                  >
+                  <p class="text-xs mt-1 text-slate-400">
+                    Tiết kiệm bộ nhớ (O(V+E)). Dễ duyệt các hàng xóm.
+                  </p>
+                </div>
+                <div class="bg-slate-800 p-3 rounded border border-slate-600">
+                  <span class="text-cyan-400 font-bold block mb-1"
+                    >2. Adjacency Matrix (Ma trận kề)</span
+                  >
+                  <code class="text-xs text-slate-300"
+                    >matrix[u][v] = 1 (có cạnh) hoặc 0 (không cạnh)</code
+                  >
+                  <p class="text-xs mt-1 text-slate-400">
+                    Tra cứu cạnh siêu nhanh O(1) nhưng ngốn bộ nhớ O(V²).
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <div
+              class="bg-slate-50 p-4 rounded-xl border border-slate-100 h-full"
+            >
+              <h3 class="font-bold text-slate-800 mb-3 flex items-center">
+                <i data-lucide="zap" class="w-4 h-4 mr-1 text-amber-500"></i>
+                Bảng Phân Loại Thuật Toán
+              </h3>
+              <ul class="space-y-3">
+                <li class="flex items-start">
+                  <span
+                    class="flex items-center justify-center bg-orange-500 text-white w-5 h-5 rounded text-xs font-bold mr-2 shrink-0"
+                    >1</span
+                  >
+                  <span
+                    ><b>Tìm kiếm / Duyệt (Traversal):</b> <code>DFS</code> (Dùng
+                    Đệ quy/Stack, đi sâu) hoặc <code>BFS</code> (Dùng Queue, đi
+                    theo lớp). Lưu ý BẮT BUỘC phải có mảng
+                    <code>visited</code> để không bị lặp vô tận.</span
+                  >
+                </li>
+                <li class="flex items-start">
+                  <span
+                    class="flex items-center justify-center bg-orange-500 text-white w-5 h-5 rounded text-xs font-bold mr-2 shrink-0"
+                    >2</span
+                  >
+                  <span
+                    ><b>Quản lý Thành phần liên thông (Connectivity):</b>
+                    <code>Union-Find (Disjoint Set)</code> cực kỳ mạnh để gom
+                    nhóm và phát hiện chu trình (Cycle) trong đồ thị vô
+                    hướng.</span
+                  >
+                </li>
+                <li class="flex items-start">
+                  <span
+                    class="flex items-center justify-center bg-orange-500 text-white w-5 h-5 rounded text-xs font-bold mr-2 shrink-0"
+                    >3</span
+                  >
+                  <span
+                    ><b>Sắp xếp theo Phụ thuộc:</b>
+                    <code>Topological Sort</code>. Dùng cho Đồ thị Có hướng
+                    Không có Chu trình (DAG) - VD: Xếp lịch học môn tiên
+                    quyết.</span
+                  >
+                </li>
+                <li class="flex items-start">
+                  <span
+                    class="flex items-center justify-center bg-orange-500 text-white w-5 h-5 rounded text-xs font-bold mr-2 shrink-0"
+                    >4</span
+                  >
+                  <span
+                    ><b>Đường đi ngắn nhất:</b> <code>Dijkstra</code> (Dùng
+                    Priority Queue, trọng số dương),
+                    <code>Bellman-Ford</code> (Chấp nhận trọng số âm).</span
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BẢNG ĐÁNH GIÁ -->
+      <div
+        class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 overflow-hidden flex flex-col"
+      >
+        <div class="flex items-center mb-6">
+          <i data-lucide="award" class="w-6 h-6 text-orange-500 mr-2"></i>
+          <h2 class="text-xl font-bold text-slate-800">
+            Các Dạng Bài Tiêu Biểu
+          </h2>
+        </div>
+        <div class="overflow-x-auto">
+          <table
+            class="w-full text-left border-collapse whitespace-nowrap min-w-[600px]"
+          >
+            <thead>
+              <tr class="bg-slate-50">
+                <th class="p-4 font-semibold text-slate-700 rounded-tl-xl">
+                  Dạng bài
+                </th>
+                <th class="p-4 font-semibold text-slate-700">Tên phổ biến</th>
+                <th class="p-4 font-semibold text-slate-700">
+                  Kỹ thuật / Mục đích
+                </th>
+                <th class="p-4 font-semibold text-slate-700 rounded-tr-xl">
+                  Bộ nhớ (Space)
+                </th>
+              </tr>
+            </thead>
+            <tbody id="comparison-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- MAIN UI -->
+      <div
+        class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden"
+      >
+        <div
+          id="tabs-container"
+          class="flex overflow-x-auto border-b border-slate-200 hide-scrollbar bg-slate-50"
+        ></div>
+
+        <div
+          class="p-4 sm:p-6 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start"
+        >
+          <!-- Left Panel: Info -->
+          <div class="lg:col-span-4 space-y-6" id="info-container"></div>
+
+          <!-- Right Panel: Visualizer & Code -->
+          <div class="lg:col-span-8 w-full flex flex-col space-y-6">
+            <div
+              class="bg-slate-900 rounded-2xl p-4 sm:p-6 shadow-inner border border-slate-800"
+            >
+              <div
+                class="flex flex-wrap gap-4 items-center justify-between mb-4 pb-4 border-b border-slate-700"
+              >
+                <div class="flex gap-2">
+                  <button
+                    id="btn-play"
+                    class="flex items-center px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-lg font-semibold transition disabled:opacity-50 text-sm"
+                  >
+                    <i data-lucide="play" class="w-4 h-4 mr-2"></i>
+                    <span id="btn-play-text">Chạy Mô Phỏng</span>
+                  </button>
+                  <button
+                    id="btn-reset"
+                    class="flex items-center px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition text-sm"
+                  >
+                    <i data-lucide="rotate-ccw" class="w-4 h-4 mr-2"></i> Làm
+                    mới Đồ thị
+                  </button>
+                </div>
+                <div class="flex items-center gap-3 text-slate-300 text-sm">
+                  <i data-lucide="settings-2" class="w-4 h-4"></i>
+                  <label class="font-medium hidden sm:block">Tốc độ:</label>
+                  <input
+                    type="range"
+                    id="speed-slider"
+                    min="50"
+                    max="1500"
+                    value="800"
+                    class="w-24 accent-orange-500"
+                  />
+                </div>
+              </div>
+
+              <!-- Khối Đề Bài -->
+              <div
+                id="problem-statement"
+                class="bg-orange-900/40 border border-orange-500/30 rounded-xl p-4 mb-4 text-sm sm:text-base text-orange-100 flex items-start gap-3 hidden"
+              >
+                <i
+                  data-lucide="target"
+                  class="w-5 h-5 text-orange-400 shrink-0 mt-0.5"
+                ></i>
+                <div id="problem-text" class="leading-relaxed"></div>
+              </div>
+
+              <!-- Bảng tính toán Logic Realtime -->
+              <div
+                id="math-computation"
+                class="bg-slate-800 rounded-xl p-3 mb-6 text-center font-mono text-sm sm:text-base border border-slate-600 text-slate-300 min-h-[48px] flex items-center justify-center"
+              >
+                Sẵn sàng mô phỏng.
+              </div>
+
+              <!-- Vùng Hiển Thị Graph -->
+              <div
+                class="flex flex-col items-center justify-center w-full relative mb-4"
+              >
+                <!-- Khu vực Canvas vẽ Graph -->
+                <div
+                  id="graph-canvas"
+                  class="relative w-full h-[300px] sm:h-[400px] border border-slate-700 rounded-xl bg-slate-950 shadow-inner overflow-hidden"
+                >
+                  <!-- Định nghĩa SVG Markers (Mũi tên) -->
+                  <svg class="absolute w-0 h-0">
+                    <defs>
+                      <marker
+                        id="arrow-normal"
+                        markerWidth="10"
+                        markerHeight="10"
+                        refX="22"
+                        refY="3"
+                        orient="auto"
+                        markerUnits="strokeWidth"
+                      >
+                        <path d="M0,0 L0,6 L9,3 z" fill="#64748b" />
+                      </marker>
+                      <marker
+                        id="arrow-active"
+                        markerWidth="10"
+                        markerHeight="10"
+                        refX="22"
+                        refY="3"
+                        orient="auto"
+                        markerUnits="strokeWidth"
+                      >
+                        <path d="M0,0 L0,6 L9,3 z" fill="#f59e0b" />
+                      </marker>
+                      <marker
+                        id="arrow-visited"
+                        markerWidth="10"
+                        markerHeight="10"
+                        refX="22"
+                        refY="3"
+                        orient="auto"
+                        markerUnits="strokeWidth"
+                      >
+                        <path d="M0,0 L0,6 L9,3 z" fill="#10b981" />
+                      </marker>
+                    </defs>
+                  </svg>
+
+                  <!-- SVG Lines (Vẽ Cạnh) -->
+                  <svg
+                    id="graph-lines"
+                    class="absolute top-0 left-0 w-full h-full z-0"
+                  ></svg>
+
+                  <!-- Vẽ Trọng số Cạnh (HTML/Absolute) -->
+                  <div
+                    id="graph-weights"
+                    class="absolute top-0 left-0 w-full h-full z-10 pointer-events-none"
+                  ></div>
+
+                  <!-- Các Node HTML -->
+                  <div
+                    id="graph-nodes"
+                    class="absolute top-0 left-0 w-full h-full z-20 pointer-events-none"
+                  ></div>
+                </div>
+
+                <!-- Khu vực Bổ sung (Output Array / Biến) -->
+                <div
+                  id="output-wrapper"
+                  class="flex flex-col items-center w-full mt-6 hidden"
+                >
+                  <div
+                    id="output-title"
+                    class="text-orange-400 font-mono text-sm font-bold mb-2 uppercase tracking-wider"
+                  >
+                    CẤU TRÚC PHỤ TRỢ
+                  </div>
+                  <div
+                    id="output-container"
+                    class="flex flex-wrap items-center justify-center gap-1 sm:gap-2 min-h-[48px] min-w-[200px] p-2 border border-dashed border-slate-600 rounded bg-slate-800/30"
+                  ></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Code Block -->
+            <div
+              class="relative rounded-2xl overflow-hidden shadow-lg border border-slate-700 bg-[#0f172a]"
+            >
+              <div
+                class="w-full px-4 py-3 bg-[#1e293b] border-b border-slate-700 flex items-center justify-between"
+              >
+                <div class="flex space-x-2">
+                  <div class="w-3 h-3 rounded-full bg-rose-500"></div>
+                  <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+                  <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                </div>
+                <div class="flex items-center text-slate-400 text-xs font-mono">
+                  <i data-lucide="code" class="w-4 h-4 mr-1.5"></i> javascript
+                </div>
+              </div>
+              <pre
+                class="p-4 sm:p-6 overflow-auto text-xs sm:text-sm font-mono leading-relaxed max-h-72"
+              ><code id="code-container" class="text-slate-200"></code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // === DỮ LIỆU PATTERNS GRAPH ===
+      const ALGO_DATA = [
+        {
+          id: "dfs_bfs",
+          name: "1. DFS / BFS",
+          vnName: "Duyệt & Kết nối",
+          tech: "Recursion / Queue + Visited Array",
+          space: "O(V)",
+          code: `// Bài toán: Duyệt Đồ thị bằng DFS (Ưu tiên đi sâu)\nfunction dfsGraph(adjList, startNode) {\n  let visited = new Set();\n  let result = [];\n\n  function dfs(node) {\n    if (visited.has(node)) return;\n    \n    visited.add(node);\n    result.push(node);\n\n    // Gọi đệ quy thăm tất cả hàng xóm chưa được thăm\n    for (let neighbor of adjList[node]) {\n      dfs(neighbor);\n    }\n  }\n\n  dfs(startNode);\n  return result;\n}`,
+          desc: 'Là hai thuật toán kinh điển nhất. DFS (Dùng Stack/Đệ quy) thích hợp để đi tìm đường, phát hiện chu trình. BFS (Dùng Queue) thích hợp để tìm đường đi ngắn nhất trên đồ thị không trọng số. <b class="text-rose-500">Luôn nhớ:</b> Khác với Tree, Graph có thể có vòng lặp, NÊN PHẢI DÙNG tập hợp `visited` để đánh dấu node đã đi qua.',
+          characteristics: [
+            "Cốt lõi của mọi bài toán Đồ thị",
+            "Complexity: Thời gian O(V + E), Không gian O(V) cho `visited` set",
+          ],
+        },
+        {
+          id: "union_find",
+          name: "2. Union-Find",
+          vnName: "Disjoint Set (Gom nhóm)",
+          tech: "Mảng Parent + Phân hạng",
+          space: "O(V)",
+          code: `// Bài toán: Kiểm tra đồ thị Vô hướng có Chu trình (Cycle) không?\nclass UnionFind {\n  constructor(n) {\n    this.parent = Array.from({length: n}, (_, i) => i);\n  }\n  \n  // Tìm Gốc (Đại diện) của tập hợp chứa x\n  find(x) {\n    if (this.parent[x] !== x) {\n      this.parent[x] = this.find(this.parent[x]); // Nén đường đi (Path Compression)\n    }\n    return this.parent[x];\n  }\n  \n  // Gộp 2 tập hợp chứa x và y\n  union(x, y) {\n    let rootX = this.find(x);\n    let rootY = this.find(y);\n    if (rootX === rootY) return false; // Phát hiện Chu trình!\n    this.parent[rootY] = rootX;\n    return true;\n  }\n}`,
+          desc: 'Cấu trúc dữ liệu siêu hạng để giải bài toán "Hai điểm này có thông nhau không?". Ban đầu, mỗi Node là một tập hợp riêng (Cha của nó là chính nó). Khi có 1 cạnh nối A và B, ta Gộp (Union) chúng lại. Nếu A và B ĐÃ CÙNG CHUNG MỘT CHA mà vẫn bị nối thêm cạnh -> Xuất hiện Vòng lặp (Cycle)!',
+          characteristics: [
+            "Mảng `parent` cực kỳ đơn giản nhưng mạnh mẽ",
+            'Tốc độ gần như O(1) nhờ kỹ thuật "Nén đường đi" (Path Compression)',
+          ],
+        },
+        {
+          id: "topo_sort",
+          name: "3. Topological Sort",
+          vnName: "Sắp xếp Phụ thuộc",
+          tech: "Kahn Algorithm (In-degree + BFS)",
+          space: "O(V + E)",
+          code: `// Bài toán: Course Schedule (Xếp lịch học môn tiên quyết)\nfunction topologicalSort(numCourses, prerequisites) {\n  let inDegree = new Array(numCourses).fill(0);\n  let adj = Array.from({length: numCourses}, () => []);\n\n  // Xây dựng đồ thị & Bậc vào (In-degree)\n  for (let [v, u] of prerequisites) {\n    adj[u].push(v);\n    inDegree[v]++;\n  }\n\n  // Bỏ các node không bị phụ thuộc (Bậc vào = 0) vào Queue\n  let queue = [];\n  for (let i = 0; i < numCourses; i++) {\n    if (inDegree[i] === 0) queue.push(i);\n  }\n\n  let topoOrder = [];\n  while (queue.length > 0) {\n    let u = queue.shift();\n    topoOrder.push(u);\n    \n    for (let v of adj[u]) {\n      inDegree[v]--; // Xóa bỏ phụ thuộc\n      if (inDegree[v] === 0) queue.push(v); // Node mới đã tự do\n    }\n  }\n  return topoOrder.length === numCourses ? topoOrder : []; // Kiểm tra Cycle\n}`,
+          desc: "Topological Sort chỉ áp dụng được trên Đồ thị Có hướng Không chu trình (DAG). Hãy tưởng tượng: Bạn không thể học Thuật toán nếu chưa học Lập trình cơ bản. Kỹ thuật Kahn đếm số mũi tên ĐI VÀO mỗi node (In-degree). Môn nào In-degree = 0 thì được học trước, học xong thì cắt bỏ mũi tên đi ra của nó.",
+          characteristics: [
+            "Chuyên giải các bài toán Phụ thuộc / Tiên quyết (Dependency)",
+            "Thuật toán Kahn tận dụng sức mạnh của mảng In-Degree và Queue",
+          ],
+        },
+        {
+          id: "dijkstra",
+          name: "4. Dijkstra",
+          vnName: "Đường đi ngắn nhất (Trọng số)",
+          tech: "Priority Queue + Relaxation",
+          space: "O(V)",
+          code: `// Bài toán: Tìm đường đi ngắn nhất từ S đến mọi đỉnh (Trọng số Dương)\nfunction dijkstra(n, adj, start) {\n  let dist = new Array(n).fill(Infinity);\n  dist[start] = 0;\n  \n  // Priority Queue giả lập (Min-Heap lưu [Khoảng_cách, Node])\n  let pq = [[0, start]]; \n\n  while (pq.length > 0) {\n    pq.sort((a, b) => a[0] - b[0]); // O(n log n) - Thực tế dùng Min-Heap O(log n)\n    let [d, u] = pq.shift();\n\n    if (d > dist[u]) continue; // Tối ưu: Bỏ qua đường vòng xa hơn\n\n    for (let [v, weight] of adj[u]) {\n      // Thư giãn cạnh (Relaxation)\n      if (dist[u] + weight < dist[v]) {\n        dist[v] = dist[u] + weight;\n        pq.push([dist[v], v]);\n      }\n    }\n  }\n  return dist;\n}`,
+          desc: 'Thuật toán tìm đường GPS nổi tiếng nhất thế giới. Từ điểm xuất phát, nó lan tỏa ra các hàng xóm, liên tục "Thư giãn" (Cập nhật) nếu tìm thấy một con đường có tổng chi phí (Trọng số) nhỏ hơn đường cũ. LƯU Ý: Phải chọn đi tiếp vào đường có chi phí hiện tại NHỎ NHẤT (Cần Priority Queue).',
+          characteristics: [
+            "Tuyệt đối KHÔNG chạy được nếu có Trọng số Âm (Negative Weight)",
+            'Sử dụng kỹ thuật "Relaxation" liên tục ép khoảng cách nhỏ xuống.',
+          ],
+        },
+        {
+          id: "bipartite",
+          name: "5. Đồ thị Hai phía",
+          vnName: "Bipartite Graph (Tô màu)",
+          tech: "BFS / DFS + Coloring",
+          space: "O(V)",
+          code: `// Bài toán: Có thể chia các Node thành 2 nhóm độc lập không có cạnh nối nội bộ không?\nfunction isBipartite(graph) {\n  let n = graph.length;\n  let colors = new Array(n).fill(0); // 0: Chưa tô, 1: Màu A, -1: Màu B\n\n  for (let i = 0; i < n; i++) {\n    if (colors[i] !== 0) continue; // Bỏ qua node đã xử lý\n    \n    // Dùng BFS để tô màu luân phiên\n    let queue = [i];\n    colors[i] = 1; \n\n    while (queue.length > 0) {\n      let u = queue.shift();\n      for (let v of graph[u]) {\n        if (colors[v] === 0) {\n          colors[v] = -colors[u]; // Hàng xóm bắt buộc phải KHÁC MÀU\n          queue.push(v);\n        } else if (colors[v] === colors[u]) {\n          return false; // Phá sản! Hàng xóm mà lại CÙNG MÀU!\n        }\n      }\n    }\n  }\n  return true;\n}`,
+          desc: 'Bài toán kinh điển "Phân chia phe phái" (như xếp học sinh vào 2 nhóm sao cho những đứa ghét nhau không ngồi chung). Giải thuật vô cùng trực quan: Dùng 2 màu xanh/đỏ tô luân phiên. Node này màu Đỏ thì tất cả hàng xóm nối với nó BẮT BUỘC phải màu Xanh. Nếu phát hiện 1 cạnh nối 2 node CÙNG MÀU -> Trả về False!',
+          characteristics: [
+            "Ứng dụng siêu hạng của BFS kết hợp mảng lưu trạng thái Màu",
+            "Chỉ áp dụng trên Đồ thị Vô hướng.",
+          ],
+        },
+      ];
+
+      let currentTabId = ALGO_DATA[0].id;
+      let isRunning = false;
+      let currentProcessId = 0;
+      let currentSpeed = 800;
+
+      // --- Graph State ---
+      let graphDef = {
+        nodes: [], // {id, x, y, label, val}
+        edges: [], // {u, v, w} (w: weight)
+        isDirected: false,
+        adjList: {}, // Built automatically
+      };
+
+      // State Visuals
+      let activeNode = -1;
+      let activeEdges = []; // ["u-v", ...]
+      let visitedNodes = [];
+      let visitedEdges = [];
+      let errorEdges = []; // For Bipartite mismatch or Cycles
+      let nodeColors = {}; // { id: colorClass }
+      let nodeBadges = {}; // { id: htmlString }
+
+      // Aux UI State (for Output Panel)
+      let auxTitle = "";
+      let auxData = []; // [{label, val, class}]
+
+      // Tọa độ cấu hình chuẩn cho Đồ thị 6 đỉnh (Hexagon/Diamond layout)
+      const baseNodes = [
+        { id: 0, x: 20, y: 50, label: "0" },
+        { id: 1, x: 50, y: 20, label: "1" },
+        { id: 2, x: 50, y: 80, label: "2" },
+        { id: 3, x: 80, y: 50, label: "3" },
+        { id: 4, x: 35, y: 50, label: "4" },
+        { id: 5, x: 65, y: 50, label: "5" },
+      ];
+
+      // Tiện ích UI
+      const renderBadgeHTML = (text) => {
+        let c = "bg-slate-100 text-slate-800 border-slate-300";
+        if (text.includes("O(1)"))
+          c = "bg-emerald-100 text-emerald-800 border-emerald-300";
+        if (text.includes("O(V)"))
+          c = "bg-orange-100 text-orange-800 border-orange-300";
+        return `<span class="px-3 py-1 rounded-full border text-sm font-semibold shadow-sm inline-block ${c}">${text}</span>`;
+      };
+
+      const highlightJS = (code) => {
+        let esc = code.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const c = [];
+        esc = esc.replace(/(\/\/.*)/g, (m) => {
+          c.push(m);
+          return `___C_${c.length - 1}___`;
+        });
+        esc = esc.replace(
+          /\b(\d+)\b/g,
+          '<span class="text-slate-300">$1</span>',
+        ); // Đổi màu số thành xám nhạt để tránh trùng màu Cam
+        esc = esc
+          .replace(
+            /\b(function|let|const|var|if|else|for|while|return|break|continue|class|constructor)\b/g,
+            '<span class="text-pink-400 font-semibold">$1</span>',
+          )
+          .replace(
+            /\b(true|false|null|isNaN|Number|Infinity)\b/g,
+            '<span class="text-purple-400">$1</span>',
+          )
+          .replace(
+            /\b(Math|this|push|shift|pop|unshift|length|isEmpty|has|add|get|set|sort)\b/g,
+            '<span class="text-yellow-300">$1</span>',
+          )
+          .replace(
+            /\b(new|Array|Set|Map|UnionFind)\b/g,
+            '<span class="text-cyan-300">$1</span>',
+          );
+        c.forEach(
+          (com, i) =>
+            (esc = esc.replace(
+              `___C_${i}___`,
+              `<span class="text-slate-500 italic">${com}</span>`,
+            )),
+        );
+        return esc;
+      };
+
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+      const isAborted = (id) => id !== currentProcessId;
+
+      function renderTabs() {
+        document.getElementById("tabs-container").innerHTML = ALGO_DATA.map(
+          (a) =>
+            `<button onclick="changeTab('${a.id}')" class="px-5 py-4 font-bold whitespace-nowrap transition-all duration-200 border-b-2 flex-1 text-center ${a.id === currentTabId ? "text-orange-600 border-orange-600 bg-white" : "text-slate-500 hover:text-slate-800 hover:bg-slate-100/50 border-transparent cursor-pointer"} text-sm sm:text-base">${a.name}</button>`,
+        ).join("");
+      }
+
+      function initUI() {
+        document.getElementById("comparison-table-body").innerHTML =
+          ALGO_DATA.map(
+            (a) =>
+              `<tr class="border-b border-slate-100 hover:bg-slate-50/50"><td class="p-4 font-bold text-slate-800">${a.name}</td><td class="p-4 text-slate-700 text-sm font-semibold text-orange-600">${a.vnName}</td><td class="p-4 text-slate-700 text-sm italic">${a.tech}</td><td class="p-4">${renderBadgeHTML(a.space)}</td></tr>`,
+          ).join("");
+        renderTabs();
+        updateInfoAndCode();
+        generateNewData();
+        lucide.createIcons();
+      }
+
+      function updateInfoAndCode() {
+        const a = ALGO_DATA.find((x) => x.id === currentTabId);
+        if (!a) return;
+        document.getElementById("info-container").innerHTML =
+          `<div><h3 class="text-3xl font-extrabold text-slate-900 mb-1">${a.name}</h3><div class="inline-flex items-center px-3 py-1 bg-orange-100 text-orange-700 rounded-lg text-sm font-medium">${a.vnName}</div></div><p class="text-slate-600 leading-relaxed text-sm">${a.desc}</p><ul class="space-y-2 text-sm text-slate-700 mt-4">${a.characteristics.map((c) => `<li class="flex items-start"><i data-lucide="check-circle-2" class="w-4 h-4 text-orange-500 mr-2 shrink-0 mt-0.5"></i><span>${c}</span></li>`).join("")}</ul>`;
+        document.getElementById("code-container").innerHTML = highlightJS(
+          a.code,
+        );
+        lucide.createIcons();
+      }
+
+      function setMathHTML(htmlContent) {
+        document.getElementById("math-computation").innerHTML = htmlContent;
+      }
+
+      function buildAdjacencyList() {
+        graphDef.adjList = {};
+        graphDef.nodes.forEach((n) => (graphDef.adjList[n.id] = []));
+        graphDef.edges.forEach((e) => {
+          graphDef.adjList[e.u].push({ v: e.v, w: e.w });
+          if (!graphDef.isDirected) {
+            graphDef.adjList[e.v].push({ v: e.u, w: e.w });
+          }
+        });
+      }
+
+      function getEdgeID(u, v) {
+        if (graphDef.isDirected) return `${u}-${v}`;
+        return u < v ? `${u}-${v}` : `${v}-${u}`;
+      }
+
+      // --- RENDER GRAPH VISUALS ---
+      function renderGraphUI() {
+        const nodesContainer = document.getElementById("graph-nodes");
+        const linesContainer = document.getElementById("graph-lines");
+        const weightsContainer = document.getElementById("graph-weights");
+
+        let htmlNodes = "";
+        let htmlLines = "";
+        let htmlWeights = "";
+
+        // Vẽ Đường thẳng (Edges)
+        graphDef.edges.forEach((edge) => {
+          let uNode = graphDef.nodes.find((n) => n.id === edge.u);
+          let vNode = graphDef.nodes.find((n) => n.id === edge.v);
+          if (!uNode || !vNode) return;
+
+          let eID = getEdgeID(edge.u, edge.v);
+
+          let strokeColor = "#334155"; // slate-700
+          let strokeWidth = "2";
+          let cssClass = "graph-edge";
+          let markerEnd = graphDef.isDirected ? "url(#arrow-normal)" : "";
+
+          if (visitedEdges.includes(eID)) {
+            strokeColor = "#10b981"; // emerald-500
+            strokeWidth = "3";
+            cssClass += " edge-visited";
+            if (graphDef.isDirected) markerEnd = "url(#arrow-visited)";
+          }
+
+          if (activeEdges.includes(eID)) {
+            strokeColor = "#f59e0b"; // amber-500
+            strokeWidth = "4";
+            cssClass += " edge-active";
+            if (graphDef.isDirected) markerEnd = "url(#arrow-active)";
+          }
+
+          if (errorEdges.includes(eID)) {
+            strokeColor = "#ef4444"; // rose-500
+            strokeWidth = "4";
+            cssClass += " edge-error";
+          }
+
+          // Tính toán điểm neo mũi tên (tránh đâm xuyên qua hình tròn HTML div)
+          // Góc toán học đơn giản
+          let dx = vNode.x - uNode.x;
+          let dy = vNode.y - uNode.y;
+          let dist = Math.sqrt(dx * dx + dy * dy);
+
+          // Điểm đầu/cuối của Line trên SVG (tính theo %)
+          let x1 = uNode.x;
+          let y1 = uNode.y;
+          let x2 = vNode.x;
+          let y2 = vNode.y;
+
+          // Nếu có hướng, rút ngắn x2, y2 một chút (tầm 3-4%) để nhường chỗ cho marker
+          if (graphDef.isDirected && dist > 0) {
+            let ratio = 4 / dist; // Giảm ~4% khoảng cách (Tùy chỉnh nếu cần)
+            x2 = vNode.x - dx * ratio;
+            y2 = vNode.y - dy * ratio;
+          }
+
+          htmlLines += `<line x1="${x1}%" y1="${y1}%" x2="${x2}%" y2="${y2}%" stroke="${strokeColor}" stroke-width="${strokeWidth}" class="${cssClass}" marker-end="${markerEnd}" />`;
+
+          // Render Weight
+          if (edge.w !== undefined) {
+            let midX = (uNode.x + vNode.x) / 2;
+            let midY = (uNode.y + vNode.y) / 2;
+
+            // Dịch weight ra khỏi tâm line 1 chút cho dễ nhìn
+            midY -= 3;
+
+            let weightBg = activeEdges.includes(eID)
+              ? "bg-amber-500 text-slate-900 shadow-[0_0_5px_rgba(245,158,11,0.8)]"
+              : "bg-slate-700 text-slate-300";
+            htmlWeights += `<div class="absolute ${weightBg} px-1.5 rounded font-mono text-[10px] font-bold border border-slate-900" style="left: ${midX}%; top: ${midY}%; transform: translate(-50%, -50%); z-index: 15;">${edge.w}</div>`;
+          }
+        });
+
+        linesContainer.innerHTML = htmlLines;
+        weightsContainer.innerHTML = htmlWeights;
+
+        // Vẽ Nodes
+        graphDef.nodes.forEach((node) => {
+          let bgClass = "bg-slate-800 border-slate-600 text-slate-300";
+
+          if (visitedNodes.includes(node.id)) bgClass = "node-visited";
+
+          // Override if has explicit coloring (Bipartite)
+          if (nodeColors[node.id]) bgClass = nodeColors[node.id];
+
+          // Override if Active
+          if (activeNode === node.id) bgClass = "node-active";
+
+          let badgeHTML = nodeBadges[node.id] || "";
+
+          htmlNodes += `
+           <div class="graph-node absolute w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-full border-2 font-bold text-sm sm:text-base shadow-lg ${bgClass}" 
+                style="left: ${node.x}%; top: ${node.y}%; transform: translate(-50%, -50%);">
+              ${badgeHTML}
+              ${node.label}
+           </div>
+         `;
+        });
+        nodesContainer.innerHTML = htmlNodes;
+      }
+
+      function renderAuxUI() {
+        const wrapper = document.getElementById("output-wrapper");
+        if (auxData.length === 0) {
+          wrapper.classList.add("hidden");
+          return;
+        }
+        wrapper.classList.remove("hidden");
+        document.getElementById("output-title").innerText = auxTitle;
+
+        const container = document.getElementById("output-container");
+        let html = "";
+
+        auxData.forEach((item) => {
+          html += `<div class="flex flex-col items-center">
+                      <span class="text-[10px] text-slate-400 mb-1 font-mono">${item.label}</span>
+                      <div class="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded border-2 font-bold text-sm transition-all duration-300 ${item.class}">
+                         ${item.val}
+                      </div>
+                    </div>`;
+        });
+
+        container.innerHTML = html;
+      }
+
+      function changeTab(id) {
+        if (isRunning) {
+          currentProcessId++;
+          isRunning = false;
+          toggleBtn(false);
+        }
+        currentTabId = id;
+        renderTabs();
+        updateInfoAndCode();
+        generateNewData();
+      }
+
+      function generateNewData() {
+        if (isRunning) return;
+        let problemHTML = "";
+
+        // Reset States
+        activeNode = -1;
+        activeEdges = [];
+        visitedNodes = [];
+        visitedEdges = [];
+        errorEdges = [];
+        nodeColors = {};
+        nodeBadges = {};
+        auxData = [];
+
+        // Custom Graphs based on Algorithm
+        if (currentTabId === "dfs_bfs") {
+          graphDef.isDirected = false;
+          graphDef.nodes = [
+            { id: 0, x: 50, y: 15, label: "0" },
+            { id: 1, x: 20, y: 40, label: "1" },
+            { id: 2, x: 80, y: 40, label: "2" },
+            { id: 3, x: 35, y: 80, label: "3" },
+            { id: 4, x: 65, y: 80, label: "4" },
+          ];
+          graphDef.edges = [
+            { u: 0, v: 1 },
+            { u: 0, v: 2 },
+            { u: 1, v: 3 },
+            { u: 1, v: 4 },
+            { u: 2, v: 4 },
+          ];
+
+          problemHTML = `<b class="text-white">Duyệt Đồ Thị (DFS):</b> Xuất phát từ Node <b class="text-orange-400">0</b>. Ưu tiên đi sâu xuống dưới nhất có thể. Đánh dấu <b class="text-slate-400">Visited</b> để không đi lại đường cũ.`;
+        } else if (currentTabId === "union_find") {
+          graphDef.isDirected = false;
+          // Đồ thị vòng tròn
+          graphDef.nodes = [
+            { id: 0, x: 50, y: 15, label: "0" },
+            { id: 1, x: 20, y: 80, label: "1" },
+            { id: 2, x: 80, y: 80, label: "2" },
+          ];
+          graphDef.edges = [
+            { u: 0, v: 1 },
+            { u: 1, v: 2 },
+            { u: 2, v: 0 },
+          ]; // Tam giác (Có chu trình)
+
+          problemHTML = `<b class="text-white">Phát hiện Chu trình (Union-Find):</b> Lần lượt thêm các cạnh vào Đồ thị rỗng. Dùng mảng <b class="text-orange-400">Parent</b> để quản lý phe phái. Nếu 2 Node đã cùng chung Cha mà lại nối thêm cạnh ➔ <b class="text-rose-500">Chu Trình!</b>`;
+        } else if (currentTabId === "topo_sort") {
+          graphDef.isDirected = true; // BẮT BUỘC CÓ HƯỚNG
+          graphDef.nodes = [
+            { id: 0, x: 20, y: 50, label: "0" },
+            { id: 1, x: 45, y: 20, label: "1" },
+            { id: 2, x: 45, y: 80, label: "2" },
+            { id: 3, x: 70, y: 50, label: "3" },
+            { id: 4, x: 90, y: 50, label: "4" },
+          ];
+          graphDef.edges = [
+            { u: 0, v: 1 },
+            { u: 0, v: 2 },
+            { u: 1, v: 3 },
+            { u: 2, v: 3 },
+            { u: 3, v: 4 },
+          ];
+
+          problemHTML = `<b class="text-white">Topological Sort (Kahn's Algo):</b> Đếm bậc vào (<b class="text-cyan-400">In-Degree</b>) của mỗi node. Node nào có In-degree = 0 (Không bị ai ràng buộc) thì được nạp vào Hàng đợi và gỡ bỏ dây nối!`;
+        } else if (currentTabId === "dijkstra") {
+          graphDef.isDirected = false;
+          graphDef.nodes = [
+            { id: 0, x: 15, y: 50, label: "0" },
+            { id: 1, x: 50, y: 20, label: "1" },
+            { id: 2, x: 50, y: 80, label: "2" },
+            { id: 3, x: 85, y: 50, label: "3" },
+          ];
+          // Đồ thị hình thoi với đường thẳng chéo
+          graphDef.edges = [
+            { u: 0, v: 1, w: 4 },
+            { u: 0, v: 2, w: 1 },
+            { u: 2, v: 1, w: 2 },
+            { u: 1, v: 3, w: 1 },
+            { u: 2, v: 3, w: 5 },
+          ];
+
+          problemHTML = `<b class="text-white">Dijkstra (Đường đi Ngắn nhất):</b> Từ xuất phát <b class="text-emerald-400">Node 0</b>, lan tỏa liên tục. Nếu tìm thấy đường đi MỚI rẻ hơn đường CŨ, ta <b class="text-yellow-400">"Thư giãn" (Relax)</b> cập nhật lại mảng Distance.`;
+        } else if (currentTabId === "bipartite") {
+          graphDef.isDirected = false;
+          graphDef.nodes = [
+            { id: 0, x: 30, y: 20, label: "0" },
+            { id: 1, x: 70, y: 20, label: "1" },
+            { id: 2, x: 70, y: 80, label: "2" },
+            { id: 3, x: 30, y: 80, label: "3" },
+          ];
+          // Hình vuông (Hợp lệ)
+          graphDef.edges = [
+            { u: 0, v: 1 },
+            { u: 1, v: 2 },
+            { u: 2, v: 3 },
+            { u: 3, v: 0 },
+          ];
+
+          problemHTML = `<b class="text-white">Tô Màu Đồ Thị (Bipartite):</b> Dùng BFS/DFS để tô luân phiên <b class="text-cyan-400">Màu Xanh</b> và <b class="text-rose-400">Màu Đỏ</b>. Yêu cầu: Không có bất kỳ 2 node nào kề nhau mà lại bị CÙNG MÀU.`;
+        }
+
+        buildAdjacencyList();
+
+        document.getElementById("problem-text").innerHTML = problemHTML;
+        document.getElementById("problem-statement").classList.remove("hidden");
+        lucide.createIcons();
+
+        renderGraphUI();
+        renderAuxUI();
+        setMathHTML('Nhấn "Chạy Mô Phỏng" để bắt đầu.');
+      }
+
+      function toggleBtn(s) {
+        isRunning = s;
+        document.getElementById("btn-play").disabled = s;
+        document.getElementById("btn-play-text").innerText = s
+          ? "Đang chạy..."
+          : "Chạy Mô Phỏng";
+      }
+
+      document
+        .getElementById("btn-reset")
+        .addEventListener("click", generateNewData);
+      document
+        .getElementById("speed-slider")
+        .addEventListener(
+          "input",
+          (e) => (currentSpeed = 1550 - Number(e.target.value)),
+        );
+      document.getElementById("btn-play").addEventListener("click", () => {
+        if (!isRunning) handleSimulation();
+      });
+
+      async function handleSimulation() {
+        toggleBtn(true);
+        currentProcessId++;
+        let sid = currentProcessId;
+        try {
+          if (currentTabId === "dfs_bfs") await startDFS(sid);
+          else if (currentTabId === "union_find") await startUnionFind(sid);
+          else if (currentTabId === "topo_sort") await startTopoSort(sid);
+          else if (currentTabId === "dijkstra") await startDijkstra(sid);
+          else if (currentTabId === "bipartite") await startBipartite(sid);
+        } catch (e) {
+          console.error(e);
+        }
+        if (sid === currentProcessId) toggleBtn(false);
+      }
+
+      // === 1. DFS GRAPH ===
+      async function startDFS(id) {
+        auxTitle = "MẢNG KẾT QUẢ (DFS ORDER)";
+
+        let startNode = 0;
+        await dfsHelper(startNode, id);
+
+        if (isAborted(id)) return;
+        activeNode = -1;
+        activeEdges = [];
+        renderGraphUI();
+        setMathHTML(
+          `<span class="text-emerald-400 font-bold text-xl">🎉 Duyệt DFS hoàn tất! Đã đi qua mọi ngóc ngách có thể nối tới.</span>`,
+        );
+      }
+
+      async function dfsHelper(node, id) {
+        if (isAborted(id) || visitedNodes.includes(node)) return;
+
+        // Visit
+        visitedNodes.push(node);
+        activeNode = node;
+
+        nodeBadges[node] =
+          `<span class="absolute -top-3 -right-2 bg-emerald-500 text-white text-[10px] font-bold px-1 rounded shadow z-30">✓</span>`;
+        auxData.push({
+          label: `Step ${visitedNodes.length}`,
+          val: node,
+          class: "bg-emerald-600 border-emerald-400 text-white",
+        });
+
+        renderGraphUI();
+        renderAuxUI();
+        setMathHTML(
+          `Đánh dấu Node <b class="text-orange-400">${node}</b> là <b class="text-emerald-400">Đã Thăm (Visited)</b>. Đưa vào kết quả.`,
+        );
+        await sleep(currentSpeed * 1.5);
+
+        for (let neighborObj of graphDef.adjList[node]) {
+          let neighbor = neighborObj.v;
+          let eID = getEdgeID(node, neighbor);
+
+          if (!visitedNodes.includes(neighbor)) {
+            activeEdges = [eID];
+            activeNode = neighbor;
+            renderGraphUI();
+            setMathHTML(
+              `Đi theo cạnh <b class="text-orange-400">${node}-${neighbor}</b> để khám phá Node ${neighbor}.`,
+            );
+            await sleep(currentSpeed);
+
+            visitedEdges.push(eID); // Save visited edge
+            await dfsHelper(neighbor, id);
+            if (isAborted(id)) return;
+
+            // Backtrack visual
+            activeNode = node;
+            activeEdges = [];
+            renderGraphUI();
+            setMathHTML(
+              `Node ${neighbor} đã cụt đường. <b class="text-slate-400">Quay lui (Backtrack)</b> về lại Node ${node}.`,
+            );
+            await sleep(currentSpeed * 1.2);
+          } else {
+            activeEdges = [eID];
+            renderGraphUI();
+            setMathHTML(
+              `Cạnh <b class="text-slate-400">${node}-${neighbor}</b>. Nhìn thấy Node ${neighbor} nhưng nó đã được thăm. <span class="text-rose-400 font-bold">BỎ QUA!</span>`,
+            );
+            await sleep(currentSpeed);
+          }
+        }
+      }
+
+      // === 2. UNION FIND (CYCLE DETECT) ===
+      async function startUnionFind(id) {
+        auxTitle = "MẢNG PARENT (ĐẠI DIỆN TẬP HỢP)";
+        let parent = Array.from({ length: graphDef.nodes.length }, (_, i) => i);
+
+        const updateAux = (highlightIdx = -1) => {
+          auxData = parent.map((p, i) => ({
+            label: `Node ${i}`,
+            val: p,
+            class:
+              i === highlightIdx
+                ? "bg-orange-500 border-orange-400 text-white scale-110 shadow-md"
+                : "bg-slate-700 border-slate-600 text-slate-300",
+          }));
+          renderAuxUI();
+        };
+
+        const find = (i) => {
+          if (parent[i] === i) return i;
+          return find(parent[i]); // Basic find for visual, path compression skipped for simplicity
+        };
+
+        updateAux();
+        setMathHTML(
+          `Khởi tạo: Mỗi Node là một tập hợp độc lập. Cha của nó là chính nó.`,
+        );
+        await sleep(currentSpeed * 1.5);
+
+        // Giả vờ chưa có cạnh nào
+        visitedEdges = [];
+        errorEdges = [];
+
+        for (let edge of graphDef.edges) {
+          if (isAborted(id)) return;
+          let u = edge.u,
+            v = edge.v;
+          let eID = getEdgeID(u, v);
+
+          activeEdges = [eID];
+          renderGraphUI();
+          setMathHTML(
+            `Xét cạnh <b class="text-orange-400">${u}-${v}</b>. Đi tìm Gốc của ${u} và ${v}...`,
+          );
+          await sleep(currentSpeed);
+
+          let rootU = find(u);
+          let rootV = find(v);
+
+          if (rootU === rootV) {
+            errorEdges.push(eID);
+            renderGraphUI();
+            setMathHTML(`
+                  <div class="flex flex-col items-center">
+                    <span class="text-rose-500 font-bold text-xl">❌ CẢNH BÁO CHU TRÌNH!</span>
+                    <span class="bg-slate-900 px-3 py-1 rounded border border-slate-700 mt-2">Node ${u} và ${v} ĐÃ CÙNG CHUNG CHA là <b>${rootU}</b>. Nối thêm sẽ tạo thành vòng khép kín.</span>
+                  </div>
+                `);
+            await sleep(currentSpeed * 3);
+            return;
+          } else {
+            visitedEdges.push(eID); // Hợp nhất thành công
+            parent[rootV] = rootU; // Union
+
+            updateAux(rootV); // Highlight node bị đổi cha
+            renderGraphUI();
+            setMathHTML(
+              `Khác Cha (${rootU} ≠ ${rootV}). Gộp lại! Gán Parent của <b class="text-cyan-400">${rootV}</b> thành <b class="text-emerald-400">${rootU}</b>.`,
+            );
+            await sleep(currentSpeed * 2);
+          }
+        }
+      }
+
+      // === 3. TOPOLOGICAL SORT (KAHN) ===
+      async function startTopoSort(id) {
+        auxTitle = "MẢNG BẬC VÀO (IN-DEGREE)";
+        let inDegree = new Array(graphDef.nodes.length).fill(0);
+
+        // Tính In-degree
+        graphDef.edges.forEach((e) => inDegree[e.v]++);
+
+        const updateAux = (highlightIdx = -1) => {
+          auxData = inDegree.map((deg, i) => ({
+            label: `Node ${i}`,
+            val: deg,
+            class:
+              deg === 0
+                ? "bg-emerald-600 border-emerald-400 text-white shadow-[0_0_5px_rgba(16,185,129,0.8)]"
+                : i === highlightIdx
+                  ? "bg-orange-500 border-orange-400 text-white"
+                  : "bg-slate-700 border-slate-600 text-slate-300",
+          }));
+          renderAuxUI();
+        };
+
+        updateAux();
+        setMathHTML(
+          `Bước 1: Tính số lượng mũi tên đâm vào mỗi Node (In-Degree).`,
+        );
+        await sleep(currentSpeed * 2);
+
+        let queue = [];
+        for (let i = 0; i < inDegree.length; i++) {
+          if (inDegree[i] === 0) {
+            queue.push(i);
+            nodeBadges[i] =
+              `<span class="absolute -top-3 -right-2 bg-emerald-500 text-white text-[10px] font-bold px-1 rounded shadow z-30">Q</span>`;
+          }
+        }
+
+        renderGraphUI();
+        setMathHTML(
+          `Bước 2: Nạp các Node có <b class="text-emerald-400">In-Degree = 0</b> (Tự do, không bị phụ thuộc) vào Queue (Hàng đợi).`,
+        );
+        await sleep(currentSpeed * 2);
+
+        let topoOrder = [];
+
+        while (queue.length > 0) {
+          if (isAborted(id)) return;
+          let u = queue.shift();
+          topoOrder.push(u);
+
+          visitedNodes.push(u); // Làm mờ/visited
+          activeNode = u;
+          nodeBadges[u] = ""; // Remove Q badge
+          renderGraphUI();
+
+          setMathHTML(
+            `Dequeue Node <b class="text-orange-400">${u}</b> đưa vào kết quả. Các mũi tên bắn ra từ ${u} sẽ bị xóa bỏ!`,
+          );
+          await sleep(currentSpeed * 1.5);
+
+          for (let neighborObj of graphDef.adjList[u]) {
+            let v = neighborObj.v;
+            let eID = getEdgeID(u, v);
+
+            visitedEdges.push(eID); // Coi như mũi tên bị mờ/xóa
+            inDegree[v]--;
+
+            updateAux(v);
+            activeEdges = [eID];
+            renderGraphUI();
+            setMathHTML(
+              `Giảm In-Degree của <b class="text-cyan-400">${v}</b> xuống còn <b>${inDegree[v]}</b>.`,
+            );
+            await sleep(currentSpeed * 1.5);
+
+            if (inDegree[v] === 0) {
+              queue.push(v);
+              nodeBadges[v] =
+                `<span class="absolute -top-3 -right-2 bg-emerald-500 text-white text-[10px] font-bold px-1 rounded shadow z-30">Q</span>`;
+              renderGraphUI();
+              setMathHTML(
+                `<span class="text-emerald-400 font-bold">Node ${v} đã hoàn toàn tự do (In-Degree = 0)! Nạp vào Queue.</span>`,
+              );
+              await sleep(currentSpeed * 1.5);
+            }
+          }
+        }
+
+        if (isAborted(id)) return;
+        activeNode = -1;
+        activeEdges = [];
+        renderGraphUI();
+        setMathHTML(
+          `<span class="text-emerald-400 font-bold text-xl">🎉 Hoàn tất Topological Sort! Thứ tự: [${topoOrder.join(" ➔ ")}]</span>`,
+        );
+      }
+
+      // === 4. DIJKSTRA ===
+      async function startDijkstra(id) {
+        auxTitle = "MẢNG KHOẢNG CÁCH (DISTANCE)";
+        let start = 0;
+        let dist = new Array(graphDef.nodes.length).fill(Infinity);
+        dist[start] = 0;
+
+        const updateAux = (highlightIdx = -1) => {
+          auxData = dist.map((d, i) => ({
+            label: `Node ${i}`,
+            val: d === Infinity ? "∞" : d,
+            class:
+              i === highlightIdx
+                ? "bg-orange-500 border-orange-400 text-white scale-110 shadow-md"
+                : "bg-slate-700 border-slate-600 text-slate-300",
+          }));
+          // Update node badges in Graph
+          graphDef.nodes.forEach((n, i) => {
+            let dStr = dist[i] === Infinity ? "∞" : dist[i];
+            nodeBadges[i] =
+              `<span class="absolute -top-4 left-1/2 -translate-x-1/2 bg-yellow-500 text-slate-900 text-[10px] font-bold px-1.5 py-0.5 rounded shadow z-30">d:${dStr}</span>`;
+          });
+          renderAuxUI();
+          renderGraphUI();
+        };
+
+        updateAux();
+        setMathHTML(
+          `Khởi tạo: Distance từ S(${start}) đến S = <b class="text-emerald-400">0</b>. Mọi đỉnh khác = <b class="text-rose-400">Vô cực (∞)</b>.`,
+        );
+        await sleep(currentSpeed * 2);
+
+        // Simple priority queue using array and sort
+        let pq = [{ d: 0, u: start }];
+
+        while (pq.length > 0) {
+          if (isAborted(id)) return;
+          pq.sort((a, b) => a.d - b.d);
+          let current = pq.shift();
+          let u = current.u;
+          let d = current.d;
+
+          if (d > dist[u]) continue; // Tối ưu
+
+          visitedNodes.push(u);
+          activeNode = u;
+          updateAux(u);
+          setMathHTML(
+            `Đỉnh <b class="text-orange-400">${u}</b> hiện có khoảng cách ngắn nhất (${d}). Rút ra để lan tỏa (Relax)...`,
+          );
+          await sleep(currentSpeed * 1.5);
+
+          for (let edge of graphDef.adjList[u]) {
+            if (isAborted(id)) return;
+            let v = edge.v;
+            let weight = edge.w;
+            let eID = getEdgeID(u, v);
+
+            activeEdges = [eID];
+            renderGraphUI();
+            setMathHTML(
+              `Xét cạnh ${u}-${v} (W=${weight}). Đường mới: d(${u}) + W = ${dist[u]} + ${weight} = <b class="text-yellow-400">${dist[u] + weight}</b>. Đường cũ: <b class="text-slate-400">${dist[v] === Infinity ? "∞" : dist[v]}</b>`,
+            );
+            await sleep(currentSpeed * 2);
+
+            if (dist[u] + weight < dist[v]) {
+              dist[v] = dist[u] + weight;
+              visitedEdges.push(eID); // Ghi nhận đường đi tốt
+              pq.push({ d: dist[v], u: v });
+
+              updateAux(v);
+              setMathHTML(
+                `<span class="text-emerald-400 font-bold text-lg">✅ Rẻ hơn! Thư giãn (Relax) đỉnh ${v} thành ${dist[v]}.</span>`,
+              );
+              await sleep(currentSpeed * 1.5);
+            } else {
+              setMathHTML(
+                `<span class="text-rose-400">Đường mới đắt hơn hoặc bằng. Bỏ qua!</span>`,
+              );
+              await sleep(currentSpeed);
+            }
+          }
+        }
+
+        if (isAborted(id)) return;
+        activeNode = -1;
+        activeEdges = [];
+        renderGraphUI();
+        setMathHTML(
+          `<span class="text-emerald-400 font-bold text-xl">🎉 Dijkstra hoàn tất! Xem khoảng cách ngắn nhất trên mỗi Node.</span>`,
+        );
+      }
+
+      // === 5. BIPARTITE (TÔ MÀU) ===
+      async function startBipartite(id) {
+        auxTitle = "MẢNG MÀU SẮC (COLORS)";
+        let colors = new Array(graphDef.nodes.length).fill(0); // 0: chưa, 1: Xanh, -1: Đỏ
+
+        const updateAux = (highlightIdx = -1) => {
+          auxData = colors.map((c, i) => {
+            let cls = "bg-slate-700 border-slate-600 text-slate-300";
+            let lbl = "0";
+            if (c === 1) {
+              cls = "bg-cyan-600 border-cyan-400 text-white";
+              lbl = "X";
+            } else if (c === -1) {
+              cls = "bg-rose-600 border-rose-400 text-white";
+              lbl = "Đ";
+            }
+
+            if (i === highlightIdx) cls += " scale-110 shadow-md";
+            return { label: `Node ${i}`, val: lbl, class: cls };
+          });
+          renderAuxUI();
+        };
+
+        updateAux();
+        setMathHTML(`Khởi tạo: Mọi Node chưa có màu (0).`);
+        await sleep(currentSpeed);
+
+        for (let i = 0; i < graphDef.nodes.length; i++) {
+          if (colors[i] !== 0) continue;
+
+          let queue = [i];
+          colors[i] = 1; // Màu Xanh
+          nodeColors[i] = "node-color-1";
+
+          updateAux(i);
+          renderGraphUI();
+          setMathHTML(
+            `Tô Node <b class="text-cyan-400">${i}</b> màu <b class="text-cyan-400">XANH DƯƠNG</b>. Nạp vào Queue.`,
+          );
+          await sleep(currentSpeed * 1.5);
+
+          while (queue.length > 0) {
+            if (isAborted(id)) return;
+            let u = queue.shift();
+            activeNode = u;
+            renderGraphUI();
+
+            for (let edge of graphDef.adjList[u]) {
+              if (isAborted(id)) return;
+              let v = edge.v;
+              let eID = getEdgeID(u, v);
+              activeEdges = [eID];
+              renderGraphUI();
+
+              if (colors[v] === 0) {
+                colors[v] = -colors[u]; // Tô màu đối lập
+                nodeColors[v] =
+                  colors[v] === 1 ? "node-color-1" : "node-color-2";
+                queue.push(v);
+                visitedEdges.push(eID);
+
+                updateAux(v);
+                renderGraphUI();
+                let colStr =
+                  colors[v] === 1
+                    ? '<b class="text-cyan-400">XANH DƯƠNG</b>'
+                    : '<b class="text-rose-400">ĐỎ HỒNG</b>';
+                setMathHTML(
+                  `Node ${u} lây lan sang ${v}. Ép Node <b class="text-white">${v}</b> tô màu ngược lại: ${colStr}.`,
+                );
+                await sleep(currentSpeed * 1.5);
+              } else if (colors[v] === colors[u]) {
+                errorEdges.push(eID);
+                renderGraphUI();
+                setMathHTML(`
+                          <div class="flex flex-col items-center">
+                            <span class="text-rose-500 font-bold text-xl">❌ PHÁ SẢN! (Xung đột màu sắc)</span>
+                            <span class="bg-slate-900 px-3 py-1 rounded border border-slate-700 mt-2">Node ${u} và hàng xóm ${v} đã bị tô CÙNG MỘT MÀU. Đồ thị KHÔNG THỂ chia làm 2 phe độc lập!</span>
+                          </div>
+                        `);
+                await sleep(currentSpeed * 3);
+                return;
+              } else {
+                visitedEdges.push(eID);
+                setMathHTML(`Hàng xóm ${v} đã được tô màu khác ${u}. Hợp lệ!`);
+                await sleep(currentSpeed);
+              }
+            }
+          }
+        }
+        if (isAborted(id)) return;
+        activeNode = -1;
+        activeEdges = [];
+        renderGraphUI();
+        setMathHTML(
+          `<span class="text-emerald-400 font-bold text-xl">🎉 Thành công! Đồ thị HỢP LỆ (Bipartite Graph). Ta có thể chia các node thành 2 nhóm độc lập hoàn toàn.</span>`,
+        );
+      }
+
+      window.onload = initUI;
+    </script>
+  </body>
+</html>

@@ -1,0 +1,1312 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trực Quan Hóa Stack (Ngăn Xếp)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .hide-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      @keyframes slideInDown {
+        from {
+          transform: translateY(-30px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+      .stack-item-enter {
+        animation: slideInDown 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)
+          forwards;
+      }
+      .stack-container {
+        border-bottom: 4px solid #475569;
+        border-left: 4px solid #475569;
+        border-right: 4px solid #475569;
+        border-radius: 0 0 16px 16px;
+        box-shadow: inset 0 -10px 20px rgba(0, 0, 0, 0.2);
+      }
+      .node-box {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+    </style>
+  </head>
+  <body
+    class="bg-slate-50 text-slate-900 font-sans min-h-screen p-4 sm:p-6 lg:p-8"
+  >
+    <div class="max-w-7xl mx-auto space-y-8">
+      <!-- HEADER -->
+      <header class="text-center space-y-4 mb-10">
+        <div
+          class="inline-flex items-center justify-center p-3 bg-violet-100 text-violet-600 rounded-full mb-2 shadow-sm"
+        >
+          <i data-lucide="layers" class="w-8 h-8"></i>
+        </div>
+        <h1
+          class="text-3xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-violet-700 to-fuchsia-600"
+        >
+          Stack (Ngăn Xếp)
+        </h1>
+        <p class="text-lg text-slate-600 max-w-3xl mx-auto">
+          Cấu trúc LIFO huyền thoại. Sát thủ giải quyết các bài toán
+          <b>"Tìm phần tử gần nhất thỏa điều kiện"</b>.<br />
+          <span
+            class="inline-block mt-2 px-3 py-1 bg-amber-100 text-amber-800 rounded-lg text-sm font-semibold border border-amber-200"
+          >
+            🔥 Insight: Stack = Matching (bắt cặp) + Monotonic (Duy trì tính đơn
+            điệu)
+          </span>
+        </p>
+      </header>
+
+      <!-- LÝ THUYẾT TRỌNG TÂM -->
+      <div
+        class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 overflow-hidden"
+      >
+        <div class="flex items-center mb-6">
+          <i data-lucide="book-open" class="w-6 h-6 text-violet-500 mr-2"></i>
+          <h2 class="text-xl font-bold text-slate-800">
+            Lý thuyết Trọng tâm (Tham khảo GfG)
+          </h2>
+        </div>
+        <div
+          class="grid grid-cols-1 lg:grid-cols-2 gap-8 text-sm text-slate-700 items-start"
+        >
+          <div class="space-y-4">
+            <div
+              class="bg-slate-900 p-4 rounded-xl border border-slate-700 flex flex-col text-white h-full justify-center"
+            >
+              <span
+                class="text-slate-400 text-xs uppercase tracking-wider mb-3 text-center"
+                >Bản chất: LIFO (Last In, First Out)</span
+              >
+              <p class="text-center text-slate-300 mb-4">
+                Giống như một chồng đĩa, bạn chỉ có thể lấy chiếc đĩa
+                <b>nằm trên cùng</b> ra trước, và khi thêm đĩa mới cũng chỉ được
+                đặt lên <b>trên cùng</b>.
+              </p>
+
+              <div
+                class="flex justify-center gap-8 text-xs font-mono font-bold"
+              >
+                <div class="text-center">
+                  <span class="text-emerald-400 text-lg block">Push(x)</span>
+                  Thêm vào Đỉnh: O(1)
+                </div>
+                <div class="text-center">
+                  <span class="text-rose-400 text-lg block">Pop()</span> Lấy
+                  khỏi Đỉnh: O(1)
+                </div>
+                <div class="text-center">
+                  <span class="text-cyan-400 text-lg block">Peek()</span> Xem
+                  Đỉnh: O(1)
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Các Pattern -->
+          <div class="space-y-4">
+            <div
+              class="bg-slate-50 p-4 rounded-xl border border-slate-100 h-full"
+            >
+              <h3 class="font-bold text-slate-800 mb-3 flex items-center">
+                <i data-lucide="zap" class="w-4 h-4 mr-1 text-amber-500"></i>
+                Các Pattern Nâng Cao
+              </h3>
+              <ul class="space-y-3">
+                <li class="flex items-start">
+                  <span
+                    class="flex items-center justify-center bg-violet-500 text-white w-5 h-5 rounded text-xs font-bold mr-2 shrink-0"
+                    >1</span
+                  >
+                  <span
+                    ><b>Matching (Bắt cặp):</b> Lưu trữ trạng thái chưa hoàn
+                    thành để chờ đối tác. (VD: Valid Parentheses, RPN).</span
+                  >
+                </li>
+                <li class="flex items-start">
+                  <span
+                    class="flex items-center justify-center bg-violet-500 text-white w-5 h-5 rounded text-xs font-bold mr-2 shrink-0"
+                    >2</span
+                  >
+                  <span
+                    ><b>Monotonic Stack (Đơn điệu):</b> Chìa khóa để giảm O(n²)
+                    thành O(n). Liên tục Pop các phần tử "vô dụng" để ép Stack
+                    luôn Tăng dần hoặc Giảm dần. Dùng cho bài
+                    <i>Next Greater Element</i>.</span
+                  >
+                </li>
+                <li class="flex items-start">
+                  <span
+                    class="flex items-center justify-center bg-violet-500 text-white w-5 h-5 rounded text-xs font-bold mr-2 shrink-0"
+                    >3</span
+                  >
+                  <span
+                    ><b>Lưu vết Index:</b> Stack không chỉ lưu Value mà lưu
+                    <b>Index</b> để tính toán khoảng cách (Width) trong các bài
+                    như <i>Histogram</i> hoặc <i>Daily Temperatures</i>.</span
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BẢNG ĐÁNH GIÁ -->
+      <div
+        class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 overflow-hidden flex flex-col"
+      >
+        <div class="flex items-center mb-6">
+          <i data-lucide="award" class="w-6 h-6 text-violet-500 mr-2"></i>
+          <h2 class="text-xl font-bold text-slate-800">
+            Các Dạng Bài Tiêu Biểu
+          </h2>
+        </div>
+        <div class="overflow-x-auto">
+          <table
+            class="w-full text-left border-collapse whitespace-nowrap min-w-[600px]"
+          >
+            <thead>
+              <tr class="bg-slate-50">
+                <th class="p-4 font-semibold text-slate-700 rounded-tl-xl">
+                  Dạng bài
+                </th>
+                <th class="p-4 font-semibold text-slate-700">Pattern Chính</th>
+                <th class="p-4 font-semibold text-slate-700">
+                  Kỹ thuật / Mục đích
+                </th>
+                <th class="p-4 font-semibold text-slate-700 rounded-tr-xl">
+                  Độ Phức Tạp (Time/Space)
+                </th>
+              </tr>
+            </thead>
+            <tbody id="comparison-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- MAIN UI -->
+      <div
+        class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden"
+      >
+        <div
+          id="tabs-container"
+          class="flex overflow-x-auto border-b border-slate-200 hide-scrollbar bg-slate-50"
+        ></div>
+
+        <div
+          class="p-4 sm:p-6 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start"
+        >
+          <div class="lg:col-span-4 space-y-6" id="info-container"></div>
+
+          <div class="lg:col-span-8 w-full flex flex-col space-y-6">
+            <div
+              class="bg-slate-900 rounded-2xl p-4 sm:p-6 shadow-inner border border-slate-800"
+            >
+              <div
+                class="flex flex-wrap gap-4 items-center justify-between mb-4 pb-4 border-b border-slate-700"
+              >
+                <div class="flex gap-2">
+                  <button
+                    id="btn-play"
+                    class="flex items-center px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-lg font-semibold transition disabled:opacity-50 text-sm"
+                  >
+                    <i data-lucide="play" class="w-4 h-4 mr-2"></i>
+                    <span id="btn-play-text">Chạy Mô Phỏng</span>
+                  </button>
+                  <button
+                    id="btn-reset"
+                    class="flex items-center px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition text-sm"
+                  >
+                    <i data-lucide="rotate-ccw" class="w-4 h-4 mr-2"></i> Dữ
+                    liệu mới
+                  </button>
+                </div>
+                <div class="flex items-center gap-3 text-slate-300 text-sm">
+                  <i data-lucide="settings-2" class="w-4 h-4"></i>
+                  <label class="font-medium hidden sm:block">Tốc độ:</label>
+                  <input
+                    type="range"
+                    id="speed-slider"
+                    min="50"
+                    max="1500"
+                    value="800"
+                    class="w-24 accent-violet-500"
+                  />
+                </div>
+              </div>
+
+              <!-- Khối Đề Bài -->
+              <div
+                id="problem-statement"
+                class="bg-violet-900/40 border border-violet-500/30 rounded-xl p-4 mb-4 text-sm sm:text-base text-violet-100 flex items-start gap-3 hidden"
+              >
+                <i
+                  data-lucide="target"
+                  class="w-5 h-5 text-violet-400 shrink-0 mt-0.5"
+                ></i>
+                <div id="problem-text" class="leading-relaxed"></div>
+              </div>
+
+              <!-- Bảng tính toán Logic Realtime -->
+              <div
+                id="math-computation"
+                class="bg-slate-800 rounded-xl p-3 mb-6 text-center font-mono text-sm sm:text-base border border-slate-600 text-slate-300 min-h-[48px] flex items-center justify-center"
+              >
+                Sẵn sàng mô phỏng.
+              </div>
+
+              <!-- Vùng Hiển Thị -->
+              <div class="flex flex-col items-center justify-center gap-8 py-4">
+                <!-- Khu vực Dữ liệu Đầu vào (Mảng / Chuỗi) -->
+                <div
+                  id="input-container"
+                  class="flex flex-wrap items-center justify-center gap-1 sm:gap-2 w-full min-h-[50px]"
+                ></div>
+
+                <div
+                  class="flex items-end justify-center w-full gap-8 sm:gap-16"
+                >
+                  <!-- Khu vực Stack Chính -->
+                  <div class="flex flex-col items-center">
+                    <div
+                      class="text-violet-400 font-mono text-sm font-bold mb-2"
+                    >
+                      STACK (Ngăn xếp)
+                    </div>
+                    <div
+                      id="stack-container"
+                      class="stack-container w-24 sm:w-32 min-h-[160px] bg-slate-800/50 flex flex-col-reverse justify-start items-center p-2 gap-1 relative"
+                    >
+                      <span
+                        id="stack-empty-text"
+                        class="text-slate-500 font-mono text-xs absolute top-1/2 -translate-y-1/2 opacity-50"
+                        >Empty</span
+                      >
+                    </div>
+                  </div>
+
+                  <!-- Khu vực Min Stack (Auxiliary Stack) -->
+                  <div
+                    id="min-stack-wrapper"
+                    class="flex flex-col items-center hidden"
+                  >
+                    <div
+                      class="text-emerald-400 font-mono text-sm font-bold mb-2"
+                    >
+                      MIN STACK
+                    </div>
+                    <div
+                      id="min-stack-container"
+                      class="stack-container w-24 sm:w-32 min-h-[160px] bg-slate-800/50 flex flex-col-reverse justify-start items-center p-2 gap-1 relative !border-emerald-600/50"
+                    >
+                      <span
+                        id="min-stack-empty-text"
+                        class="text-slate-500 font-mono text-xs absolute top-1/2 -translate-y-1/2 opacity-50"
+                        >Empty</span
+                      >
+                    </div>
+                  </div>
+
+                  <!-- Khu vực Bổ sung (Output Array / Biến) -->
+                  <div
+                    id="output-wrapper"
+                    class="flex flex-col items-center hidden"
+                  >
+                    <div
+                      id="output-title"
+                      class="text-emerald-400 font-mono text-sm font-bold mb-2"
+                    >
+                      OUTPUT (Kết quả)
+                    </div>
+                    <div
+                      id="output-container"
+                      class="flex flex-wrap items-center justify-center gap-1 sm:gap-2 min-w-[120px] p-2 border border-dashed border-slate-600 rounded bg-slate-800/30"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Code Block -->
+            <div
+              class="relative rounded-2xl overflow-hidden shadow-lg border border-slate-700 bg-[#0f172a]"
+            >
+              <div
+                class="w-full px-4 py-3 bg-[#1e293b] border-b border-slate-700 flex items-center justify-between"
+              >
+                <div class="flex space-x-2">
+                  <div class="w-3 h-3 rounded-full bg-rose-500"></div>
+                  <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+                  <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                </div>
+                <div class="flex items-center text-slate-400 text-xs font-mono">
+                  <i data-lucide="code" class="w-4 h-4 mr-1.5"></i> javascript
+                </div>
+              </div>
+              <pre
+                class="p-4 sm:p-6 overflow-auto text-xs sm:text-sm font-mono leading-relaxed max-h-72"
+              ><code id="code-container" class="text-slate-200"></code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // === DỮ LIỆU PATTERNS STACK ===
+      const ALGO_DATA = [
+        {
+          id: "basic_ops",
+          name: "1. Cơ bản (Push/Pop)",
+          vnName: "Thao tác Nền tảng",
+          tech: "LIFO (Last In First Out)",
+          space: "O(n) / O(1)",
+          code: `// Cài đặt Stack cơ bản bằng Mảng trong JS\nclass Stack {\n  constructor() {\n    this.items = [];\n  }\n  \n  // O(1) - Thêm phần tử lên đỉnh\n  push(element) {\n    this.items.push(element);\n  }\n  \n  // O(1) - Lấy và xóa phần tử trên đỉnh\n  pop() {\n    if (this.isEmpty()) return "Underflow";\n    return this.items.pop();\n  }\n  \n  // O(1) - Xem phần tử trên đỉnh\n  peek() {\n    return this.items[this.items.length - 1];\n  }\n  \n  isEmpty() {\n    return this.items.length === 0;\n  }\n}`,
+          desc: "Stack được cài đặt rất dễ dàng bằng Mảng (Array) trong JavaScript thông qua 2 hàm có sẵn là <code>push()</code> và <code>pop()</code>. Thao tác thêm và lấy ra đều chỉ tốn O(1) vì ta chỉ tác động lên phần Đuôi (Đỉnh) của mảng.",
+          characteristics: [
+            "Push: Đẩy phần tử vào đỉnh ngăn xếp",
+            "Pop: Rút phần tử ra khỏi đỉnh ngăn xếp",
+            "Peek: Chỉ nhìn phần tử đỉnh, không rút ra",
+          ],
+        },
+        {
+          id: "valid_parentheses",
+          name: "2. Kiểm tra hợp lệ",
+          vnName: "Pattern: Matching (Bắt cặp)",
+          tech: "Stack Matching",
+          space: "O(n) / O(n)",
+          code: `// Bài toán: Kiểm tra chuỗi ngoặc ()[]{} có hợp lệ không?\nfunction isValid(s) {\n  let stack = [];\n  let map = { ')': '(', ']': '[', '}': '{' };\n\n  for (let char of s) {\n    if (char === '(' || char === '[' || char === '{') {\n      stack.push(char);\n    } else {\n      if (stack.length === 0 || stack.pop() !== map[char]) {\n        return false;\n      }\n    }\n  }\n  return stack.length === 0;\n}`,
+          desc: 'Ứng dụng kinh điển nhất của Stack. Khi gặp một ngoặc MỞ, ta chưa thể biết nó có hợp lệ không -> Lưu nó vào Stack chờ đợi. Khi gặp một ngoặc ĐÓNG, người "bạn đời" của nó BẮT BUỘC phải là ngoặc mở GẦN NHẤT vừa được lưu (tức là Đỉnh Stack).',
+          characteristics: [
+            'Dùng Stack để lưu trữ "Công việc đang dang dở"',
+            "Bắt lỗi ngay lập tức nếu Đỉnh Stack không khớp",
+            "Sau khi duyệt xong, Stack phải rỗng mới hợp lệ.",
+          ],
+        },
+        {
+          id: "evaluate_rpn",
+          name: "3. Tính RPN (Hậu tố)",
+          vnName: "Tính toán (Computation)",
+          tech: "Stack lưu toán hạng",
+          space: "O(n) / O(n)",
+          code: `// Bài toán: Tính giá trị biểu thức Hậu tố (VD: "2 1 + 3 *")\nfunction evalRPN(tokens) {\n  let stack = [];\n  for (let t of tokens) {\n    if (!isNaN(t)) stack.push(Number(t));\n    else {\n      let b = stack.pop(); // Rút số thứ 2\n      let a = stack.pop(); // Rút số thứ 1\n      if (t === '+') stack.push(a + b);\n      else if (t === '-') stack.push(a - b);\n      else if (t === '*') stack.push(a * b);\n      else if (t === '/') stack.push(Math.trunc(a / b));\n    }\n  }\n  return stack[0];\n}`,
+          desc: "Biểu thức Hậu tố (Reverse Polish Notation) đưa toán tử ra sau toán hạng. Cách giải: Gặp số thì Push, gặp toán tử thì Pop 2 số ra tính toán rồi Push kết quả lại.",
+          characteristics: [
+            "Toán hạng được lấy ra theo thứ tự ngược LIFO (b là đỉnh, a là dưới đỉnh)",
+            "Không cần dấu ngoặc để biểu diễn độ ưu tiên",
+          ],
+        },
+        {
+          id: "next_greater",
+          name: "4. Next Greater",
+          vnName: "Pattern: Monotonic Stack",
+          tech: "Ngăn xếp giảm dần",
+          space: "O(n) / O(n)",
+          code: `// Bài toán: Tìm phần tử đầu tiên lớn hơn nằm bên phải\nfunction nextGreaterElements(arr) {\n  let result = new Array(arr.length).fill(-1);\n  let stack = []; // Lưu giá trị\n\n  for (let i = arr.length - 1; i >= 0; i--) {\n    // Tàn nhẫn vứt bỏ các phần tử nhỏ hơn arr[i]\n    while (stack.length > 0 && stack[stack.length - 1] <= arr[i]) {\n      stack.pop(); \n    }\n\n    if (stack.length > 0) result[i] = stack[stack.length - 1];\n    stack.push(arr[i]);\n  }\n  return result;\n}`,
+          desc: "Thay vì dùng vòng lặp lồng nhau O(n²), ta duyệt 1 lần. Bằng cách LOẠI BỎ (pop) các phần tử nhỏ hơn khỏi Stack, ta luôn giữ cho Stack duy trì tính ĐƠN ĐIỆU GIẢM. Nhờ đó phần tử đỉnh luôn là đáp án.",
+          characteristics: [
+            "Cao hơn thì che khuất kẻ lùn -> Pop số lùn đi!",
+            "Mỗi phần tử chỉ bị Push/Pop đúng 1 lần -> O(n)",
+          ],
+        },
+        {
+          id: "daily_temp",
+          name: "5. Daily Temperatures",
+          vnName: "Monotonic (Lưu Index)",
+          tech: "Ngăn xếp giảm dần",
+          space: "O(n) / O(n)",
+          code: `// Bài toán: Đếm số ngày phải chờ để có nhiệt độ ấm hơn\nfunction dailyTemperatures(temps) {\n  let n = temps.length;\n  let res = new Array(n).fill(0);\n  let stack = []; // Lưu INDEX\n\n  for (let i = 0; i < n; i++) {\n    // Nếu ngày hiện tại ấm hơn ngày ở đỉnh stack\n    while (stack.length > 0 && temps[i] > temps[stack[stack.length - 1]]) {\n      let prevIndex = stack.pop();\n      res[prevIndex] = i - prevIndex; // Tính số ngày chờ\n    }\n    stack.push(i);\n  }\n  return res;\n}`,
+          desc: 'Biến thể thực tế của Next Greater. Thay vì duyệt ngược, ta duyệt tiến. Khi gặp một ngày ấm hơn, nó sẽ "giải quyết" cho các ngày lạnh đang cất trong Stack. Ta lưu Index vào Stack để tính khoảng cách (i - prevIndex).',
+          characteristics: [
+            "Duyệt từ trái qua phải",
+            "Stack lưu Index thay vì Value để tính toán khoảng cách (Width)",
+          ],
+        },
+        {
+          id: "histogram",
+          name: "6. Histogram",
+          vnName: "Stack Nâng Cao (Indices)",
+          tech: "Ngăn xếp tăng dần",
+          space: "O(n) / O(n)",
+          code: `// Bài toán: Largest Rectangle in Histogram\nfunction largestRectangleArea(heights) {\n  let stack = []; let maxArea = 0; let n = heights.length;\n  for (let i = 0; i <= n; i++) {\n    let h = (i === n) ? 0 : heights[i]; // Cột ảo ép pop\n\n    // Cột hiện tại THẤP HƠN đỉnh stack -> Đỉnh bị chặn phải!\n    while (stack.length > 0 && h < heights[stack[stack.length - 1]]) {\n      let height = heights[stack.pop()];\n      let width = stack.length === 0 ? i : i - stack[stack.length - 1] - 1;\n      maxArea = Math.max(maxArea, height * width);\n    }\n    stack.push(i);\n  }\n  return maxArea;\n}`,
+          desc: 'Bài toán Hard kinh điển. Chiều cao bị giới hạn bởi cột thấp nhất. Ta dùng Stack lưu INDEX sao cho chiều cao các cột tăng dần. Bất cứ khi gặp cột THẤP HƠN, cột đỉnh bị "chặn" ở 2 đầu, ta rút ra tính diện tích.',
+          characteristics: [
+            "Duy trì Monotonic Increasing (Tăng dần).",
+            "Kỹ thuật chặn biên: Thêm cột ảo cao 0 ở cuối mảng.",
+          ],
+        },
+        {
+          id: "min_stack",
+          name: "7. Min Stack",
+          vnName: "Stack Phụ (Auxiliary Stack)",
+          tech: "2 Ngăn xếp song song",
+          space: "O(1) Time / O(n) Space",
+          code: `// Bài toán: Thiết kế Stack hỗ trợ lấy phần tử nhỏ nhất (getMin) trong O(1)\nclass MinStack {\n  constructor() {\n    this.stack = [];\n    this.minStack = []; // Lưu Min tương ứng\n  }\n  push(val) {\n    this.stack.push(val);\n    // Push vào MinStack nếu rỗng hoặc nhỏ hơn/bằng đỉnh hiện tại\n    if (this.minStack.length === 0 || val <= this.minStack[this.minStack.length - 1]) {\n      this.minStack.push(val);\n    }\n  }\n  pop() {\n    let val = this.stack.pop();\n    // Nếu lấy ra đúng số Min, rút khỏi MinStack luôn\n    if (val === this.minStack[this.minStack.length - 1]) {\n      this.minStack.pop();\n    }\n  }\n  getMin() {\n    return this.minStack[this.minStack.length - 1];\n  }\n}`,
+          desc: "Để tìm Min trong O(1), ta không thể quét lại Stack (tốn O(n)). Mẹo là dùng một Stack phụ (Min Stack) đồng bộ với Stack chính, đỉnh của Min Stack luôn duy trì giá trị nhỏ nhất tại thời điểm đó.",
+          characteristics: [
+            "Đánh đổi không gian (Space O(n)) để tối ưu thời gian tìm Min (Time O(1))",
+          ],
+        },
+      ];
+
+      let currentTabId = ALGO_DATA[0].id;
+      let isRunning = false;
+      let currentProcessId = 0;
+      let currentSpeed = 800;
+
+      let inputData = [];
+      let outputData = [];
+      let stackData = [];
+      let minStackData = [];
+      let isDoneDailyTemp = false;
+
+      // Tiện ích UI
+      const renderBadgeHTML = (text) => {
+        let c = "bg-slate-100 text-slate-800 border-slate-300";
+        if (text.includes("O(1)"))
+          c = "bg-teal-100 text-teal-800 border-teal-300";
+        if (text.includes("O(n)"))
+          c = "bg-violet-100 text-violet-800 border-violet-300";
+        return `<span class="px-3 py-1 rounded-full border text-sm font-semibold shadow-sm inline-block ${c}">${text}</span>`;
+      };
+
+      const highlightJS = (code) => {
+        let esc = code.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const c = [];
+        esc = esc.replace(/(\/\/.*)/g, (m) => {
+          c.push(m);
+          return `___C_${c.length - 1}___`;
+        });
+        esc = esc.replace(
+          /\b(\d+)\b/g,
+          '<span class="text-orange-300">$1</span>',
+        );
+        esc = esc
+          .replace(
+            /\b(function|let|const|var|if|else|for|while|return|break|continue|class|constructor)\b/g,
+            '<span class="text-pink-400 font-semibold">$1</span>',
+          )
+          .replace(
+            /\b(true|false|null|isNaN|Number)\b/g,
+            '<span class="text-purple-400">$1</span>',
+          )
+          .replace(
+            /\b(Math|this|push|pop|peek|length|isEmpty)\b/g,
+            '<span class="text-yellow-300">$1</span>',
+          )
+          .replace(
+            /\b(new|Array|Stack|MinStack)\b/g,
+            '<span class="text-cyan-300">$1</span>',
+          );
+        c.forEach(
+          (com, i) =>
+            (esc = esc.replace(
+              `___C_${i}___`,
+              `<span class="text-slate-500 italic">${com}</span>`,
+            )),
+        );
+        return esc;
+      };
+
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+      const isAborted = (id) => id !== currentProcessId;
+
+      function renderTabs() {
+        document.getElementById("tabs-container").innerHTML = ALGO_DATA.map(
+          (a) =>
+            `<button onclick="changeTab('${a.id}')" class="px-5 py-4 font-bold whitespace-nowrap transition-all duration-200 border-b-2 flex-1 text-center ${a.id === currentTabId ? "text-violet-600 border-violet-600 bg-white" : "text-slate-500 hover:text-slate-800 hover:bg-slate-100/50 border-transparent cursor-pointer"} text-sm sm:text-base">${a.name}</button>`,
+        ).join("");
+      }
+
+      function initUI() {
+        document.getElementById("comparison-table-body").innerHTML =
+          ALGO_DATA.map(
+            (a) =>
+              `<tr class="border-b border-slate-100 hover:bg-slate-50/50"><td class="p-4 font-bold text-slate-800">${a.name}</td><td class="p-4 text-slate-700 text-sm font-semibold text-violet-700">${a.vnName}</td><td class="p-4 text-slate-700 text-sm italic">${a.tech}</td><td class="p-4">${renderBadgeHTML(a.space)}</td></tr>`,
+          ).join("");
+        renderTabs();
+        updateInfoAndCode();
+        generateNewData();
+        lucide.createIcons();
+      }
+
+      function updateInfoAndCode() {
+        const a = ALGO_DATA.find((x) => x.id === currentTabId);
+        if (!a) return;
+        document.getElementById("info-container").innerHTML =
+          `<div><h3 class="text-3xl font-extrabold text-slate-900 mb-1">${a.name}</h3><div class="inline-flex items-center px-3 py-1 bg-violet-100 text-violet-700 rounded-lg text-sm font-medium">${a.vnName}</div></div><p class="text-slate-600 leading-relaxed text-sm">${a.desc}</p><ul class="space-y-2 text-sm text-slate-700 mt-4">${a.characteristics.map((c) => `<li class="flex items-start"><i data-lucide="check-circle-2" class="w-4 h-4 text-violet-500 mr-2 shrink-0 mt-0.5"></i><span>${c}</span></li>`).join("")}</ul>`;
+        document.getElementById("code-container").innerHTML = highlightJS(
+          a.code,
+        );
+
+        if (currentTabId === "min_stack")
+          document
+            .getElementById("min-stack-wrapper")
+            .classList.remove("hidden");
+        else
+          document.getElementById("min-stack-wrapper").classList.add("hidden");
+        lucide.createIcons();
+      }
+
+      function setMathHTML(htmlContent) {
+        document.getElementById("math-computation").innerHTML = htmlContent;
+      }
+
+      function renderInputUI(activeIdx = -1, isDone = false) {
+        const container = document.getElementById("input-container");
+        let html = "";
+
+        inputData.forEach((val, idx) => {
+          let bg = "bg-slate-700 border-slate-600 text-white";
+
+          if (
+            currentTabId === "next_greater" ||
+            currentTabId === "histogram" ||
+            currentTabId === "daily_temp"
+          ) {
+            if (idx === activeIdx)
+              bg =
+                "bg-rose-500 border-rose-400 text-white shadow-[0_0_10px_rgba(244,63,94,0.8)] scale-110 z-10";
+            else if (
+              isDone ||
+              (currentTabId === "daily_temp" && outputData[idx] !== 0)
+            )
+              bg = "bg-slate-800 border-slate-700 text-slate-400 opacity-50";
+
+            if (currentTabId === "histogram") {
+              let h = val * 15 + 20;
+              let isBarActiveInStack = stackData.includes(idx);
+              if (isBarActiveInStack)
+                bg = "bg-indigo-600 border-indigo-400 text-white";
+              if (idx === activeIdx)
+                bg = "bg-rose-500 border-rose-400 text-white z-10 scale-x-110";
+
+              html += `<div class="flex flex-col items-center justify-end h-32 w-8 sm:w-10">
+                            <div class="w-full flex items-center justify-center rounded-t-md border-2 border-b-0 ${bg} transition-all duration-300" style="height: ${h}px">
+                               <span class="text-xs font-bold">${val}</span>
+                            </div>
+                            <span class="text-[10px] text-slate-500 mt-1">${idx}</span>
+                          </div>`;
+              return;
+            }
+          }
+
+          if (currentTabId === "valid_parentheses") {
+            if (idx === activeIdx)
+              bg =
+                "bg-yellow-400 border-yellow-300 text-slate-900 shadow-[0_0_10px_rgba(250,204,21,0.8)] scale-110 z-10 font-extrabold";
+            else if (idx < activeIdx)
+              bg = "bg-slate-800 border-slate-700 text-slate-500 opacity-50";
+            html += `<div class="w-8 h-10 sm:w-10 sm:h-12 flex items-center justify-center rounded border-2 font-bold text-lg sm:text-xl transition-all duration-300 ${bg}">${val}</div>`;
+            return;
+          }
+
+          if (currentTabId === "evaluate_rpn") {
+            if (idx === activeIdx)
+              bg =
+                "bg-indigo-500 border-indigo-400 text-white shadow-[0_0_10px_rgba(99,102,241,0.8)] scale-110 z-10 font-bold";
+            else if (idx < activeIdx)
+              bg = "bg-slate-800 border-slate-700 text-slate-500 opacity-50";
+            html += `<div class="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded border-2 font-bold text-sm sm:text-base transition-all duration-300 ${bg}">${val}</div>`;
+            return;
+          }
+
+          if (currentTabId === "min_stack") {
+            if (idx === activeIdx)
+              bg =
+                "bg-violet-600 border-violet-400 text-white shadow-[0_0_10px_rgba(139,92,246,0.8)] scale-110 z-10";
+            else if (idx < activeIdx)
+              bg = "bg-slate-800 border-slate-700 text-slate-500 opacity-50";
+            let text =
+              val.op === "push"
+                ? `Push(${val.val})`
+                : val.op === "pop"
+                  ? `Pop()`
+                  : `getMin()`;
+            html += `<div class="px-2 py-1 sm:px-3 sm:py-2 flex items-center justify-center rounded border-2 font-bold text-xs sm:text-sm transition-all duration-300 ${bg}">${text}</div>`;
+            return;
+          }
+
+          html += `<div class="w-10 h-10 sm:w-12 sm:h-12 flex flex-col items-center justify-center rounded border-2 font-bold text-sm sm:text-base transition-all duration-300 ${bg}">${val}</div>`;
+        });
+        container.innerHTML = html;
+      }
+
+      function renderStackUI(highlightTop = false, customColor = "") {
+        const container = document.getElementById("stack-container");
+        const emptyText = document.getElementById("stack-empty-text");
+        let html = "";
+
+        if (stackData.length === 0) {
+          emptyText.style.display = "block";
+        } else {
+          emptyText.style.display = "none";
+          stackData.forEach((item, index) => {
+            let isTop = index === stackData.length - 1;
+            let bg = "bg-indigo-600 border-indigo-400 text-white";
+
+            if (isTop && highlightTop)
+              bg =
+                customColor ||
+                "bg-emerald-500 border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.8)] scale-105 z-10";
+
+            let displayVal = item;
+            if (currentTabId === "histogram") displayVal = `Idx ${item}`;
+            else if (currentTabId === "daily_temp")
+              displayVal = `Idx ${item} (${inputData[item]}°)`;
+
+            html += `<div class="w-full h-8 sm:h-10 flex items-center justify-center rounded border-2 font-bold text-xs sm:text-sm ${bg} stack-item-enter truncate px-1">${displayVal}</div>`;
+          });
+        }
+        container.innerHTML =
+          html +
+          `<span id="stack-empty-text" class="text-slate-500 font-mono text-xs absolute top-1/2 -translate-y-1/2 opacity-50" style="display: ${stackData.length === 0 ? "block" : "none"}">Empty</span>`;
+      }
+
+      function renderMinStackUI(highlightTop = false, customColor = "") {
+        const container = document.getElementById("min-stack-container");
+        if (!container) return;
+        const emptyText = document.getElementById("min-stack-empty-text");
+        let html = "";
+
+        if (minStackData.length === 0) {
+          emptyText.style.display = "block";
+        } else {
+          emptyText.style.display = "none";
+          minStackData.forEach((item, index) => {
+            let isTop = index === minStackData.length - 1;
+            let bg = "bg-emerald-700 border-emerald-600 text-white";
+            if (isTop && highlightTop)
+              bg =
+                customColor ||
+                "bg-emerald-400 border-emerald-300 shadow-[0_0_15px_rgba(52,211,153,0.8)] scale-105 z-10";
+
+            html += `<div class="w-full h-8 sm:h-10 flex items-center justify-center rounded border-2 font-bold text-sm ${bg} stack-item-enter">${item}</div>`;
+          });
+        }
+        container.innerHTML =
+          html +
+          `<span id="min-stack-empty-text" class="text-slate-500 font-mono text-xs absolute top-1/2 -translate-y-1/2 opacity-50" style="display: ${minStackData.length === 0 ? "block" : "none"}">Empty</span>`;
+      }
+
+      function renderOutputUI(activeIdx = -1) {
+        const wrapper = document.getElementById("output-wrapper");
+        if (
+          currentTabId !== "next_greater" &&
+          currentTabId !== "histogram" &&
+          currentTabId !== "daily_temp"
+        ) {
+          wrapper.classList.add("hidden");
+          return;
+        }
+        wrapper.classList.remove("hidden");
+        const container = document.getElementById("output-container");
+        let html = "";
+
+        if (currentTabId === "next_greater" || currentTabId === "daily_temp") {
+          document.getElementById("output-title").innerText =
+            currentTabId === "daily_temp"
+              ? "SỐ NGÀY CHỜ (Days)"
+              : "KẾT QUẢ (Next Greater)";
+          outputData.forEach((val, idx) => {
+            let isNull =
+              (currentTabId === "next_greater" && val === null) ||
+              (currentTabId === "daily_temp" && val === 0 && !isDoneDailyTemp);
+            let bg =
+              val === -1 || isNull
+                ? "text-slate-500"
+                : "text-emerald-400 font-bold";
+            let border =
+              idx === activeIdx
+                ? "border-rose-400 bg-slate-800"
+                : "border-slate-700";
+            let displayVal = isNull ? "?" : val;
+            if (currentTabId === "daily_temp" && val === 0 && isDoneDailyTemp)
+              displayVal = 0;
+
+            html += `<div class="flex flex-col items-center">
+                          <div class="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded border-2 ${border} ${bg} transition-all duration-300">${displayVal}</div>
+                        </div>`;
+          });
+        } else if (currentTabId === "histogram") {
+          document.getElementById("output-title").innerText =
+            "MAX AREA (Diện tích Max)";
+          html = `<div class="px-6 py-4 bg-emerald-900/40 border-2 border-emerald-500 text-emerald-300 font-bold text-2xl rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.5)] flex items-center justify-center min-w-[100px]">${outputData[0] || 0}</div>`;
+        }
+        container.innerHTML = html;
+      }
+
+      function changeTab(id) {
+        if (isRunning) {
+          currentProcessId++;
+          isRunning = false;
+          toggleBtn(false);
+        }
+        currentTabId = id;
+        renderTabs();
+        updateInfoAndCode();
+        generateNewData();
+      }
+
+      function generateNewData() {
+        if (isRunning) return;
+        let problemHTML = "";
+        stackData = [];
+        minStackData = [];
+        outputData = [];
+        isDoneDailyTemp = false;
+
+        if (currentTabId === "basic_ops") {
+          inputData = [10, 20, 30];
+          problemHTML = `<b class="text-white">Thao tác cơ bản:</b> Mô phỏng các hàm Push (thêm vào đỉnh), Peek (nhìn đỉnh) và Pop (rút khỏi đỉnh) của Ngăn xếp.`;
+        } else if (currentTabId === "valid_parentheses") {
+          let strList = ["{ [ ( ) ] }", "{ [ ( ] ) }", "( ) [ ] { }"];
+          let choice = strList[Math.floor(Math.random() * strList.length)];
+          inputData = choice.replace(/\s/g, "").split("");
+          problemHTML = `<b class="text-white">Kiểm tra chuỗi:</b> <b class="text-yellow-400 tracking-widest">${choice}</b>. Dùng Stack chứa ngoặc mở để "chờ" ngoặc đóng tương ứng.`;
+        } else if (currentTabId === "evaluate_rpn") {
+          let expr = ["2", "1", "+", "3", "*"];
+          inputData = expr;
+          problemHTML = `<b class="text-white">Tính biểu thức RPN:</b> <b class="text-yellow-400 tracking-widest">${expr.join(" ")}</b> (Tương đương (2 + 1) * 3). Gặp số thì Push, gặp Toán tử thì Pop 2 số ra tính.`;
+        } else if (currentTabId === "next_greater") {
+          inputData = Array.from(
+            { length: 6 },
+            () => Math.floor(Math.random() * 40) + 1,
+          );
+          outputData = new Array(inputData.length).fill(null);
+          problemHTML = `<b class="text-white">Next Greater Element:</b> Tìm số đầu tiên lớn hơn ở bên phải của mỗi ô. Dùng <b class="text-violet-400">Ngăn xếp Đơn điệu Giảm</b> duyệt ngược từ phải sang trái.`;
+        } else if (currentTabId === "daily_temp") {
+          inputData = [73, 74, 75, 71, 69, 72, 76];
+          outputData = new Array(inputData.length).fill(0);
+          problemHTML = `<b class="text-white">Nhiệt độ hàng ngày:</b> Tìm số ngày phải chờ để có ngày ấm hơn. Duyệt tiến, dùng <b class="text-violet-400">Stack lưu Index</b> để tính khoảng cách số ngày chờ.`;
+        } else if (currentTabId === "histogram") {
+          inputData = [2, 1, 5, 6, 2, 3];
+          outputData = [0];
+          problemHTML = `<b class="text-white">Largest Rectangle:</b> Các cột chiều cao: <b class="text-yellow-400">[2, 1, 5, 6, 2, 3]</b>. Stack lưu Index duy trì <b class="text-violet-400">Tăng dần</b>. Khi bị cột thấp hơn chặn -> Rút ra tính diện tích!`;
+        } else if (currentTabId === "min_stack") {
+          inputData = [
+            { op: "push", val: 5 },
+            { op: "push", val: 2 },
+            { op: "getMin" },
+            { op: "push", val: 3 },
+            { op: "pop" },
+            { op: "getMin" },
+          ];
+          problemHTML = `<b class="text-white">Min Stack:</b> Thiết kế Stack cho phép lấy giá trị Min trong O(1). Mẹo: Dùng <b class="text-emerald-400">Min Stack phụ</b> để luôn lưu giá trị Min hiện tại.`;
+        }
+
+        document.getElementById("problem-text").innerHTML = problemHTML;
+        document.getElementById("problem-statement").classList.remove("hidden");
+        document.getElementById("output-wrapper").classList.add("hidden");
+        lucide.createIcons();
+
+        renderInputUI();
+        renderStackUI();
+        renderMinStackUI();
+        renderOutputUI();
+        setMathHTML('Nhấn "Chạy Mô Phỏng" để bắt đầu.');
+      }
+
+      function toggleBtn(s) {
+        isRunning = s;
+        document.getElementById("btn-play").disabled = s;
+        document.getElementById("btn-play-text").innerText = s
+          ? "Đang chạy..."
+          : "Chạy Mô Phỏng";
+      }
+
+      document
+        .getElementById("btn-reset")
+        .addEventListener("click", generateNewData);
+      document
+        .getElementById("speed-slider")
+        .addEventListener(
+          "input",
+          (e) => (currentSpeed = 1550 - Number(e.target.value)),
+        );
+      document.getElementById("btn-play").addEventListener("click", () => {
+        if (!isRunning) handleSimulation();
+      });
+
+      async function handleSimulation() {
+        toggleBtn(true);
+        currentProcessId++;
+        let sid = currentProcessId;
+        try {
+          if (currentTabId === "basic_ops") await startBasic(sid);
+          else if (currentTabId === "valid_parentheses")
+            await startValidParentheses(sid);
+          else if (currentTabId === "evaluate_rpn") await startRPN(sid);
+          else if (currentTabId === "next_greater") await startNextGreater(sid);
+          else if (currentTabId === "daily_temp") await startDailyTemp(sid);
+          else if (currentTabId === "histogram") await startHistogram(sid);
+          else if (currentTabId === "min_stack") await startMinStack(sid);
+        } catch (e) {
+          console.error(e);
+        }
+        if (sid === currentProcessId) toggleBtn(false);
+      }
+
+      // === 1. BASIC OPS ===
+      async function startBasic(id) {
+        stackData = [];
+        renderStackUI();
+        for (let i = 0; i < inputData.length; i++) {
+          if (isAborted(id)) return;
+          let val = inputData[i];
+          setMathHTML(
+            `Lệnh: <b class="text-emerald-400">stack.push(${val})</b>. Thêm ${val} lên đỉnh.`,
+          );
+          stackData.push(val);
+          renderStackUI(true, "bg-emerald-500 border-emerald-400 text-white");
+          await sleep(currentSpeed * 1.5);
+          renderStackUI();
+        }
+        if (isAborted(id)) return;
+        setMathHTML(
+          `Lệnh: <b class="text-cyan-400">stack.peek()</b>. Xem phần tử trên cùng -> <b class="text-white">${stackData[stackData.length - 1]}</b>.`,
+        );
+        renderStackUI(
+          true,
+          "bg-cyan-500 border-cyan-400 text-white shadow-[0_0_15px_rgba(6,182,212,0.8)]",
+        );
+        await sleep(currentSpeed * 2);
+
+        while (stackData.length > 0) {
+          if (isAborted(id)) return;
+          renderStackUI(
+            true,
+            "bg-rose-500 border-rose-400 text-white shadow-[0_0_15px_rgba(244,63,94,0.8)]",
+          );
+          let val = stackData[stackData.length - 1];
+          setMathHTML(
+            `Lệnh: <b class="text-rose-400">stack.pop()</b>. Rút <b class="text-white">${val}</b> ra khỏi đỉnh.`,
+          );
+          await sleep(currentSpeed * 1.5);
+          stackData.pop();
+          renderStackUI();
+          await sleep(currentSpeed * 0.5);
+        }
+        setMathHTML(
+          `<span class="text-emerald-400 font-bold">Stack đã rỗng (isEmpty == true).</span>`,
+        );
+      }
+
+      // === 2. VALID PARENTHESES ===
+      async function startValidParentheses(id) {
+        stackData = [];
+        renderStackUI();
+        let map = { ")": "(", "]": "[", "}": "{" };
+        let isValid = true;
+        for (let i = 0; i < inputData.length; i++) {
+          if (isAborted(id)) return;
+          let char = inputData[i];
+          renderInputUI(i);
+          if (char === "(" || char === "[" || char === "{") {
+            setMathHTML(
+              `Gặp ngoặc mở <b class="text-yellow-400 text-lg">${char}</b> -> <span class="text-emerald-400">PUSH</span> vào Stack chờ bạn đời.`,
+            );
+            stackData.push(char);
+            renderStackUI(true, "bg-indigo-500 border-indigo-400");
+            await sleep(currentSpeed * 1.5);
+            renderStackUI();
+          } else {
+            setMathHTML(
+              `Gặp ngoặc đóng <b class="text-yellow-400 text-lg">${char}</b>. Bắt cặp với đỉnh Stack...`,
+            );
+            renderStackUI(true, "bg-amber-500 border-amber-400");
+            await sleep(currentSpeed * 1.5);
+            if (stackData.length === 0) {
+              setMathHTML(
+                `<span class="text-rose-500 font-bold text-lg">❌ Không hợp lệ!</span> Có ngoặc đóng '${char}' dư thừa.`,
+              );
+              isValid = false;
+              break;
+            }
+            let top = stackData.pop();
+            if (top !== map[char]) {
+              setMathHTML(
+                `<span class="text-rose-500 font-bold text-lg">❌ Sai cặp!</span> Đỉnh là '${top}' KHÔNG KHỚP với '${char}'.`,
+              );
+              renderStackUI(true, "bg-rose-500 border-rose-400");
+              isValid = false;
+              break;
+            } else {
+              setMathHTML(
+                `<span class="text-emerald-400 font-bold text-lg">✅ Khớp cặp:</span> '${top}' và '${char}'. <span class="text-rose-400">POP</span> khỏi Stack.`,
+              );
+              renderStackUI();
+              await sleep(currentSpeed);
+            }
+          }
+        }
+        if (isAborted(id)) return;
+        renderInputUI(-1, true);
+        if (isValid && stackData.length === 0)
+          setMathHTML(
+            `<span class="text-emerald-400 font-bold text-xl">🎉 Chuỗi hợp lệ hoàn toàn! (Stack rỗng)</span>`,
+          );
+        else if (isValid && stackData.length > 0) {
+          setMathHTML(
+            `<span class="text-rose-500 font-bold text-xl">❌ Không hợp lệ!</span> Stack vẫn còn ngoặc mở bị bỏ rơi.`,
+          );
+          renderStackUI(true, "bg-rose-500 border-rose-400");
+        }
+      }
+
+      // === 3. EVALUATE RPN ===
+      async function startRPN(id) {
+        stackData = [];
+        renderStackUI();
+        for (let i = 0; i < inputData.length; i++) {
+          if (isAborted(id)) return;
+          let token = inputData[i];
+          renderInputUI(i);
+          if (!isNaN(token)) {
+            setMathHTML(
+              `Gặp toán hạng <b class="text-emerald-400">${token}</b> -> <span class="text-emerald-400">PUSH</span> vào Stack.`,
+            );
+            stackData.push(Number(token));
+            renderStackUI(true, "bg-emerald-500 border-emerald-400");
+            await sleep(currentSpeed * 1.5);
+            renderStackUI();
+          } else {
+            setMathHTML(
+              `Gặp toán tử <b class="text-rose-400 text-xl">${token}</b>. Cần <span class="text-rose-400">POP</span> 2 số ra để tính.`,
+            );
+            await sleep(currentSpeed);
+            let b = stackData.pop();
+            renderStackUI(true, "bg-rose-500 border-rose-400");
+            await sleep(currentSpeed);
+            let a = stackData.pop();
+            renderStackUI(true, "bg-rose-500 border-rose-400");
+            await sleep(currentSpeed);
+            let res = 0;
+            if (token === "+") res = a + b;
+            else if (token === "-") res = a - b;
+            else if (token === "*") res = a * b;
+            else if (token === "/") res = Math.trunc(a / b);
+            setMathHTML(
+              `Tính toán: <b class="text-cyan-400 text-lg">${a} ${token} ${b} = ${res}</b>. <span class="text-emerald-400">PUSH</span> kết quả lại Stack.`,
+            );
+            stackData.push(res);
+            renderStackUI(true, "bg-cyan-500 border-cyan-400");
+            await sleep(currentSpeed * 1.5);
+            renderStackUI();
+          }
+        }
+        if (isAborted(id)) return;
+        renderInputUI(-1, true);
+        setMathHTML(
+          `<span class="text-emerald-400 font-bold text-xl">🎉 Kết quả cuối cùng là: ${stackData[0]}</span>`,
+        );
+        document.getElementById("output-wrapper").classList.remove("hidden");
+        document.getElementById("output-title").innerText = "KẾT QUẢ RPN";
+        document.getElementById("output-container").innerHTML =
+          `<div class="px-6 py-4 bg-emerald-900/40 border-2 border-emerald-500 text-emerald-300 font-bold text-2xl rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.5)]">${stackData[0]}</div>`;
+      }
+
+      // === 4. NEXT GREATER ELEMENT ===
+      async function startNextGreater(id) {
+        stackData = [];
+        outputData = new Array(inputData.length).fill(null);
+        renderStackUI();
+        renderOutputUI();
+        let n = inputData.length;
+        setMathHTML(
+          `<span class="text-violet-400">Duyệt ngược từ phải sang trái. Duy trì Ngăn xếp GIẢM DẦN.</span>`,
+        );
+        await sleep(currentSpeed);
+
+        for (let i = n - 1; i >= 0; i--) {
+          if (isAborted(id)) return;
+          let val = inputData[i];
+          renderInputUI(i);
+          setMathHTML(
+            `Đang xét arr[${i}] = <b class="text-yellow-400 text-lg">${val}</b>.`,
+          );
+          await sleep(currentSpeed);
+
+          while (
+            stackData.length > 0 &&
+            stackData[stackData.length - 1] <= val
+          ) {
+            if (isAborted(id)) return;
+            let top = stackData[stackData.length - 1];
+            setMathHTML(
+              `Đỉnh = <b class="text-rose-400">${top}</b>. Vì ${top} <= ${val}, nó bị che khuất hoàn toàn! -> <span class="text-rose-500 font-bold">POP VỨT BỎ</span>.`,
+            );
+            renderStackUI(
+              true,
+              "bg-rose-500 border-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.8)]",
+            );
+            await sleep(currentSpeed * 1.5);
+            stackData.pop();
+            renderStackUI();
+            await sleep(currentSpeed * 0.5);
+          }
+
+          if (isAborted(id)) return;
+          if (stackData.length > 0) {
+            let ans = stackData[stackData.length - 1];
+            outputData[i] = ans;
+            setMathHTML(
+              `Đỉnh Stack hiện tại = <b class="text-emerald-400">${ans}</b> > ${val}. Đây chính là Next Greater!`,
+            );
+          } else {
+            outputData[i] = -1;
+            setMathHTML(
+              `Stack rỗng. Không có phần tử nào bên phải lớn hơn ${val}. Ghi <b class="text-slate-400">-1</b>.`,
+            );
+          }
+          renderOutputUI(i);
+          await sleep(currentSpeed * 1.5);
+          setMathHTML(
+            `Push <b class="text-yellow-400">${val}</b> vào Stack làm ứng viên cho các số bên trái.`,
+          );
+          stackData.push(val);
+          renderStackUI(true, "bg-indigo-500 border-indigo-400");
+          await sleep(currentSpeed);
+          renderStackUI();
+        }
+        if (isAborted(id)) return;
+        renderInputUI(-1, true);
+        renderOutputUI();
+        setMathHTML(
+          `<span class="text-emerald-400 font-bold text-lg">🎉 Thuật toán hoàn tất! O(n) do mỗi phần tử chỉ Push/Pop 1 lần.</span>`,
+        );
+      }
+
+      // === 5. DAILY TEMPERATURES ===
+      async function startDailyTemp(id) {
+        stackData = [];
+        outputData = new Array(inputData.length).fill(0);
+        renderStackUI();
+        renderOutputUI();
+        let n = inputData.length;
+        setMathHTML(
+          `<span class="text-violet-400">Duyệt trái sang phải. Stack lưu INDEX của các ngày đang "chờ" ngày ấm hơn.</span>`,
+        );
+        await sleep(currentSpeed);
+
+        for (let i = 0; i < n; i++) {
+          if (isAborted(id)) return;
+          let val = inputData[i];
+          renderInputUI(i);
+          setMathHTML(
+            `Ngày ${i}: Nhiệt độ <b class="text-yellow-400 text-lg">${val}°</b>.`,
+          );
+          await sleep(currentSpeed);
+
+          while (
+            stackData.length > 0 &&
+            val > inputData[stackData[stackData.length - 1]]
+          ) {
+            if (isAborted(id)) return;
+            let prevIndex = stackData[stackData.length - 1];
+            setMathHTML(
+              `Nhiệt độ ${val}° > ngày ${prevIndex} (${inputData[prevIndex]}°). <span class="text-emerald-400 font-bold">Giải quyết xong ngày ${prevIndex}!</span>`,
+            );
+            renderStackUI(true, "bg-rose-500 border-rose-400");
+            await sleep(currentSpeed * 1.5);
+
+            stackData.pop();
+            outputData[prevIndex] = i - prevIndex;
+            renderStackUI();
+            renderOutputUI(prevIndex);
+            await sleep(currentSpeed);
+          }
+
+          if (isAborted(id)) return;
+          setMathHTML(`Đưa ngày ${i} vào Stack chờ ngày ấm hơn.`);
+          stackData.push(i);
+          renderStackUI(true, "bg-indigo-500 border-indigo-400");
+          await sleep(currentSpeed);
+          renderStackUI();
+        }
+        if (isAborted(id)) return;
+        isDoneDailyTemp = true;
+        renderInputUI(-1, true);
+        renderOutputUI();
+        setMathHTML(
+          `<span class="text-emerald-400 font-bold text-lg">🎉 Hoàn tất! Các ngày còn kẹt trong Stack ghi 0 vì không có ngày ấm hơn.</span>`,
+        );
+      }
+
+      // === 6. HISTOGRAM (LARGEST RECTANGLE) ===
+      async function startHistogram(id) {
+        stackData = [];
+        outputData = [0];
+        renderStackUI();
+        renderOutputUI();
+        let n = inputData.length;
+        let maxArea = 0;
+        setMathHTML(
+          `<span class="text-violet-400">Duyệt các cột. Stack lưu INDEX để duy trì chiều cao TĂNG DẦN.</span>`,
+        );
+        await sleep(currentSpeed);
+
+        for (let i = 0; i <= n; i++) {
+          if (isAborted(id)) return;
+          let h = i === n ? 0 : inputData[i];
+          if (i < n) {
+            renderInputUI(i);
+            setMathHTML(
+              `Xét cột i=${i} (cao <b class="text-yellow-400">${h}</b>).`,
+            );
+          } else {
+            renderInputUI(-1);
+            setMathHTML(
+              `Đã hết mảng! Gặp cột ẢO (cao <b class="text-yellow-400">0</b>) để rút cạn Stack.`,
+            );
+          }
+          await sleep(currentSpeed);
+
+          while (
+            stackData.length > 0 &&
+            h < inputData[stackData[stackData.length - 1]]
+          ) {
+            if (isAborted(id)) return;
+            let topIndex = stackData.pop();
+            let height = inputData[topIndex];
+            renderStackUI(true, "bg-rose-500 border-rose-400");
+            let width =
+              stackData.length === 0
+                ? i
+                : i - stackData[stackData.length - 1] - 1;
+            let area = height * width;
+
+            setMathHTML(`
+                 <div class="flex flex-col items-center">
+                    <span class="text-rose-400 mb-1">Đỉnh bị CHẶN bới chiều cao ${h}! Rút cột idx=${topIndex} (cao <b>${height}</b>).</span>
+                    <span class="bg-slate-900 px-3 py-1 rounded border border-slate-700">Rộng = ${width} -> Diện tích: ${height} x ${width} = <b class="text-yellow-400 text-lg">${area}</b></span>
+                 </div>
+               `);
+            if (area > maxArea) {
+              maxArea = area;
+              outputData[0] = maxArea;
+              renderOutputUI();
+            }
+            await sleep(currentSpeed * 2.5);
+            renderStackUI();
+            renderInputUI(i);
+          }
+
+          if (isAborted(id)) return;
+          if (i < n) {
+            setMathHTML(
+              `Push Index <b class="text-cyan-400">${i}</b> vào Stack.`,
+            );
+            stackData.push(i);
+            renderStackUI(true, "bg-indigo-500 border-indigo-400");
+            renderInputUI(i);
+            await sleep(currentSpeed);
+            renderStackUI();
+          }
+        }
+        if (isAborted(id)) return;
+        setMathHTML(
+          `<span class="text-emerald-400 font-bold text-xl">🎉 Hoàn tất! Diện tích hình chữ nhật lớn nhất là ${maxArea}.</span>`,
+        );
+      }
+
+      // === 7. MIN STACK ===
+      async function startMinStack(id) {
+        stackData = [];
+        minStackData = [];
+        renderStackUI();
+        renderMinStackUI();
+        for (let i = 0; i < inputData.length; i++) {
+          if (isAborted(id)) return;
+          let action = inputData[i];
+          renderInputUI(i);
+          if (action.op === "push") {
+            setMathHTML(
+              `Lệnh: <b class="text-emerald-400">Push(${action.val})</b> vào Stack chính.`,
+            );
+            stackData.push(action.val);
+            renderStackUI(true, "bg-indigo-500 border-indigo-400");
+            await sleep(currentSpeed);
+
+            if (
+              minStackData.length === 0 ||
+              action.val <= minStackData[minStackData.length - 1]
+            ) {
+              setMathHTML(
+                `${action.val} <= Min hiện tại. Push <b class="text-emerald-400">${action.val}</b> vào Min Stack.`,
+              );
+              minStackData.push(action.val);
+              renderMinStackUI(
+                true,
+                "bg-emerald-400 border-emerald-300 shadow-[0_0_15px_rgba(52,211,153,0.8)]",
+              );
+            } else {
+              setMathHTML(
+                `${action.val} > Min hiện tại. Không cần push vào Min Stack.`,
+              );
+            }
+            await sleep(currentSpeed * 1.5);
+            renderStackUI();
+            renderMinStackUI();
+          } else if (action.op === "pop") {
+            let val = stackData.pop();
+            setMathHTML(
+              `Lệnh: <b class="text-rose-400">Pop()</b> rút <b class="text-white">${val}</b> khỏi Stack chính.`,
+            );
+            renderStackUI(true, "bg-rose-500 border-rose-400");
+            await sleep(currentSpeed);
+
+            if (val === minStackData[minStackData.length - 1]) {
+              setMathHTML(
+                `Giá trị Pop khớp với Đỉnh Min Stack. Rút khỏi Min Stack luôn!`,
+              );
+              minStackData.pop();
+              renderMinStackUI(true, "bg-rose-500 border-rose-400");
+            }
+            await sleep(currentSpeed * 1.5);
+            renderStackUI();
+            renderMinStackUI();
+          } else if (action.op === "getMin") {
+            let minVal = minStackData[minStackData.length - 1];
+            setMathHTML(
+              `Lệnh: <b class="text-cyan-400">getMin()</b>. Đỉnh của Min Stack là <b class="text-white text-lg">${minVal}</b>.`,
+            );
+            renderMinStackUI(
+              true,
+              "bg-cyan-500 border-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.8)] scale-110 z-10",
+            );
+
+            document
+              .getElementById("output-wrapper")
+              .classList.remove("hidden");
+            document.getElementById("output-title").innerText = "GET MIN";
+            document.getElementById("output-container").innerHTML =
+              `<div class="px-6 py-2 bg-cyan-900/40 border-2 border-cyan-500 text-cyan-300 font-bold text-xl rounded-xl animate-pulse">${minVal}</div>`;
+            await sleep(currentSpeed * 2.5);
+            renderMinStackUI();
+          }
+        }
+        if (isAborted(id)) return;
+        renderInputUI(-1, true);
+        setMathHTML(
+          `<span class="text-emerald-400 font-bold text-lg">🎉 Hoàn tất! Hàm getMin() luôn trả kết quả ngay lập tức O(1).</span>`,
+        );
+      }
+
+      window.onload = initUI;
+    </script>
+  </body>
+</html>

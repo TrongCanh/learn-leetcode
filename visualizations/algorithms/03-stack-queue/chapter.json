@@ -1,0 +1,17 @@
+{
+  "name": "📚 Stack & Queue",
+  "problems": [
+    {
+      "name": "Stack",
+      "file": "/visualizations/algorithms/03-stack-queue/stack.html",
+      "type": "viz",
+      "difficulty": "Easy"
+    },
+    {
+      "name": "Queue",
+      "file": "/visualizations/algorithms/03-stack-queue/queue.html",
+      "type": "viz",
+      "difficulty": "Easy"
+    }
+  ]
+}

@@ -1,0 +1,1184 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trực Quan Hóa Linked List (Danh Sách Liên Kết)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .hide-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      .node-box {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .pointer-arrow {
+        transition: all 0.3s ease;
+      }
+
+      @keyframes pulse-border {
+        0% {
+          box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.7);
+        }
+        70% {
+          box-shadow: 0 0 0 10px rgba(20, 184, 166, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(20, 184, 166, 0);
+        }
+      }
+      .node-active {
+        animation: pulse-border 1s infinite;
+        border-color: #14b8a6;
+        z-index: 10;
+        transform: translateY(-5px);
+      }
+    </style>
+  </head>
+  <body
+    class="bg-slate-50 text-slate-900 font-sans min-h-screen p-4 sm:p-6 lg:p-8"
+  >
+    <div class="max-w-7xl mx-auto space-y-8">
+      <!-- HEADER -->
+      <header class="text-center space-y-4 mb-10">
+        <div
+          class="inline-flex items-center justify-center p-3 bg-teal-100 text-teal-600 rounded-full mb-2 shadow-sm"
+        >
+          <i data-lucide="git-commit" class="w-8 h-8"></i>
+        </div>
+        <h1
+          class="text-3xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-teal-700 to-emerald-600"
+        >
+          Linked List (Danh Sách Liên Kết)
+        </h1>
+        <p class="text-lg text-slate-600 max-w-3xl mx-auto">
+          Cấu trúc dữ liệu linh hoạt, khắc phục nhược điểm của Mảng. Yêu cầu kỹ
+          năng thao tác <b>Con trỏ (Pointers)</b>.
+        </p>
+      </header>
+
+      <!-- LÝ THUYẾT TRỌNG TÂM -->
+      <div
+        class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 overflow-hidden"
+      >
+        <div class="flex items-center mb-6">
+          <i data-lucide="book-open" class="w-6 h-6 text-teal-500 mr-2"></i>
+          <h2 class="text-xl font-bold text-slate-800">
+            Căn bản về Linked List
+          </h2>
+        </div>
+        <div
+          class="grid grid-cols-1 lg:grid-cols-2 gap-8 text-sm text-slate-700 items-start"
+        >
+          <!-- Cột 1: Cấu tạo & So sánh -->
+          <div class="space-y-4">
+            <!-- Trực quan hóa Cấu tạo Node -->
+            <div
+              class="bg-slate-900 p-4 rounded-xl border border-slate-700 flex flex-col items-center justify-center text-white"
+            >
+              <span class="text-slate-400 text-xs uppercase tracking-wider mb-3"
+                >Cấu trúc 1 Node cơ bản</span
+              >
+              <div class="flex items-center">
+                <span
+                  class="text-teal-400 font-mono mr-3 font-bold text-xs uppercase tracking-widest"
+                  >Head ➔</span
+                >
+                <div
+                  class="border-2 border-slate-500 rounded-md flex overflow-hidden bg-slate-800"
+                >
+                  <div
+                    class="px-4 py-2 font-bold text-base text-center border-r border-slate-600 text-yellow-400"
+                  >
+                    Data (Giá trị)
+                  </div>
+                  <div
+                    class="px-2 py-2 bg-slate-700 text-xs text-slate-300 flex items-center justify-center font-mono"
+                  >
+                    .next (Con trỏ)
+                  </div>
+                </div>
+                <i
+                  data-lucide="arrow-right"
+                  class="w-5 h-5 mx-2 text-slate-500"
+                ></i>
+                <span class="text-slate-400 font-mono font-bold text-xs"
+                  >NULL</span
+                >
+              </div>
+            </div>
+
+            <!-- So sánh với Array -->
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+              <h3 class="font-bold text-slate-800 mb-2 flex items-center">
+                <i data-lucide="scale" class="w-4 h-4 mr-1 text-orange-500"></i>
+                Tại sao dùng Linked List?
+              </h3>
+              <p class="mb-3">
+                Khác với Mảng (Array) cần cấp phát ô nhớ <b>liên tục</b>, Linked
+                List tạo các ô nhớ <b>rải rác</b> trong RAM và xâu chuỗi chúng
+                lại.
+              </p>
+              <table
+                class="w-full text-left bg-white border border-slate-200 rounded-lg overflow-hidden text-xs sm:text-sm"
+              >
+                <tr class="bg-slate-100 border-b border-slate-200">
+                  <th class="p-2">Thao tác</th>
+                  <th class="p-2 border-l border-slate-200">Array (Mảng)</th>
+                  <th class="p-2 border-l border-slate-200">Linked List</th>
+                </tr>
+                <tr class="border-b border-slate-100">
+                  <td class="p-2 font-semibold">Kích thước</td>
+                  <td class="p-2 border-l border-slate-100 text-rose-600">
+                    Cố định / Khó co giãn
+                  </td>
+                  <td class="p-2 border-l border-slate-100 text-emerald-600">
+                    Linh hoạt vô hạn
+                  </td>
+                </tr>
+                <tr class="border-b border-slate-100">
+                  <td class="p-2 font-semibold">Chèn/Xóa (Đầu mảng)</td>
+                  <td class="p-2 border-l border-slate-100 text-rose-600">
+                    O(n) - Phải dịch toàn bộ
+                  </td>
+                  <td class="p-2 border-l border-slate-100 text-emerald-600">
+                    O(1) - Rất nhanh
+                  </td>
+                </tr>
+                <tr>
+                  <td class="p-2 font-semibold">
+                    Truy cập ngẫu nhiên (arr[i])
+                  </td>
+                  <td class="p-2 border-l border-slate-100 text-emerald-600">
+                    O(1) - Cực nhanh
+                  </td>
+                  <td class="p-2 border-l border-slate-100 text-rose-600">
+                    O(n) - Phải lội từ Head
+                  </td>
+                </tr>
+              </table>
+            </div>
+          </div>
+
+          <!-- Cột 2: Quy tắc -->
+          <div class="space-y-4">
+            <div
+              class="bg-slate-50 p-4 rounded-xl border border-slate-100 h-full"
+            >
+              <h3 class="font-bold text-slate-800 mb-3 flex items-center">
+                <i
+                  data-lucide="alert-triangle"
+                  class="w-4 h-4 mr-1 text-amber-500"
+                ></i>
+                3 Quy tắc Vàng khi Code
+              </h3>
+              <ul class="space-y-3">
+                <li class="flex items-start">
+                  <span
+                    class="flex items-center justify-center bg-teal-500 text-white w-5 h-5 rounded-full text-xs font-bold mr-2 shrink-0"
+                    >1</span
+                  >
+                  <span
+                    ><b>Tránh Null Reference:</b> Luôn kiểm tra
+                    <code>if (!head)</code> đầu tiên. Khi dùng
+                    <code>curr.next</code>, hãy chắc chắn
+                    <code>curr</code> không bị Null.</span
+                  >
+                </li>
+                <li class="flex items-start">
+                  <span
+                    class="flex items-center justify-center bg-teal-500 text-white w-5 h-5 rounded-full text-xs font-bold mr-2 shrink-0"
+                    >2</span
+                  >
+                  <span
+                    ><b>Nguyên tắc "Giữ dây":</b> Khi muốn bẻ mũi tên của Node A
+                    sang chỗ khác, phải gán Node B vào một biến
+                    <code>temp</code> trước kẻo toàn bộ đuôi phía sau bị rơi vào
+                    hố đen (Memory Leak).</span
+                  >
+                </li>
+                <li class="flex items-start">
+                  <span
+                    class="flex items-center justify-center bg-teal-500 text-white w-5 h-5 rounded-full text-xs font-bold mr-2 shrink-0"
+                    >3</span
+                  >
+                  <span
+                    ><b>Dùng Dummy Node:</b> Nếu thuật toán có khả năng làm mất
+                    hoặc thay đổi Node <code>Head</code> gốc (như trộn mảng, xóa
+                    Node đầu), hãy tạo một Node giả `ListNode(-1)` cắm vào trước
+                    Head để làm mỏ neo.</span
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MAIN UI -->
+      <div
+        class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden"
+      >
+        <!-- Tabs -->
+        <div
+          id="tabs-container"
+          class="flex overflow-x-auto border-b border-slate-200 hide-scrollbar bg-slate-50"
+        ></div>
+
+        <div
+          class="p-4 sm:p-6 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start"
+        >
+          <div class="lg:col-span-4 space-y-6" id="info-container"></div>
+
+          <div class="lg:col-span-8 w-full flex flex-col space-y-6">
+            <div
+              class="bg-slate-900 rounded-2xl p-4 sm:p-6 shadow-inner border border-slate-800"
+            >
+              <div
+                class="flex flex-wrap gap-4 items-center justify-between mb-4 pb-4 border-b border-slate-700"
+              >
+                <div class="flex gap-2">
+                  <button
+                    id="btn-play"
+                    class="flex items-center px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-lg font-semibold transition disabled:opacity-50 text-sm"
+                  >
+                    <i data-lucide="play" class="w-4 h-4 mr-2"></i>
+                    <span id="btn-play-text">Chạy Mô Phỏng</span>
+                  </button>
+                  <button
+                    id="btn-reset"
+                    class="flex items-center px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition text-sm"
+                  >
+                    <i data-lucide="rotate-ccw" class="w-4 h-4 mr-2"></i> Dữ
+                    liệu mới
+                  </button>
+                </div>
+                <div class="flex items-center gap-3 text-slate-300 text-sm">
+                  <i data-lucide="settings-2" class="w-4 h-4"></i>
+                  <label class="font-medium hidden sm:block">Tốc độ:</label>
+                  <input
+                    type="range"
+                    id="speed-slider"
+                    min="50"
+                    max="1500"
+                    value="800"
+                    class="w-24 accent-teal-500"
+                  />
+                </div>
+              </div>
+
+              <!-- Khối Đề Bài -->
+              <div
+                id="problem-statement"
+                class="bg-teal-900/40 border border-teal-500/30 rounded-xl p-4 mb-4 text-sm sm:text-base text-teal-100 flex items-start gap-3 hidden"
+              >
+                <i
+                  data-lucide="target"
+                  class="w-5 h-5 text-teal-400 shrink-0 mt-0.5"
+                ></i>
+                <div id="problem-text" class="leading-relaxed"></div>
+              </div>
+
+              <!-- Bảng tính toán Logic Realtime -->
+              <div
+                id="math-computation"
+                class="bg-slate-800 rounded-xl p-3 mb-6 text-center font-mono text-sm sm:text-base border border-slate-600 text-slate-300 min-h-[48px] flex items-center justify-center"
+              >
+                Sẵn sàng mô phỏng.
+              </div>
+
+              <!-- Vùng Hiển Thị Linked List -->
+              <div class="space-y-6 py-4 overflow-x-auto hide-scrollbar">
+                <!-- Container cho Single Lists -->
+                <div id="single-list-wrapper" class="relative hidden">
+                  <div
+                    id="single-list-container"
+                    class="flex items-center justify-start min-w-max py-8 px-4"
+                  >
+                    <!-- Nodes will be injected here -->
+                  </div>
+                </div>
+
+                <!-- Container cho Merge Lists (Dummy Node) -->
+                <div
+                  id="multi-list-wrapper"
+                  class="relative hidden space-y-8 min-w-max py-4 px-4"
+                >
+                  <div class="flex items-center">
+                    <span class="text-cyan-400 font-mono text-sm w-12 font-bold"
+                      >L1:</span
+                    >
+                    <div
+                      id="list1-container"
+                      class="flex items-center justify-start"
+                    ></div>
+                  </div>
+                  <div class="flex items-center">
+                    <span
+                      class="text-purple-400 font-mono text-sm w-12 font-bold"
+                      >L2:</span
+                    >
+                    <div
+                      id="list2-container"
+                      class="flex items-center justify-start"
+                    ></div>
+                  </div>
+                  <div class="h-px bg-slate-700 w-full my-2"></div>
+                  <div class="flex items-center">
+                    <span
+                      class="text-emerald-400 font-mono text-sm w-12 font-bold"
+                      >Mới:</span
+                    >
+                    <div
+                      id="merged-container"
+                      class="flex items-center justify-start"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Code Block -->
+            <div
+              class="relative rounded-2xl overflow-hidden shadow-lg border border-slate-700 bg-[#0f172a]"
+            >
+              <div
+                class="w-full px-4 py-3 bg-[#1e293b] border-b border-slate-700 flex items-center justify-between"
+              >
+                <div class="flex space-x-2">
+                  <div class="w-3 h-3 rounded-full bg-rose-500"></div>
+                  <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+                  <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                </div>
+                <div class="flex items-center text-slate-400 text-xs font-mono">
+                  <i data-lucide="code" class="w-4 h-4 mr-1.5"></i> javascript
+                </div>
+              </div>
+              <pre
+                class="p-4 sm:p-6 overflow-auto text-xs sm:text-sm font-mono leading-relaxed max-h-72"
+              ><code id="code-container" class="text-slate-200"></code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // === DỮ LIỆU PATTERNS LINKED LIST (TỪ CƠ BẢN ĐẾN NÂNG CAO) ===
+      const ALGO_DATA = [
+        {
+          id: "basic_insert",
+          name: "1. Chèn Node (Insert)",
+          vnName: "Thao tác Nền tảng",
+          tech: "Duyệt & Nối lại Pointers",
+          space: "O(1)",
+          code: `// Bài toán: Chèn Node mới vào vị trí index = K\nfunction insertAtPosition(head, val, k) {\n  let newNode = new ListNode(val);\n\n  // Edge case: Chèn ở đầu\n  if (k === 0) {\n    newNode.next = head;\n    return newNode;\n  }\n\n  // Bước 1: Dùng vòng lặp tìm Node ở vị trí K-1\n  let curr = head;\n  for (let i = 0; i < k - 1; i++) {\n    if (curr === null) return head; // Khỏi giới hạn\n    curr = curr.next;\n  }\n\n  // Bước 2: Nối dây cho Node mới vào phần đuôi\n  newNode.next = curr.next;\n  \n  // Bước 3: Bẻ mũi tên của curr trỏ vào Node mới\n  curr.next = newNode;\n  \n  return head;\n}`,
+          desc: "Để chèn một Node mới, ta không phải dịch chuyển bất kỳ Node nào khác. Mấu chốt là tìm được Node đứng ngay trước vị trí cần chèn (vị trí K-1). Sau đó, cắm đuôi Node mới vào phần sau của danh sách, và sửa mũi tên của Node (K-1) hướng vào Node mới.",
+          characteristics: [
+            "Minh họa rõ nhất sức mạnh của Pointers",
+            "Thứ tự gán mũi tên cực kỳ quan trọng: Luôn nối đuôi Node Mới trước!",
+          ],
+        },
+        {
+          id: "basic_delete",
+          name: "2. Xóa Node (Delete)",
+          vnName: "Thao tác Nền tảng",
+          tech: "Dummy Node & Nhảy cóc",
+          space: "O(1)",
+          code: `// Bài toán: Xóa Node đầu tiên có giá trị X khỏi danh sách\nfunction deleteNode(head, targetVal) {\n  // Dùng Dummy Node bảo vệ trường hợp Head bị xóa\n  let dummy = new ListNode(0);\n  dummy.next = head;\n  let curr = dummy;\n\n  // Duyệt và dò tìm giá trị ở Node KẾ TIẾP\n  while (curr.next !== null) {\n    if (curr.next.val === targetVal) {\n      // Nhảy cóc qua Node bị xóa\n      curr.next = curr.next.next;\n      break;\n    }\n    curr = curr.next;\n  }\n  \n  return dummy.next;\n}`,
+          desc: 'Để xóa 1 Node, ta chỉ việc "bẻ" mũi tên của Node đứng trước nó, trỏ nhảy cóc xuyên qua Node cần xóa để nối thẳng tới Node phía sau. Node bị nhảy cóc sẽ rơi ra ngoài và bị bộ thu gom rác (Garbage Collector) của RAM dọn dẹp.',
+          characteristics: [
+            "Sử dụng Dummy Node giúp việc xóa Node đầu tiên trở nên dễ dàng như xóa các Node khác.",
+            "Xóa mất O(1) nhưng thời gian tìm đến vị trí cần xóa tốn O(n).",
+          ],
+        },
+        {
+          id: "reverse_pointers",
+          name: "3. Đảo ngược (Reverse)",
+          vnName: "Kỹ thuật 3 Pointers",
+          tech: "Pointer manipulation",
+          space: "O(1)",
+          code: `// Bài toán: Đảo chiều các mũi tên liên kết của Linked List\nfunction reverseList(head) {\n  let prev = null;\n  let curr = head;\n\n  while (curr !== null) {\n    // 1. Lưu lại Node tiếp theo kẻo bị đứt dây\n    let nextTemp = curr.next; \n    \n    // 2. Quay đầu mũi tên của Node hiện tại\n    curr.next = prev;\n    \n    // 3. Tịnh tiến cả 2 con trỏ lên 1 bước\n    prev = curr;\n    curr = nextTemp;\n  }\n  \n  // prev lúc này đang trỏ vào Node cuối cùng (Head mới)\n  return prev;\n}`,
+          desc: 'Đây là bài test kỹ năng "cầm nắm" con trỏ kinh điển. Không được tạo mảng mới, ta phải đi duyệt từng Node và quay đầu mũi tên của nó. Mấu chốt là biến tạm `nextTemp` để giữ lấy phần còn lại của danh sách.',
+          characteristics: [
+            "Cực kỳ phổ biến trong các bài toán yêu cầu xử lý chuỗi đối xứng (Palindrome).",
+          ],
+        },
+        {
+          id: "dummynode",
+          name: "4. Trộn 2 mảng (Merge)",
+          vnName: "Tuyệt kỹ Dummy Node",
+          tech: "Tạo Node mồi + Iteration",
+          space: "O(1)",
+          code: `// Bài toán: Trộn 2 Linked List đã sắp xếp thành 1 list mới\nfunction mergeTwoLists(l1, l2) {\n  let dummy = new ListNode(-1); \n  let tail = dummy;\n\n  while (l1 !== null && l2 !== null) {\n    if (l1.val <= l2.val) {\n      tail.next = l1;\n      l1 = l1.next;\n    } else {\n      tail.next = l2;\n      l2 = l2.next;\n    }\n    tail = tail.next;\n  }\n  tail.next = l1 !== null ? l1 : l2;\n  return dummy.next;\n}`,
+          desc: 'Dummy Node là một "mánh khóe" cứu mạng. Thay vì phải viết hàng tá câu lệnh `if` rắc rối để xử lý phần tử đầu tiên, ta tự tạo ra một Node giả vô nghĩa. Mọi thứ cứ nối vào Node giả này, cuối cùng ta trả về `dummy.next`.',
+          characteristics: [
+            "Đánh bay rắc rối về Edge Cases (trường hợp biên)",
+            "Tail pointer luôn chỉ vào Node cuối cùng của list đang xây dựng",
+          ],
+        },
+        {
+          id: "fastslow_middle",
+          name: "5. Tìm điểm giữa",
+          vnName: "Rùa và Thỏ (Fast & Slow)",
+          tech: "2 con trỏ khác tốc độ",
+          space: "O(1)",
+          code: `// Bài toán: Tìm Node chính giữa của Linked List chỉ trong 1 lần duyệt\nfunction middleNode(head) {\n  let slow = head;\n  let fast = head;\n\n  // Lặp cho đến khi Thỏ (fast) chạm đích\n  while (fast !== null && fast.next !== null) {\n    slow = slow.next;\n    fast = fast.next.next;\n  }\n\n  // Lúc Thỏ chạm đích thì Rùa đang ở đúng giữa đường\n  return slow;\n}`,
+          desc: "Vì Linked List không có index như Array, ta không thể `length / 2` ngay lập tức. Ta cho Thỏ (fast) chạy nhanh gấp đôi Rùa (slow). Khi Thỏ chạm vạch đích cuối danh sách, Rùa chắc chắn đang đứng ở đúng điểm giữa.",
+          characteristics: [
+            "Chỉ duyệt danh sách đúng 1 lần (One-pass)",
+            "Thuật toán phụ trợ cốt lõi cho kỹ thuật Merge Sort Linked List",
+          ],
+        },
+        {
+          id: "fastslow_cycle",
+          name: "6. Phát hiện Cycle",
+          vnName: "Rùa và Thỏ (Detect Cycle)",
+          tech: "2 con trỏ khác tốc độ",
+          space: "O(1)",
+          code: `// Bài toán: Kiểm tra xem Linked List có bị vòng lặp không?\nfunction hasCycle(head) {\n  if (!head || !head.next) return false;\n  \n  let slow = head; // Rùa: đi 1 bước\n  let fast = head; // Thỏ: đi 2 bước\n\n  while (fast !== null && fast.next !== null) {\n    slow = slow.next;\n    fast = fast.next.next;\n\n    // Nếu có vòng lặp, Thỏ chạy nhanh hơn sẽ "bắt kịp" Rùa\n    if (slow === fast) return true;\n  }\n  return false;\n}`,
+          desc: 'Nếu danh sách có vòng lặp (Cycle), Thỏ chạy nhanh hơn rốt cuộc sẽ chạy xoay vòng và "bắt kịp" Rùa từ phía sau. Khoảng cách giữa 2 con trỏ thu hẹp đúng 1 đơn vị sau mỗi vòng lặp.',
+          characteristics: [
+            "Triệt tiêu việc phải dùng Hash Set để lưu các node đã đi qua (Tiết kiệm O(n) RAM)",
+          ],
+        },
+      ];
+
+      let currentTabId = ALGO_DATA[0].id;
+      let isRunning = false;
+      let currentProcessId = 0;
+      let currentSpeed = 800;
+
+      // Dữ liệu mô phỏng
+      let listNodes = [];
+      let list1 = [],
+        list2 = [],
+        mergedList = [];
+      let cycleTargetIndex = -1;
+      let targetIndexForInsert = 2;
+      let valForInsert = 99;
+      let valForDelete = -1;
+
+      // Tiện ích UI
+      const renderBadgeHTML = (text) => {
+        let c = "bg-slate-100 text-slate-800 border-slate-300";
+        if (text === "O(1)" || text.includes("O(1)"))
+          c = "bg-teal-100 text-teal-800 border-teal-300";
+        else if (text.includes("O(n)"))
+          c = "bg-amber-100 text-amber-800 border-amber-300";
+        return `<span class="px-3 py-1 rounded-full border text-sm font-semibold shadow-sm inline-block ${c}">${text}</span>`;
+      };
+
+      const highlightJS = (code) => {
+        let esc = code.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const c = [];
+        esc = esc.replace(/(\/\/.*)/g, (m) => {
+          c.push(m);
+          return `___C_${c.length - 1}___`;
+        });
+        esc = esc.replace(
+          /\b(\d+)\b/g,
+          '<span class="text-orange-300">$1</span>',
+        );
+        esc = esc
+          .replace(
+            /\b(function|let|const|var|if|else|for|while|return|break|continue|class|constructor)\b/g,
+            '<span class="text-pink-400 font-semibold">$1</span>',
+          )
+          .replace(
+            /\b(true|false|null)\b/g,
+            '<span class="text-purple-400">$1</span>',
+          )
+          .replace(
+            /\b(Math|this|ListNode)\b/g,
+            '<span class="text-yellow-300">$1</span>',
+          )
+          .replace(/\b(new)\b/g, '<span class="text-cyan-300">$1</span>');
+        c.forEach(
+          (com, i) =>
+            (esc = esc.replace(
+              `___C_${i}___`,
+              `<span class="text-slate-500 italic">${com}</span>`,
+            )),
+        );
+        return esc;
+      };
+
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+      const isAborted = (id) => id !== currentProcessId;
+
+      function renderTabs() {
+        document.getElementById("tabs-container").innerHTML = ALGO_DATA.map(
+          (a) =>
+            `<button onclick="changeTab('${a.id}')" class="px-5 py-4 font-bold whitespace-nowrap transition-all duration-200 border-b-2 flex-1 text-center ${a.id === currentTabId ? "text-teal-600 border-teal-600 bg-white" : "text-slate-500 hover:text-slate-800 hover:bg-slate-100/50 border-transparent cursor-pointer"} text-sm sm:text-base">${a.name}</button>`,
+        ).join("");
+      }
+
+      function initUI() {
+        renderTabs();
+        updateInfoAndCode();
+        generateNewData();
+        lucide.createIcons();
+      }
+
+      function updateInfoAndCode() {
+        const a = ALGO_DATA.find((x) => x.id === currentTabId);
+        if (!a) return;
+        document.getElementById("info-container").innerHTML =
+          `<div><h3 class="text-3xl font-extrabold text-slate-900 mb-1">${a.name}</h3><div class="inline-flex items-center px-3 py-1 bg-teal-100 text-teal-700 rounded-lg text-sm font-medium">${a.vnName}</div></div><p class="text-slate-600 leading-relaxed text-sm">${a.desc}</p><ul class="space-y-2 text-sm text-slate-700 mt-4">${a.characteristics.map((c) => `<li class="flex items-start"><i data-lucide="check-circle-2" class="w-4 h-4 text-teal-500 mr-2 shrink-0 mt-0.5"></i><span>${c}</span></li>`).join("")}</ul>`;
+        document.getElementById("code-container").innerHTML = highlightJS(
+          a.code,
+        );
+
+        // Chuyển đổi Container
+        if (currentTabId === "dummynode") {
+          document
+            .getElementById("single-list-wrapper")
+            .classList.add("hidden");
+          document
+            .getElementById("multi-list-wrapper")
+            .classList.remove("hidden");
+        } else {
+          document
+            .getElementById("single-list-wrapper")
+            .classList.remove("hidden");
+          document.getElementById("multi-list-wrapper").classList.add("hidden");
+        }
+        lucide.createIcons();
+      }
+
+      function setMathHTML(htmlContent) {
+        document.getElementById("math-computation").innerHTML = htmlContent;
+      }
+
+      // --- HTML GENERATORS CHO NODE ---
+      function createNodeHTML(
+        val,
+        idStr,
+        pointers = [],
+        extraClasses = "",
+        isNull = false,
+      ) {
+        if (isNull) {
+          return `<div class="flex items-center text-slate-500 font-mono text-sm ml-2 shrink-0">null</div>`;
+        }
+
+        let pointerHTML = "";
+        if (pointers.length > 0) {
+          pointerHTML = `<div class="absolute -top-7 left-0 w-full flex flex-col items-center gap-1">`;
+          pointers.forEach((p) => {
+            let col = p.color || "teal";
+            pointerHTML += `<span class="bg-slate-800 border border-${col}-500 text-${col}-400 text-[10px] font-bold px-1.5 rounded leading-tight shadow-sm">${p.label}</span>`;
+          });
+          pointerHTML += `</div>`;
+        }
+
+        let bgClass = "bg-slate-800";
+        let borderClass = "border-slate-600";
+        let textClass = "text-yellow-400";
+        let valDisplay = val;
+
+        if (val === "DUMMY") {
+          bgClass = "bg-amber-900/30";
+          borderClass = "border-amber-600/50";
+          textClass = "text-amber-200 text-xs";
+        } else if (extraClasses.includes("node-new")) {
+          bgClass = "bg-indigo-900";
+          borderClass = "border-indigo-400";
+          textClass = "text-indigo-200";
+        }
+
+        if (extraClasses.includes("skipped-node")) {
+          bgClass = "bg-rose-900/30";
+          borderClass = "border-rose-500/50";
+          textClass = "text-rose-400 line-through";
+        }
+
+        return `
+        <div id="${idStr}" class="node-box relative flex items-center shrink-0 ${extraClasses}">
+           ${pointerHTML}
+           <div class="border-2 ${borderClass} rounded-md flex overflow-hidden shadow-md ${bgClass}">
+              <div class="px-4 py-2.5 ${textClass} font-bold text-lg min-w-[40px] text-center border-r ${borderClass}">${valDisplay}</div>
+              <div class="px-1.5 py-2.5 bg-slate-700/50 text-[10px] text-slate-400 flex items-center justify-center font-mono">.next</div>
+           </div>
+        </div>
+      `;
+      }
+
+      function createArrowHTML(
+        direction = "right",
+        isReversed = false,
+        isFaded = false,
+      ) {
+        let colorClass = isReversed ? "text-emerald-500" : "text-slate-500";
+        if (isFaded) colorClass = "text-slate-300 opacity-30";
+        return `<i data-lucide="arrow-${direction}" class="w-6 h-6 mx-2 pointer-arrow ${colorClass} shrink-0"></i>`;
+      }
+
+      // --- HÀM RENDER SINGLE LIST ---
+      function renderSingleListUI(
+        pointersMap = {},
+        reversedIndices = [],
+        skippedIndices = [],
+        specialNodeIndex = -1,
+      ) {
+        const container = document.getElementById("single-list-container");
+        let html = "";
+
+        for (let i = 0; i < listNodes.length; i++) {
+          let nodePointers = pointersMap[i] || [];
+          let isSkipped = skippedIndices.includes(i);
+          let isNew = i === specialNodeIndex;
+
+          let extraClass = nodePointers.length > 0 ? "node-active" : "";
+          if (isSkipped) extraClass += " skipped-node opacity-60 scale-90";
+          if (isNew) extraClass += " node-new";
+
+          html += createNodeHTML(
+            listNodes[i],
+            `node-${i}`,
+            nodePointers,
+            extraClass,
+          );
+
+          if (i < listNodes.length - 1) {
+            if (currentTabId === "reverse_pointers") {
+              if (reversedIndices.includes(i)) {
+                html += createArrowHTML("left", true);
+              } else if (
+                i === reversedIndices.length - 1 &&
+                reversedIndices.length > 0
+              ) {
+                html += `<div class="w-10 mx-2 text-transparent shrink-0">.</div>`;
+              } else {
+                html += createArrowHTML("right");
+              }
+            } else {
+              if (isSkipped) {
+                html += createArrowHTML("right", false, true);
+              } else if (skippedIndices.includes(i + 1)) {
+                html += createArrowHTML("right");
+              } else {
+                html += createArrowHTML("right");
+              }
+            }
+          }
+        }
+
+        // Xử lý Tail
+        if (currentTabId === "fastslow_cycle") {
+          html += createArrowHTML("right");
+          html += `<div class="px-3 py-1.5 bg-rose-900/50 border border-rose-500 text-rose-300 text-xs rounded-lg whitespace-nowrap font-semibold shadow-[0_0_10px_rgba(244,63,94,0.3)] shrink-0">↺ Cycle về [Node ${listNodes[cycleTargetIndex]}]</div>`;
+        } else {
+          if (
+            currentTabId === "reverse_pointers" &&
+            reversedIndices.length === listNodes.length - 1
+          ) {
+            html =
+              createNodeHTML("null", "null-node", [], "", true) +
+              createArrowHTML("left", true) +
+              html;
+          } else if (
+            currentTabId === "reverse_pointers" &&
+            reversedIndices.length > 0
+          ) {
+          } else {
+            html +=
+              createArrowHTML("right") +
+              createNodeHTML("null", "null-node", [], "", true);
+          }
+        }
+
+        container.innerHTML = html;
+        lucide.createIcons();
+      }
+
+      // --- HÀM RENDER MULTI LISTS (Cho Dummy Node) ---
+      function renderMultiListsUI(pL1, pL2, pTail, isDummyBuilt) {
+        let h1 = "";
+        for (let i = 0; i < list1.length; i++) {
+          let ptrs = i === pL1 ? [{ label: "l1", color: "cyan" }] : [];
+          let ex =
+            i === pL1 ? "node-active" : i < pL1 ? "opacity-30 scale-90" : "";
+          h1 += createNodeHTML(list1[i], `l1-${i}`, ptrs, ex);
+          if (i < list1.length - 1) h1 += createArrowHTML("right");
+        }
+        h1 +=
+          createArrowHTML("right") + createNodeHTML("null", "", [], "", true);
+        document.getElementById("list1-container").innerHTML = h1;
+
+        let h2 = "";
+        for (let i = 0; i < list2.length; i++) {
+          let ptrs = i === pL2 ? [{ label: "l2", color: "purple" }] : [];
+          let ex =
+            i === pL2 ? "node-active" : i < pL2 ? "opacity-30 scale-90" : "";
+          h2 += createNodeHTML(list2[i], `l2-${i}`, ptrs, ex);
+          if (i < list2.length - 1) h2 += createArrowHTML("right");
+        }
+        h2 +=
+          createArrowHTML("right") + createNodeHTML("null", "", [], "", true);
+        document.getElementById("list2-container").innerHTML = h2;
+
+        let hm = "";
+        if (isDummyBuilt) {
+          let dummyPtr =
+            pTail === -1
+              ? [{ label: "dummy/tail", color: "yellow" }]
+              : [{ label: "dummy", color: "slate" }];
+          hm += `<div class="node-box relative flex items-center shrink-0 ${pTail === -1 ? "node-active" : ""}">
+                 <div class="absolute -top-7 left-0 w-full flex flex-col items-center gap-1">${dummyPtr.map((p) => `<span class="bg-slate-800 border border-${p.color}-500 text-${p.color}-400 text-[10px] font-bold px-1.5 rounded leading-tight">${p.label}</span>`).join("")}</div>
+                 <div class="border-2 border-amber-600/50 rounded-md flex overflow-hidden shadow-[0_0_10px_rgba(245,158,11,0.2)] bg-amber-900/30">
+                    <div class="px-3 py-2 text-amber-200 font-bold text-sm text-center border-r border-amber-600/50">DUMMY</div>
+                    <div class="px-1.5 py-2 bg-amber-900/50 text-[10px] text-amber-500 flex items-center justify-center font-mono">.next</div>
+                 </div>
+               </div>`;
+
+          if (mergedList.length > 0) hm += createArrowHTML("right");
+
+          for (let i = 0; i < mergedList.length; i++) {
+            let ptrs = i === pTail ? [{ label: "tail", color: "emerald" }] : [];
+            hm += createNodeHTML(
+              mergedList[i],
+              `m-${i}`,
+              ptrs,
+              i === pTail ? "node-active" : "",
+            );
+            if (i < mergedList.length - 1) hm += createArrowHTML("right");
+          }
+        }
+        document.getElementById("merged-container").innerHTML = hm;
+        lucide.createIcons();
+      }
+
+      function changeTab(id) {
+        if (isRunning) {
+          currentProcessId++;
+          isRunning = false;
+          toggleBtn(false);
+        }
+        currentTabId = id;
+        renderTabs();
+        updateInfoAndCode();
+        generateNewData();
+      }
+
+      function generateNewData() {
+        if (isRunning) return;
+
+        let problemHTML = "";
+
+        if (currentTabId === "basic_insert") {
+          listNodes = Array.from(
+            { length: 4 },
+            () => Math.floor(Math.random() * 50) + 10,
+          );
+          targetIndexForInsert = 2; // Chèn vào vị trí index 2
+          valForInsert = 99;
+          problemHTML = `<b class="text-white">Bài toán Chèn (Insert):</b> Hãy chèn Node có giá trị <b class="text-indigo-300 font-bold px-1 bg-indigo-900 rounded">${valForInsert}</b> vào vị trí <b class="text-yellow-400">Index = ${targetIndexForInsert}</b>. Mấu chốt là tìm đến Node đứng ngay trước nó (Index = 1).`;
+          renderSingleListUI({ 0: [{ label: "head", color: "cyan" }] });
+        } else if (currentTabId === "basic_delete") {
+          let arr = Array.from(
+            { length: 4 },
+            () => Math.floor(Math.random() * 50) + 10,
+          );
+          valForDelete = arr[2]; // Xóa phần tử thứ 3
+          listNodes = ["DUMMY", ...arr];
+          problemHTML = `<b class="text-white">Bài toán Xóa (Delete):</b> Tìm và xóa Node mang giá trị <b class="text-rose-400 font-bold px-1 bg-slate-800 rounded">${valForDelete}</b>. Sử dụng <b>Dummy Node</b> để mồi ở đầu, giúp code gọn hơn.`;
+          renderSingleListUI({ 0: [{ label: "dummy", color: "yellow" }] });
+        } else if (currentTabId === "fastslow_cycle") {
+          listNodes = Array.from(
+            { length: 6 },
+            () => Math.floor(Math.random() * 90) + 10,
+          );
+          cycleTargetIndex = Math.floor(Math.random() * 4); // Điểm vòng về
+          problemHTML = `<b class="text-white">Bài toán Phát hiện Vòng lặp:</b> Cho Linked List có Node cuối trỏ ngược về <b class="text-rose-400">Node có giá trị ${listNodes[cycleTargetIndex]}</b>. Dùng 2 con trỏ Fast (2 bước) & Slow (1 bước) để bắt vòng lặp.`;
+          renderSingleListUI({
+            0: [
+              { label: "slow", color: "cyan" },
+              { label: "fast", color: "rose" },
+            ],
+          });
+        } else if (currentTabId === "fastslow_middle") {
+          let len = Math.random() > 0.5 ? 5 : 6;
+          listNodes = Array.from(
+            { length: len },
+            () => Math.floor(Math.random() * 90) + 10,
+          );
+          problemHTML = `<b class="text-white">Bài toán Tìm điểm giữa:</b> Tìm phần tử chính giữa (Middle Node) mà CHỈ DUYỆT 1 LẦN bằng chiến thuật Fast & Slow.`;
+          renderSingleListUI({
+            0: [
+              { label: "slow", color: "cyan" },
+              { label: "fast", color: "rose" },
+            ],
+          });
+        } else if (currentTabId === "reverse_pointers") {
+          listNodes = Array.from(
+            { length: 5 },
+            () => Math.floor(Math.random() * 90) + 10,
+          );
+          problemHTML = `<b class="text-white">Bài toán Đảo ngược danh sách:</b> Chuyển hướng toàn bộ mũi tên .next sang trái. Sử dụng 3 biến: <b class="text-slate-400">prev</b>, <b class="text-cyan-400">curr</b>, <b class="text-yellow-400">nextTemp</b>.`;
+          renderSingleListUI({ 0: [{ label: "curr", color: "cyan" }] });
+        } else if (currentTabId === "dummynode") {
+          let s1 = new Set(),
+            s2 = new Set();
+          while (s1.size < 4) s1.add(Math.floor(Math.random() * 50));
+          while (s2.size < 3) s2.add(Math.floor(Math.random() * 50));
+          list1 = Array.from(s1).sort((a, b) => a - b);
+          list2 = Array.from(s2).sort((a, b) => a - b);
+          mergedList = [];
+          problemHTML = `<b class="text-white">Bài toán Trộn danh sách:</b> Gộp L1 và L2 thành một danh sách mới. Khởi tạo <b class="text-amber-400">Dummy Node (-1)</b> làm mồi để tránh lỗi NullReference ở bước đầu.`;
+          renderMultiListsUI(0, 0, null, false);
+        }
+
+        document.getElementById("problem-text").innerHTML = problemHTML;
+        document.getElementById("problem-statement").classList.remove("hidden");
+        lucide.createIcons();
+        setMathHTML('Nhấn "Chạy Mô Phỏng" để bắt đầu.');
+      }
+
+      function toggleBtn(s) {
+        isRunning = s;
+        document.getElementById("btn-play").disabled = s;
+        document.getElementById("btn-play-text").innerText = s
+          ? "Đang chạy..."
+          : "Chạy Mô Phỏng";
+      }
+
+      document
+        .getElementById("btn-reset")
+        .addEventListener("click", generateNewData);
+      document
+        .getElementById("speed-slider")
+        .addEventListener(
+          "input",
+          (e) => (currentSpeed = 1550 - Number(e.target.value)),
+        );
+      document.getElementById("btn-play").addEventListener("click", () => {
+        if (!isRunning) handleSimulation();
+      });
+
+      async function handleSimulation() {
+        toggleBtn(true);
+        currentProcessId++;
+        let sid = currentProcessId;
+        try {
+          if (currentTabId === "basic_insert") await startBasicInsert(sid);
+          else if (currentTabId === "basic_delete") await startBasicDelete(sid);
+          else if (currentTabId === "fastslow_cycle")
+            await startDetectCycle(sid);
+          else if (currentTabId === "fastslow_middle")
+            await startFindMiddle(sid);
+          else if (currentTabId === "reverse_pointers") await startReverse(sid);
+          else if (currentTabId === "dummynode") await startDummyNode(sid);
+        } catch (e) {
+          console.error(e);
+        }
+        if (sid === currentProcessId) toggleBtn(false);
+      }
+
+      // === 0.1 BASIC INSERT ===
+      async function startBasicInsert(id) {
+        let curr = 0;
+        setMathHTML(
+          `Bắt đầu duyệt từ Head. Tìm Node ở vị trí (K - 1) tức là Index = ${targetIndexForInsert - 1}.`,
+        );
+        await sleep(currentSpeed);
+
+        for (let i = 0; i < targetIndexForInsert - 1; i++) {
+          if (isAborted(id)) return;
+          curr++;
+          renderSingleListUI({ [curr]: [{ label: "curr", color: "cyan" }] });
+          setMathHTML(`Tiến curr lên Index = ${curr}`);
+          await sleep(currentSpeed);
+        }
+
+        setMathHTML(
+          `<span class="text-emerald-400">Đã đến vị trí trước điểm cần chèn (Index = ${curr}). Tạo Node Mới.</span>`,
+        );
+
+        listNodes.splice(targetIndexForInsert, 0, valForInsert);
+        renderSingleListUI(
+          {
+            [curr]: [{ label: "curr", color: "cyan" }],
+            [targetIndexForInsert]: [{ label: "newNode", color: "indigo" }],
+          },
+          [],
+          [],
+          targetIndexForInsert,
+        ); // Pass special index
+        await sleep(currentSpeed * 2);
+
+        setMathHTML(
+          `Bẻ mũi tên:<br/>1. <b class="text-indigo-300">newNode.next</b> = curr.next<br/>2. <b class="text-cyan-400">curr.next</b> = newNode`,
+        );
+        renderSingleListUI({
+          [targetIndexForInsert]: [{ label: "Inserted!", color: "emerald" }],
+        });
+        await sleep(currentSpeed * 1.5);
+        setMathHTML(
+          `<span class="text-emerald-400 font-bold text-lg">Chèn thành công trong thời gian O(1) (sau khi tìm thấy vị trí).</span>`,
+        );
+      }
+
+      // === 0.2 BASIC DELETE ===
+      async function startBasicDelete(id) {
+        let curr = 0; // Đang đứng ở DUMMY
+        renderSingleListUI({ [curr]: [{ label: "curr", color: "cyan" }] });
+        setMathHTML(
+          `Bắt đầu từ Dummy Node. Ta sẽ soi giá trị của Node đứng KẾ TIẾP: <b class="text-rose-400">curr.next.val</b>`,
+        );
+        await sleep(currentSpeed);
+
+        while (curr < listNodes.length - 1) {
+          if (isAborted(id)) return;
+          let nextNode = curr + 1;
+
+          renderSingleListUI({
+            [curr]: [{ label: "curr", color: "cyan" }],
+            [nextNode]: [{ label: "curr.next", color: "yellow" }],
+          });
+          setMathHTML(
+            `Kiểm tra: curr.next.val == ${valForDelete}? (<b class="text-yellow-400">${listNodes[nextNode]}</b> so với <b class="text-rose-400">${valForDelete}</b>)`,
+          );
+          await sleep(currentSpeed * 1.5);
+
+          if (listNodes[nextNode] === valForDelete) {
+            setMathHTML(
+              `<span class="text-emerald-400 font-bold">Trùng khớp!</span> Nhảy cóc liên kết: <b class="text-cyan-400">curr.next</b> = <b class="text-rose-400">curr.next.next</b>`,
+            );
+            let skipped = [nextNode];
+            renderSingleListUI(
+              {
+                [curr]: [{ label: "curr", color: "cyan" }],
+                [nextNode]: [{ label: "XÓA", color: "rose" }],
+              },
+              [],
+              skipped,
+            );
+            await sleep(currentSpeed * 2.5);
+
+            // Xóa hẳn khỏi UI array
+            listNodes.splice(nextNode, 1);
+            renderSingleListUI({
+              [curr]: [{ label: "curr", color: "emerald" }],
+            });
+            setMathHTML(
+              `<span class="text-emerald-400 font-bold text-lg">Đã xóa thành công và rác được dọn dẹp! Trả về dummy.next.</span>`,
+            );
+            return;
+          }
+
+          setMathHTML(`Không khớp. Tiếp tục duyệt...`);
+          curr++;
+          await sleep(currentSpeed);
+        }
+      }
+
+      // === 1. FAST & SLOW POINTERS (DETECT CYCLE) ===
+      async function startDetectCycle(id) {
+        let slow = 0,
+          fast = 0,
+          n = listNodes.length;
+        setMathHTML(
+          `<span class="text-slate-300">Khởi tạo: <b class="text-cyan-400">Slow</b> và <b class="text-rose-400">Fast</b> cùng ở vị trí xuất phát.</span>`,
+        );
+        await sleep(currentSpeed);
+
+        while (true) {
+          if (isAborted(id)) return;
+
+          slow = (slow + 1) % n;
+          if (slow === 0 && cycleTargetIndex !== -1) slow = cycleTargetIndex;
+
+          fast = (fast + 1) % n;
+          if (fast === 0 && cycleTargetIndex !== -1) fast = cycleTargetIndex;
+          fast = (fast + 1) % n;
+          if (fast === 0 && cycleTargetIndex !== -1) fast = cycleTargetIndex;
+
+          renderSingleListUI({
+            [slow]: [{ label: "slow", color: "cyan" }],
+            [fast]: slow !== fast ? [{ label: "fast", color: "rose" }] : [],
+          });
+
+          if (slow === fast) {
+            renderSingleListUI({
+              [slow]: [{ label: "slow & fast", color: "emerald" }],
+            });
+            setMathHTML(
+              `<span class="text-emerald-400 text-lg">⚠️ Vòng lặp phát hiện! <b class="text-cyan-400">Slow</b> và <b class="text-rose-400">Fast</b> đã đụng nhau tại giá trị <b>${listNodes[slow]}</b>.</span>`,
+            );
+            return;
+          }
+
+          setMathHTML(`
+          <div class="flex flex-col items-center">
+            <span class="text-slate-300 mb-1">Bước lặp:</span>
+            <span class="bg-slate-900 px-3 py-1 rounded border border-slate-700">Slow tiến 1 ô tới <b class="text-cyan-400">${listNodes[slow]}</b> | Fast tiến 2 ô tới <b class="text-rose-400">${listNodes[fast]}</b></span>
+          </div>
+        `);
+          await sleep(currentSpeed * 1.5);
+        }
+      }
+
+      // === 2. FIND MIDDLE NODE ===
+      async function startFindMiddle(id) {
+        let slow = 0,
+          fast = 0,
+          n = listNodes.length;
+        setMathHTML(
+          `<span class="text-slate-300">Khởi tạo: <b class="text-cyan-400">Slow</b> và <b class="text-rose-400">Fast</b> cùng ở Head.</span>`,
+        );
+        await sleep(currentSpeed);
+
+        while (fast < n - 1 && fast + 1 < n) {
+          if (isAborted(id)) return;
+          slow += 1;
+          fast += 2;
+          if (fast >= n) fast = n - 1;
+
+          renderSingleListUI({
+            [slow]: [{ label: "slow", color: "cyan" }],
+            [fast]: slow !== fast ? [{ label: "fast", color: "rose" }] : [],
+          });
+          setMathHTML(`Slow tiến 1 bước. Fast tiến 2 bước.`);
+          await sleep(currentSpeed * 1.5);
+        }
+        setMathHTML(
+          `<span class="text-emerald-400 text-lg font-bold">Hoàn tất! Fast chạm vạch đích, Slow đang đứng ở đúng vị trí giữa: Node ${listNodes[slow]}.</span>`,
+        );
+      }
+
+      // === 4. REVERSE LINKED LIST ===
+      async function startReverse(id) {
+        let prev = -1,
+          curr = 0,
+          n = listNodes.length;
+        let reversedEdges = [];
+
+        setMathHTML(
+          `<span class="text-slate-300">Khởi tạo: <b class="text-slate-400">prev</b> = null, <b class="text-cyan-400">curr</b> = head.</span>`,
+        );
+        await sleep(currentSpeed);
+
+        while (curr < n) {
+          if (isAborted(id)) return;
+          let nextTemp = curr + 1;
+
+          let ptrs = { [curr]: [{ label: "curr", color: "cyan" }] };
+          if (prev !== -1) ptrs[prev] = [{ label: "prev", color: "slate" }];
+          if (nextTemp < n)
+            ptrs[nextTemp] = [{ label: "nextTmp", color: "yellow" }];
+
+          renderSingleListUI(ptrs, reversedEdges);
+          setMathHTML(
+            `<span class="text-yellow-400">Bước 1:</span> Giữ lấy node tiếp theo bằng <b class="text-yellow-400">nextTemp</b> kẻo đứt dây.`,
+          );
+          await sleep(currentSpeed * 1.5);
+
+          reversedEdges.push(curr - 1);
+
+          setMathHTML(
+            `<span class="text-emerald-400">Bước 2:</span> Bẻ mũi tên: <b class="text-cyan-400">curr.next</b> trỏ ngược về <b class="text-slate-400">prev</b>.`,
+          );
+          renderSingleListUI(ptrs, reversedEdges);
+          await sleep(currentSpeed * 1.5);
+
+          prev = curr;
+          curr = nextTemp;
+
+          setMathHTML(
+            `<span class="text-purple-400">Bước 3:</span> Tịnh tiến: Đẩy <b class="text-slate-400">prev</b> và <b class="text-cyan-400">curr</b> lên 1 bước.`,
+          );
+          await sleep(currentSpeed);
+        }
+
+        if (isAborted(id)) return;
+        renderSingleListUI(
+          { [n - 1]: [{ label: "prev (New Head)", color: "emerald" }] },
+          reversedEdges,
+        );
+        setMathHTML(
+          `<span class="text-emerald-400 font-bold text-lg">Hoàn tất! Curr đã chạm Null. Trả về Prev làm Head mới.</span>`,
+        );
+      }
+
+      // === 5. MERGE TWO SORTED LISTS ===
+      async function startDummyNode(id) {
+        mergedList = [];
+        let p1 = 0,
+          p2 = 0;
+
+        setMathHTML(
+          `<span class="text-amber-400">Khởi tạo Dummy Node (-1) làm mồi và Tail trỏ vào nó.</span>`,
+        );
+        renderMultiListsUI(p1, p2, -1, true);
+        await sleep(currentSpeed * 1.5);
+
+        while (p1 < list1.length && p2 < list2.length) {
+          if (isAborted(id)) return;
+          let v1 = list1[p1],
+            v2 = list2[p2];
+
+          setMathHTML(
+            `So sánh: L1 (<b class="text-cyan-400">${v1}</b>) với L2 (<b class="text-purple-400">${v2}</b>).`,
+          );
+          await sleep(currentSpeed);
+
+          if (v1 <= v2) {
+            mergedList.push(v1);
+            setMathHTML(
+              `<b class="text-cyan-400">${v1}</b> nhỏ hơn. Nối Node L1 vào <b class="text-emerald-400">tail.next</b>.`,
+            );
+            renderMultiListsUI(p1, p2, mergedList.length - 1, true);
+            await sleep(currentSpeed);
+            p1++;
+          } else {
+            mergedList.push(v2);
+            setMathHTML(
+              `<b class="text-purple-400">${v2}</b> nhỏ hơn. Nối Node L2 vào <b class="text-emerald-400">tail.next</b>.`,
+            );
+            renderMultiListsUI(p1, p2, mergedList.length - 1, true);
+            await sleep(currentSpeed);
+            p2++;
+          }
+        }
+
+        if (isAborted(id)) return;
+        if (p1 < list1.length) {
+          setMathHTML(`L2 đã cạn. Nối toàn bộ phần còn lại của L1 vào tail.`);
+          while (p1 < list1.length) {
+            mergedList.push(list1[p1]);
+            p1++;
+          }
+        } else if (p2 < list2.length) {
+          setMathHTML(`L1 đã cạn. Nối toàn bộ phần còn lại của L2 vào tail.`);
+          while (p2 < list2.length) {
+            mergedList.push(list2[p2]);
+            p2++;
+          }
+        }
+
+        renderMultiListsUI(
+          list1.length,
+          list2.length,
+          mergedList.length - 1,
+          true,
+        );
+        await sleep(currentSpeed);
+
+        if (isAborted(id)) return;
+        setMathHTML(
+          `<span class="text-emerald-400 font-bold text-lg">Hoàn tất! Trả về <b class="text-amber-400">dummy.next</b> chính là Head của danh sách mới.</span>`,
+        );
+      }
+
+      // Khởi chạy
+      window.onload = initUI;
+    </script>
+  </body>
+</html>

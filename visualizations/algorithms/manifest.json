@@ -1,5 +1,11 @@
 {
   "chapters": [
-    "01-visualizations"
+    "01-array",
+    "02-hash",
+    "03-stack-queue",
+    "04-linked-list",
+    "05-tree",
+    "06-graph",
+    "07-heap"
   ]
 }

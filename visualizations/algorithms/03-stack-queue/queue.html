@@ -1,0 +1,1441 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trực Quan Hóa Queue (Hàng Đợi) & Deque</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .hide-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      @keyframes slideInRight {
+        from {
+          transform: translateX(30px);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      @keyframes slideOutLeft {
+        from {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateX(-30px);
+          opacity: 0;
+        }
+      }
+
+      .queue-item-enter {
+        animation: slideInRight 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)
+          forwards;
+      }
+
+      /* Giao diện Ống Queue ngang */
+      .queue-container {
+        border-top: 4px solid #475569;
+        border-bottom: 4px solid #475569;
+        box-shadow:
+          inset 0 10px 20px rgba(0, 0, 0, 0.1),
+          inset 0 -10px 20px rgba(0, 0, 0, 0.1);
+      }
+      .node-box {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      /* CSS Grid linh hoạt cho Mê cung và Multi-source BFS */
+      .grid-matrix {
+        display: grid;
+        gap: 0.5rem;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-slate-50 text-slate-900 font-sans min-h-screen p-4 sm:p-6 lg:p-8"
+  >
+    <div class="max-w-7xl mx-auto space-y-8">
+      <!-- HEADER -->
+      <header class="text-center space-y-4 mb-10">
+        <div
+          class="inline-flex items-center justify-center p-3 bg-blue-100 text-blue-600 rounded-full mb-2 shadow-sm"
+        >
+          <i data-lucide="fast-forward" class="w-8 h-8"></i>
+        </div>
+        <h1
+          class="text-3xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-cyan-600"
+        >
+          Queue & Deque (Hàng Đợi)
+        </h1>
+        <p class="text-lg text-slate-600 max-w-3xl mx-auto">
+          Cấu trúc FIFO kinh điển. Chuyên trị các bài toán duyệt theo
+          <b>"thời gian / lớp"</b> và luồng dữ liệu trượt.<br />
+          <span
+            class="inline-block mt-2 px-3 py-1 bg-amber-100 text-amber-800 rounded-lg text-sm font-semibold border border-amber-200"
+          >
+            🔥 Insight: Queue = Breadth-First Search (BFS) & Monotonic Deque
+          </span>
+        </p>
+      </header>
+
+      <!-- LÝ THUYẾT TRỌNG TÂM -->
+      <div
+        class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 overflow-hidden"
+      >
+        <div class="flex items-center mb-6">
+          <i data-lucide="book-open" class="w-6 h-6 text-blue-500 mr-2"></i>
+          <h2 class="text-xl font-bold text-slate-800">Lý thuyết Trọng tâm</h2>
+        </div>
+        <div
+          class="grid grid-cols-1 lg:grid-cols-2 gap-8 text-sm text-slate-700 items-start"
+        >
+          <div class="space-y-4">
+            <div
+              class="bg-slate-900 p-4 rounded-xl border border-slate-700 flex flex-col text-white h-full justify-center"
+            >
+              <span
+                class="text-slate-400 text-xs uppercase tracking-wider mb-3 text-center"
+                >Bản chất: FIFO (First In, First Out)</span
+              >
+              <p class="text-center text-slate-300 mb-4">
+                Giống như xếp hàng siêu thị, ai đến trước sẽ được phục vụ trước.
+                Bạn <b>thêm vào đuôi (Rear)</b> và <b>lấy ra ở đầu (Front)</b>.
+              </p>
+
+              <div
+                class="flex justify-center gap-8 text-xs font-mono font-bold"
+              >
+                <div class="text-center">
+                  <span class="text-emerald-400 text-lg block">Enqueue()</span>
+                  Thêm Đuôi: O(1)
+                </div>
+                <div class="text-center">
+                  <span class="text-rose-400 text-lg block">Dequeue()</span> Lấy
+                  Đầu: O(1)
+                </div>
+                <div class="text-center">
+                  <span class="text-cyan-400 text-lg block">Peek()</span> Xem
+                  Đầu: O(1)
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Các Pattern -->
+          <div class="space-y-4">
+            <div
+              class="bg-slate-50 p-4 rounded-xl border border-slate-100 h-full"
+            >
+              <h3 class="font-bold text-slate-800 mb-3 flex items-center">
+                <i data-lucide="zap" class="w-4 h-4 mr-1 text-amber-500"></i>
+                Các Pattern Cốt Lõi
+              </h3>
+              <ul class="space-y-3">
+                <li class="flex items-start">
+                  <span
+                    class="flex items-center justify-center bg-blue-500 text-white w-5 h-5 rounded text-xs font-bold mr-2 shrink-0"
+                    >1</span
+                  >
+                  <span
+                    ><b>BFS (Level by Level):</b> Duyệt qua Cây (Tree) hoặc Đồ
+                    thị (Graph) theo từng tầng. Đảm bảo tìm được đường đi ngắn
+                    nhất trong đồ thị không trọng số.</span
+                  >
+                </li>
+                <li class="flex items-start">
+                  <span
+                    class="flex items-center justify-center bg-blue-500 text-white w-5 h-5 rounded text-xs font-bold mr-2 shrink-0"
+                    >2</span
+                  >
+                  <span
+                    ><b>Multi-source BFS (Lan truyền):</b> Đẩy TẤT CẢ các điểm
+                    xuất phát vào Queue ở thời điểm T=0. Thích hợp cho bài toán
+                    lây lan (Rotting Oranges, Khoảng cách 01 Matrix).</span
+                  >
+                </li>
+                <li class="flex items-start">
+                  <span
+                    class="flex items-center justify-center bg-blue-500 text-white w-5 h-5 rounded text-xs font-bold mr-2 shrink-0"
+                    >3</span
+                  >
+                  <span
+                    ><b>Monotonic Deque:</b> Hàng đợi 2 đầu duy trì tính đơn
+                    điệu. Chuyên trị bài toán
+                    <i>Sliding Window Maximum/Minimum</i> trong thời gian siêu
+                    tốc O(n).</span
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BẢNG ĐÁNH GIÁ -->
+      <div
+        class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 overflow-hidden flex flex-col"
+      >
+        <div class="flex items-center mb-6">
+          <i data-lucide="award" class="w-6 h-6 text-blue-500 mr-2"></i>
+          <h2 class="text-xl font-bold text-slate-800">
+            Các Dạng Bài Tiêu Biểu
+          </h2>
+        </div>
+        <div class="overflow-x-auto">
+          <table
+            class="w-full text-left border-collapse whitespace-nowrap min-w-[600px]"
+          >
+            <thead>
+              <tr class="bg-slate-50">
+                <th class="p-4 font-semibold text-slate-700 rounded-tl-xl">
+                  Dạng bài
+                </th>
+                <th class="p-4 font-semibold text-slate-700">Pattern Chính</th>
+                <th class="p-4 font-semibold text-slate-700">
+                  Kỹ thuật / Mục đích
+                </th>
+                <th class="p-4 font-semibold text-slate-700 rounded-tr-xl">
+                  Độ Phức Tạp (Time/Space)
+                </th>
+              </tr>
+            </thead>
+            <tbody id="comparison-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- MAIN UI -->
+      <div
+        class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden"
+      >
+        <div
+          id="tabs-container"
+          class="flex overflow-x-auto border-b border-slate-200 hide-scrollbar bg-slate-50"
+        ></div>
+
+        <div
+          class="p-4 sm:p-6 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start"
+        >
+          <div class="lg:col-span-4 space-y-6" id="info-container"></div>
+
+          <div class="lg:col-span-8 w-full flex flex-col space-y-6">
+            <div
+              class="bg-slate-900 rounded-2xl p-4 sm:p-6 shadow-inner border border-slate-800"
+            >
+              <div
+                class="flex flex-wrap gap-4 items-center justify-between mb-4 pb-4 border-b border-slate-700"
+              >
+                <div class="flex gap-2">
+                  <button
+                    id="btn-play"
+                    class="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold transition disabled:opacity-50 text-sm"
+                  >
+                    <i data-lucide="play" class="w-4 h-4 mr-2"></i>
+                    <span id="btn-play-text">Chạy Mô Phỏng</span>
+                  </button>
+                  <button
+                    id="btn-reset"
+                    class="flex items-center px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition text-sm"
+                  >
+                    <i data-lucide="rotate-ccw" class="w-4 h-4 mr-2"></i> Dữ
+                    liệu mới
+                  </button>
+                </div>
+                <div class="flex items-center gap-3 text-slate-300 text-sm">
+                  <i data-lucide="settings-2" class="w-4 h-4"></i>
+                  <label class="font-medium hidden sm:block">Tốc độ:</label>
+                  <input
+                    type="range"
+                    id="speed-slider"
+                    min="50"
+                    max="1500"
+                    value="800"
+                    class="w-24 accent-blue-500"
+                  />
+                </div>
+              </div>
+
+              <!-- Khối Đề Bài -->
+              <div
+                id="problem-statement"
+                class="bg-blue-900/40 border border-blue-500/30 rounded-xl p-4 mb-4 text-sm sm:text-base text-blue-100 flex items-start gap-3 hidden"
+              >
+                <i
+                  data-lucide="target"
+                  class="w-5 h-5 text-blue-400 shrink-0 mt-0.5"
+                ></i>
+                <div id="problem-text" class="leading-relaxed"></div>
+              </div>
+
+              <!-- Bảng tính toán Logic Realtime -->
+              <div
+                id="math-computation"
+                class="bg-slate-800 rounded-xl p-3 mb-6 text-center font-mono text-sm sm:text-base border border-slate-600 text-slate-300 min-h-[48px] flex items-center justify-center"
+              >
+                Sẵn sàng mô phỏng.
+              </div>
+
+              <!-- Vùng Hiển Thị -->
+              <div class="flex flex-col items-center justify-center gap-8 py-4">
+                <!-- Khu vực Dữ liệu Đầu vào Đa năng (Mảng / Tree / Grid) -->
+                <div
+                  id="input-wrapper"
+                  class="w-full flex items-center justify-center min-h-[100px]"
+                >
+                  <div
+                    id="input-container"
+                    class="flex flex-wrap items-center justify-center gap-1 sm:gap-2 w-full"
+                  >
+                    <!-- Rendered dynamically -->
+                  </div>
+                </div>
+
+                <!-- Cấu trúc nằm ngang chứa Queue và Output -->
+                <div class="flex flex-col w-full gap-6">
+                  <!-- Khu vực Queue -->
+                  <div class="flex flex-col items-center w-full">
+                    <div
+                      class="text-blue-400 font-mono text-sm font-bold mb-2 uppercase tracking-wider"
+                      id="queue-title"
+                    >
+                      QUEUE (Đầu
+                      <i data-lucide="arrow-left" class="w-4 h-4 inline"></i>
+                      Đuôi)
+                    </div>
+                    <div
+                      id="queue-container"
+                      class="queue-container w-full max-w-lg h-16 sm:h-20 bg-slate-800/50 flex justify-start items-center p-2 gap-2 relative overflow-hidden"
+                    >
+                      <span
+                        id="queue-empty-text"
+                        class="text-slate-500 font-mono text-xs absolute left-1/2 -translate-x-1/2 opacity-50"
+                        >Empty Queue</span
+                      >
+                    </div>
+                  </div>
+
+                  <!-- Khu vực Bổ sung (Output) -->
+                  <div
+                    id="output-wrapper"
+                    class="flex flex-col items-center w-full hidden"
+                  >
+                    <div
+                      id="output-title"
+                      class="text-emerald-400 font-mono text-sm font-bold mb-2 uppercase tracking-wider"
+                    >
+                      OUTPUT (Kết quả)
+                    </div>
+                    <div
+                      id="output-container"
+                      class="flex flex-wrap items-center justify-center gap-1 sm:gap-2 min-h-[48px] min-w-[200px] p-2 border border-dashed border-slate-600 rounded bg-slate-800/30"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Code Block -->
+            <div
+              class="relative rounded-2xl overflow-hidden shadow-lg border border-slate-700 bg-[#0f172a]"
+            >
+              <div
+                class="w-full px-4 py-3 bg-[#1e293b] border-b border-slate-700 flex items-center justify-between"
+              >
+                <div class="flex space-x-2">
+                  <div class="w-3 h-3 rounded-full bg-rose-500"></div>
+                  <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+                  <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                </div>
+                <div class="flex items-center text-slate-400 text-xs font-mono">
+                  <i data-lucide="code" class="w-4 h-4 mr-1.5"></i> javascript
+                </div>
+              </div>
+              <pre
+                class="p-4 sm:p-6 overflow-auto text-xs sm:text-sm font-mono leading-relaxed max-h-72"
+              ><code id="code-container" class="text-slate-200"></code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // === DỮ LIỆU PATTERNS QUEUE ===
+      const ALGO_DATA = [
+        {
+          id: "basic_ops",
+          name: "1. Cơ bản (EnQ/DeQ)",
+          vnName: "Thao tác Nền tảng",
+          tech: "FIFO (First In First Out)",
+          space: "O(n) / O(1)",
+          code: `// Cài đặt Queue cơ bản trong JS\nclass Queue {\n  constructor() {\n    this.items = {};\n    this.head = 0;\n    this.tail = 0;\n  }\n  \n  // O(1) - Thêm vào đuôi\n  enqueue(element) {\n    this.items[this.tail] = element;\n    this.tail++;\n  }\n  \n  // O(1) - Lấy khỏi đầu\n  dequeue() {\n    if (this.isEmpty()) return null;\n    let item = this.items[this.head];\n    delete this.items[this.head];\n    this.head++;\n    return item;\n  }\n  \n  isEmpty() { return this.head === this.tail; }\n}`,
+          desc: "Khác với Stack (LIFO), Queue hoạt động theo nguyên tắc <b>FIFO</b> (Vào trước ra trước). Trong JavaScript, không nên dùng `shift()` của mảng để Dequeue vì nó tốn O(n). Ta thường dùng Object với 2 con trỏ `head` và `tail` để đảm bảo O(1) thao tác.",
+          characteristics: [
+            "Enqueue: Đẩy phần tử vào sau cùng (Rear/Tail)",
+            "Dequeue: Rút phần tử ra khỏi đầu (Front/Head)",
+          ],
+        },
+        {
+          id: "tree_bfs",
+          name: "2. BFS (Level by Level)",
+          vnName: "Duyệt theo Tầng (Tree/Graph)",
+          tech: "Single-source BFS",
+          space: "O(V+E) / O(V)",
+          code: `// Bài toán: Duyệt cây theo từng tầng (Level Order Traversal)\nfunction levelOrder(root) {\n  if (!root) return [];\n  let result = [];\n  let queue = [root]; // Hàng đợi lưu Node\n\n  while (queue.length > 0) {\n    let levelSize = queue.length;\n    let currentLevel = [];\n\n    // Xử lý toàn bộ node của tầng hiện tại\n    for (let i = 0; i < levelSize; i++) {\n      let node = queue.shift(); // Dequeue (O(1) nếu cài chuẩn)\n      currentLevel.push(node.val);\n\n      // Enqueue các node con cho tầng tiếp theo\n      if (node.left) queue.push(node.left);\n      if (node.right) queue.push(node.right);\n    }\n    result.push(currentLevel);\n  }\n  return result;\n}`,
+          desc: "Ứng dụng vĩ đại nhất của Queue: <b>Breadth-First Search (BFS)</b>. Bằng cách luôn nhét các node con vào cuối hàng đợi, ta ép thuật toán phải xử lý xong toàn bộ anh em cùng tầng (ngang) trước khi bước xuống tầng sâu hơn.",
+          characteristics: [
+            "Tuyệt đối cần thiết để tìm Đường đi ngắn nhất (Shortest Path)",
+            "Lưu lại `levelSize` để tách biệt các tầng với nhau",
+          ],
+        },
+        {
+          id: "multi_bfs",
+          name: "3. Multi-source BFS",
+          vnName: "Lan truyền / Khoảng cách",
+          tech: "Multiple Starting Points",
+          space: "O(R*C) / O(R*C)",
+          code: `// Bài toán: Rotting Oranges (Mất bao lâu để cam thối lây hết?)\nfunction orangesRotting(grid) {\n  let queue = [];\n  let fresh = 0, time = 0;\n  \n  // Bước 1: Đẩy TẤT CẢ cam thối ban đầu vào Queue\n  for(let r=0; r<grid.length; r++) {\n    for(let c=0; c<grid[0].length; c++) {\n      if(grid[r][c] === 2) queue.push([r,c]);\n      else if(grid[r][c] === 1) fresh++;\n    }\n  }\n\n  let dirs = [[0,1], [0,-1], [1,0], [-1,0]]; // 4 hướng\n  \n  // Bước 2: Lan truyền theo lớp thời gian (BFS)\n  while (queue.length > 0 && fresh > 0) {\n    let size = queue.length;\n    for (let i = 0; i < size; i++) {\n      let [r, c] = queue.shift();\n      for (let [dr, dc] of dirs) {\n        let nr=r+dr, nc=c+dc;\n        if (nr>=0 && nr<grid.length && nc>=0 && nc<grid[0].length && grid[nr][nc] === 1) {\n          grid[nr][nc] = 2; // Lây nhiễm\n          fresh--;\n          queue.push([nr,nc]);\n        }\n      }\n    }\n    time++; // Xong 1 phút lây lan\n  }\n  return fresh === 0 ? time : -1;\n}`,
+          desc: "Thay vì 1 điểm xuất phát, ta đẩy nhiều điểm vào Queue ngay từ T=0. Thuật toán sẽ lan truyền đồng thời từ mọi nguồn ra xung quanh giống như vết dầu loang. Bài toán kinh điển: <i>Rotting Oranges</i> hoặc <i>01 Matrix</i>.",
+          characteristics: [
+            "Khởi tạo hàng đợi chứa TẤT CẢ các nguồn trước khi bắt đầu vòng lặp while",
+            'Rất phù hợp tìm "khoảng cách gần nhất đến một trạm cứu hỏa bất kỳ"',
+          ],
+        },
+        {
+          id: "sliding_deque",
+          name: "4. Window Max (Deque)",
+          vnName: "Monotonic Queue (Deque)",
+          tech: "Hàng đợi 2 đầu đơn điệu",
+          space: "O(n) / O(k)",
+          code: `// Bài toán: Sliding Window Maximum (Tìm Max trong mỗi cửa sổ trượt độ dài K)\nfunction maxSlidingWindow(nums, k) {\n  let deque = []; // Lưu INDEX, giữ cho giá trị Tương ứng GIẢM DẦN\n  let res = [];\n\n  for (let i = 0; i < nums.length; i++) {\n    // 1. Loại bỏ các index đã trượt khỏi cửa sổ (ở FRONT)\n    if (deque.length > 0 && deque[0] < i - k + 1) {\n      deque.shift(); \n    }\n\n    // 2. Loại bỏ các kẻ "yếu hơn" ở BACK vì chúng vô dụng\n    // Kẻ đến sau mà còn lớn hơn thì kẻ trước không bao giờ được làm Max!\n    while (deque.length > 0 && nums[deque[deque.length - 1]] <= nums[i]) {\n      deque.pop(); \n    }\n\n    // 3. Thêm kẻ mới vào BACK\n    deque.push(i);\n\n    // 4. Lấy Max ở FRONT (nếu cửa sổ đã đủ kích thước K)\n    if (i >= k - 1) {\n      res.push(nums[deque[0]]);\n    }\n  }\n  return res;\n}`,
+          desc: "Deque (Hàng đợi hai đầu) cho phép thao tác ở cả Front và Rear. Bằng cách liên tục rút (pop) ở Rear những phần tử nhỏ hơn phần tử mới lọt vào, Deque luôn giữ phần tử Max ở Front. Đồng thời, rút (shift) ở Front nếu phần tử đó đã trượt ra khỏi cửa sổ.",
+          characteristics: [
+            "Kết hợp sức mạnh của Sliding Window và Monotonic (Đơn điệu giảm)",
+            "Thời gian cực kỳ ấn tượng: O(n) thay vì O(n*k) của cách ngây thơ.",
+          ],
+        },
+        {
+          id: "shortest_path",
+          name: "5. Shortest Path (BFS)",
+          vnName: "Đường đi Mê cung",
+          tech: "BFS trên Ma Trận 2D",
+          space: "O(V) / O(V)",
+          code: `// Bài toán: Tìm đường đi ngắn nhất từ góc trái trên xuống góc phải dưới\nfunction shortestPathBinaryMatrix(grid) {\n  let n = grid.length;\n  if (grid[0][0] === 1 || grid[n-1][n-1] === 1) return -1;\n  \n  let queue = [[0, 0, 1]]; // [row, col, distance]\n  grid[0][0] = 1; // Đánh dấu đã thăm\n  \n  // Lan truyền 4 hướng (hoặc 8 tùy đề bài)\n  let dirs = [[-1,0], [1,0], [0,-1], [0,1]]; \n  \n  while (queue.length > 0) {\n    let [r, c, dist] = queue.shift();\n    \n    if (r === n-1 && c === n-1) return dist; // Đến đích!\n    \n    for (let [dr, dc] of dirs) {\n      let nr = r + dr, nc = c + dc;\n      if (nr >= 0 && nr < n && nc >= 0 && nc < n && grid[nr][nc] === 0) {\n        queue.push([nr, nc, dist + 1]);\n        grid[nr][nc] = 1; // Đánh dấu đã thăm để không bị quay lui\n      }\n    }\n  }\n  return -1;\n}`,
+          desc: "Ứng dụng kinh điển nhất của BFS. Do BFS lan truyền ra các vùng xung quanh theo từng lớp (level) theo hình tròn/thoi, lớp đầu tiên chạm đến đích ĐẢM BẢO CHẮC CHẮN là đường đi có khoảng cách ngắn nhất.",
+          characteristics: [
+            'Bắt buộc phải đánh dấu ô "Đã thăm" để tránh Queue lặp vô tận.',
+            'Hàng đợi lưu trữ thêm dữ liệu "Khoảng cách" (Distance) hiện tại.',
+          ],
+        },
+        {
+          id: "first_unique_stream",
+          name: "6. Ký tự Duy nhất (Stream)",
+          vnName: "Queue + HashMap",
+          tech: "Xử lý luồng (Streaming)",
+          space: "O(n) / O(n)",
+          code: `// Bài toán: Tìm ký tự không lặp lại đầu tiên trong luồng ký tự liên tục\nclass FirstUnique {\n  constructor() {\n    this.queue = [];\n    this.freq = new Map();\n  }\n  \n  add(char) {\n    // Cập nhật tần suất (HashMap)\n    this.freq.set(char, (this.freq.get(char) || 0) + 1);\n    this.queue.push(char); // Lưu thứ tự thời gian vào Queue\n    \n    // Lazy Deletion: Xóa phần tử ở đầu hàng đợi nếu nó đã bị lặp lại\n    while (this.queue.length > 0 && this.freq.get(this.queue[0]) > 1) {\n      this.queue.shift();\n    }\n  }\n  \n  getFirstUnique() {\n    return this.queue.length > 0 ? this.queue[0] : '#';\n  }\n}`,
+          desc: 'Sự kết hợp hoàn hảo. Queue giúp giữ nguyên "Thứ tự thời gian" của các ký tự vào trước. HashMap giúp kiểm tra số lần xuất hiện O(1). Ta áp dụng "Lazy Deletion": Không cần tìm xóa ký tự lặp ở giữa Queue, chỉ cần dọn rác ở Đầu Queue khi nó trồi lên.',
+          characteristics: [
+            "Phù hợp với luồng dữ liệu (Data Stream) không biết trước kích thước.",
+            "Thời gian Amortized O(1) cho mỗi lần thêm ký tự.",
+          ],
+        },
+      ];
+
+      let currentTabId = ALGO_DATA[0].id;
+      let isRunning = false;
+      let currentProcessId = 0;
+      let currentSpeed = 800;
+
+      // State Variables
+      let inputData = [];
+      let outputData = [];
+      let queueData = []; // Mảng chứa object {val, id, color...}
+
+      // Multi-source BFS specific
+      let gridData = [];
+      let gridRows = 3;
+      let gridCols = 3;
+
+      // Tiện ích UI
+      const renderBadgeHTML = (text) => {
+        let c = "bg-slate-100 text-slate-800 border-slate-300";
+        if (text.includes("O(1)"))
+          c = "bg-blue-100 text-blue-800 border-blue-300";
+        if (text.includes("O(n)") || text.includes("O(V)"))
+          c = "bg-cyan-100 text-cyan-800 border-cyan-300";
+        return `<span class="px-3 py-1 rounded-full border text-sm font-semibold shadow-sm inline-block ${c}">${text}</span>`;
+      };
+
+      const highlightJS = (code) => {
+        let esc = code.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const c = [];
+        esc = esc.replace(/(\/\/.*)/g, (m) => {
+          c.push(m);
+          return `___C_${c.length - 1}___`;
+        });
+        esc = esc.replace(
+          /\b(\d+)\b/g,
+          '<span class="text-orange-300">$1</span>',
+        );
+        esc = esc
+          .replace(
+            /\b(function|let|const|var|if|else|for|while|return|break|continue|class|constructor)\b/g,
+            '<span class="text-pink-400 font-semibold">$1</span>',
+          )
+          .replace(
+            /\b(true|false|null|isNaN|Number)\b/g,
+            '<span class="text-purple-400">$1</span>',
+          )
+          .replace(
+            /\b(Math|this|push|shift|pop|unshift|length|isEmpty)\b/g,
+            '<span class="text-yellow-300">$1</span>',
+          )
+          .replace(
+            /\b(new|Array|Queue)\b/g,
+            '<span class="text-cyan-300">$1</span>',
+          );
+        c.forEach(
+          (com, i) =>
+            (esc = esc.replace(
+              `___C_${i}___`,
+              `<span class="text-slate-500 italic">${com}</span>`,
+            )),
+        );
+        return esc;
+      };
+
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+      const isAborted = (id) => id !== currentProcessId;
+
+      function renderTabs() {
+        document.getElementById("tabs-container").innerHTML = ALGO_DATA.map(
+          (a) =>
+            `<button onclick="changeTab('${a.id}')" class="px-5 py-4 font-bold whitespace-nowrap transition-all duration-200 border-b-2 flex-1 text-center ${a.id === currentTabId ? "text-blue-600 border-blue-600 bg-white" : "text-slate-500 hover:text-slate-800 hover:bg-slate-100/50 border-transparent cursor-pointer"} text-sm sm:text-base">${a.name}</button>`,
+        ).join("");
+      }
+
+      function initUI() {
+        document.getElementById("comparison-table-body").innerHTML =
+          ALGO_DATA.map(
+            (a) =>
+              `<tr class="border-b border-slate-100 hover:bg-slate-50/50"><td class="p-4 font-bold text-slate-800">${a.name}</td><td class="p-4 text-slate-700 text-sm font-semibold text-blue-700">${a.vnName}</td><td class="p-4 text-slate-700 text-sm italic">${a.tech}</td><td class="p-4">${renderBadgeHTML(a.space)}</td></tr>`,
+          ).join("");
+        renderTabs();
+        updateInfoAndCode();
+        generateNewData();
+        lucide.createIcons();
+      }
+
+      function updateInfoAndCode() {
+        const a = ALGO_DATA.find((x) => x.id === currentTabId);
+        if (!a) return;
+        document.getElementById("info-container").innerHTML =
+          `<div><h3 class="text-3xl font-extrabold text-slate-900 mb-1">${a.name}</h3><div class="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium">${a.vnName}</div></div><p class="text-slate-600 leading-relaxed text-sm">${a.desc}</p><ul class="space-y-2 text-sm text-slate-700 mt-4">${a.characteristics.map((c) => `<li class="flex items-start"><i data-lucide="check-circle-2" class="w-4 h-4 text-blue-500 mr-2 shrink-0 mt-0.5"></i><span>${c}</span></li>`).join("")}</ul>`;
+        document.getElementById("code-container").innerHTML = highlightJS(
+          a.code,
+        );
+
+        let qTitle = document.getElementById("queue-title");
+        if (currentTabId === "sliding_deque")
+          qTitle.innerHTML =
+            'DEQUE (Đầu <i data-lucide="arrow-left-right" class="w-4 h-4 inline"></i> Đuôi)';
+        else
+          qTitle.innerHTML =
+            'QUEUE (Đầu <i data-lucide="arrow-left" class="w-4 h-4 inline"></i> Đuôi)';
+
+        lucide.createIcons();
+      }
+
+      function setMathHTML(htmlContent) {
+        document.getElementById("math-computation").innerHTML = htmlContent;
+      }
+
+      function renderInputUI(activeIdx = -1, highlightIndices = []) {
+        const container = document.getElementById("input-container");
+        let html = "";
+
+        if (
+          currentTabId === "basic_ops" ||
+          currentTabId === "sliding_deque" ||
+          currentTabId === "first_unique_stream"
+        ) {
+          // Render Array thường
+          inputData.forEach((val, idx) => {
+            let bg = "bg-slate-700 border-slate-600 text-white";
+            let badge = "";
+
+            if (currentTabId === "sliding_deque") {
+              if (highlightIndices.includes(idx))
+                bg =
+                  "bg-indigo-600/50 border-indigo-400 text-white shadow-[0_0_10px_rgba(99,102,241,0.5)]";
+              if (idx === activeIdx)
+                bg =
+                  "bg-rose-500 border-rose-400 text-white z-10 scale-110 shadow-[0_0_10px_rgba(244,63,94,0.8)]";
+
+              let qIdx = queueData.findIndex((item) => item.val === idx);
+              if (qIdx !== -1)
+                badge = `<span class="absolute -top-3 -right-2 text-[10px] bg-emerald-500 text-white px-1 rounded-full border border-emerald-300">Q</span>`;
+            } else if (currentTabId === "first_unique_stream") {
+              // Giao diện cho Stream Array
+              if (idx < activeIdx)
+                bg = "bg-slate-800 border-slate-700 text-slate-500 opacity-50"; // Đã nạp vào luồng
+              if (idx === activeIdx)
+                bg =
+                  "bg-indigo-500 border-indigo-400 text-white z-10 scale-110 shadow-[0_0_10px_rgba(99,102,241,0.8)]";
+            } else {
+              if (idx === activeIdx)
+                bg =
+                  "bg-rose-500 border-rose-400 text-white z-10 scale-110 shadow-[0_0_10px_rgba(244,63,94,0.8)]";
+            }
+
+            html += `<div class="relative w-10 h-10 sm:w-12 sm:h-12 flex flex-col items-center justify-center rounded border-2 font-bold text-sm sm:text-base transition-all duration-300 ${bg}">
+                        ${badge}
+                        ${val}
+                      </div>`;
+          });
+        } else if (currentTabId === "tree_bfs") {
+          // Render Cây nhị phân (giả lập vị trí cứng cho đẹp)
+          // 1
+          // 2 3
+          // 4 5 6 7
+          html += `<div class="flex flex-col items-center gap-4 w-full max-w-sm relative">`;
+
+          const drawNode = (idx, level) => {
+            if (idx >= inputData.length) return "";
+            let val = inputData[idx];
+            let bg = "bg-slate-700 border-slate-500";
+            if (idx === activeIdx)
+              bg =
+                "bg-rose-500 border-rose-300 shadow-[0_0_15px_rgba(244,63,94,0.8)] scale-110 z-10";
+            else if (highlightIndices.includes(idx))
+              bg =
+                "bg-emerald-500 border-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.8)]"; // Đang trong queue
+            else if (outputData.some((arr) => arr.includes(val)))
+              bg = "bg-slate-800 border-slate-700 text-slate-500 opacity-60"; // Đã duyệt
+
+            return `<div class="w-10 h-10 rounded-full border-2 flex items-center justify-center font-bold text-white transition-all duration-300 ${bg}">${val}</div>`;
+          };
+
+          html += `
+            <div class="flex justify-center w-full relative">
+               ${drawNode(0, 0)}
+            </div>
+            <div class="flex justify-center w-full gap-16 relative">
+               ${drawNode(1, 1)} ${drawNode(2, 1)}
+            </div>
+            <div class="flex justify-center w-full gap-4 relative">
+               ${drawNode(3, 2)} ${drawNode(4, 2)} ${drawNode(5, 2)} ${drawNode(6, 2)}
+            </div>
+          `;
+          html += `</div>`;
+        } else if (
+          currentTabId === "multi_bfs" ||
+          currentTabId === "shortest_path"
+        ) {
+          // Render Grid Ma trận (Mê cung / Cam thối)
+          html += `<div class="grid-matrix p-2 bg-slate-800 rounded-xl border border-slate-600 shadow-inner" style="grid-template-columns: repeat(${gridCols}, minmax(0, 1fr))">`;
+          for (let r = 0; r < gridRows; r++) {
+            for (let c = 0; c < gridCols; c++) {
+              let val = gridData[r][c];
+              let id = r + "," + c;
+              let bg = "bg-slate-700 border-slate-600";
+              let content = "";
+
+              if (currentTabId === "multi_bfs") {
+                if (val === 2) {
+                  bg = "bg-rose-500/20 border-rose-500 text-rose-500";
+                  content = `<i data-lucide="biohazard" class="w-6 h-6 animate-pulse"></i>`;
+                  if (activeIdx === id)
+                    bg +=
+                      " shadow-[0_0_15px_rgba(244,63,94,0.8)] scale-105 z-10";
+                } else if (val === 1) {
+                  bg = "bg-emerald-500/20 border-emerald-500 text-emerald-400";
+                  content = `<i data-lucide="apple" class="w-5 h-5"></i>`;
+                  if (activeIdx === id)
+                    bg =
+                      "bg-yellow-500/80 border-yellow-400 text-white shadow-[0_0_15px_rgba(234,179,8,0.8)] scale-110 z-10";
+                } else {
+                  bg = "bg-slate-800/50 border-slate-700 opacity-30";
+                }
+              } else if (currentTabId === "shortest_path") {
+                if (r === 0 && c === 0 && val === 0) {
+                  content = "S";
+                  bg = "bg-emerald-500 border-emerald-400 text-white";
+                } else if (
+                  r === gridRows - 1 &&
+                  c === gridCols - 1 &&
+                  val === 0
+                ) {
+                  content = "E";
+                  bg =
+                    "bg-emerald-500 border-emerald-400 text-white shadow-[0_0_10px_rgba(16,185,129,0.5)]";
+                } else if (val === 1) {
+                  bg = "bg-slate-900 border-slate-700 text-slate-600";
+                  content = "X"; // Bức tường
+                } else if (typeof val === "string" && val.startsWith("v")) {
+                  bg = "bg-cyan-500/30 border-cyan-500 text-cyan-300"; // Ô đã thăm chứa Distance
+                  content = val.split("_")[1];
+                }
+
+                if (activeIdx === id) {
+                  bg =
+                    "bg-rose-500 border-rose-400 text-white shadow-[0_0_15px_rgba(244,63,94,0.8)] scale-110 z-10";
+                } else if (highlightIndices.includes(id)) {
+                  bg =
+                    "bg-indigo-500/80 border-indigo-400 text-white shadow-[0_0_10px_rgba(99,102,241,0.6)] z-10";
+                }
+              }
+
+              html += `<div class="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded border-2 font-bold text-sm sm:text-base transition-all duration-300 ${bg}">${content}</div>`;
+            }
+          }
+          html += `</div>`;
+        }
+
+        container.innerHTML = html;
+        lucide.createIcons();
+      }
+
+      function renderQueueUI(customClasses = {}) {
+        const container = document.getElementById("queue-container");
+        const emptyText = document.getElementById("queue-empty-text");
+        let html = "";
+
+        if (queueData.length === 0) {
+          emptyText.style.display = "block";
+        } else {
+          emptyText.style.display = "none";
+
+          // In Queue, First element is at Front (left side), Last added is at Rear (right side)
+          // DOM renders left-to-right. So queueData[0] is Front.
+          queueData.forEach((item, index) => {
+            let isFront = index === 0;
+            let isRear = index === queueData.length - 1;
+            let bg = item.color || "bg-indigo-600 border-indigo-400 text-white";
+            let transform = "queue-item-enter"; // Always slide in from right
+
+            // Ghi đè class nếu có hiệu ứng xóa/pop
+            if (customClasses[item.id]) {
+              bg = customClasses[item.id].bg || bg;
+              transform = customClasses[item.id].anim || transform;
+            }
+
+            let displayVal = item.val;
+            if (currentTabId === "multi_bfs") displayVal = `[${item.val}]`;
+            if (currentTabId === "sliding_deque")
+              displayVal = `Id:${item.val} (${inputData[item.val]})`;
+            if (currentTabId === "shortest_path")
+              displayVal = `[${item.val.r},${item.val.c}] d:${item.val.d}`;
+
+            html += `<div id="q-${item.id}" class="w-auto px-3 h-10 sm:h-12 flex items-center justify-center rounded border-2 font-bold text-xs sm:text-sm ${bg} ${transform} shrink-0 truncate transition-colors duration-300">
+                        ${displayVal}
+                      </div>`;
+          });
+        }
+        container.innerHTML =
+          html +
+          `<span id="queue-empty-text" class="text-slate-500 font-mono text-xs absolute left-1/2 -translate-x-1/2 opacity-50" style="display: ${queueData.length === 0 ? "block" : "none"}">Empty Queue</span>`;
+      }
+
+      function renderOutputUI(activeIdx = -1) {
+        const wrapper = document.getElementById("output-wrapper");
+        if (
+          currentTabId === "basic_ops" ||
+          currentTabId === "multi_bfs" ||
+          currentTabId === "shortest_path"
+        ) {
+          wrapper.classList.add("hidden");
+          return;
+        }
+        wrapper.classList.remove("hidden");
+        const container = document.getElementById("output-container");
+        let html = "";
+
+        if (currentTabId === "tree_bfs") {
+          document.getElementById("output-title").innerText =
+            "KẾT QUẢ THEO TẦNG (Level Order)";
+          outputData.forEach((levelArr, idx) => {
+            html += `<div class="px-3 py-1 bg-slate-700 border border-slate-500 rounded font-mono text-emerald-300 text-sm">[${levelArr.join(", ")}]</div>`;
+          });
+        } else if (currentTabId === "sliding_deque") {
+          document.getElementById("output-title").innerText = "MAX TỪNG CỬA SỔ";
+          outputData.forEach((val, idx) => {
+            let bg =
+              idx === activeIdx
+                ? "bg-emerald-500 border-emerald-400 text-white shadow-[0_0_10px_rgba(16,185,129,0.8)] scale-110"
+                : "bg-slate-700 border-slate-600 text-emerald-400";
+            html += `<div class="w-8 h-8 flex items-center justify-center rounded border font-bold text-sm transition-all duration-300 ${bg}">${val}</div>`;
+          });
+        } else if (currentTabId === "first_unique_stream") {
+          document.getElementById("output-title").innerText =
+            "STREAM KẾT QUẢ (Ký tự duy nhất)";
+          outputData.forEach((val, idx) => {
+            let bg =
+              idx === activeIdx
+                ? "bg-emerald-500 border-emerald-400 text-white scale-110"
+                : "bg-slate-700 border-slate-600 text-emerald-300";
+            html += `<div class="w-8 h-8 flex items-center justify-center rounded border font-bold text-sm transition-all duration-300 ${bg}">${val}</div>`;
+          });
+        }
+        container.innerHTML = html;
+      }
+
+      function changeTab(id) {
+        if (isRunning) {
+          currentProcessId++;
+          isRunning = false;
+          toggleBtn(false);
+        }
+        currentTabId = id;
+        renderTabs();
+        updateInfoAndCode();
+        generateNewData();
+      }
+
+      function generateNewData() {
+        if (isRunning) return;
+        let problemHTML = "";
+        queueData = [];
+        outputData = [];
+        inputData = [];
+
+        if (currentTabId === "basic_ops") {
+          inputData = [10, 20, 30, 40];
+          problemHTML = `<b class="text-white">Thao tác cơ bản:</b> Mô phỏng <code>enqueue()</code> (Thêm vào cuối/Phải) và <code>dequeue()</code> (Lấy ra từ đầu/Trái).`;
+        } else if (currentTabId === "tree_bfs") {
+          inputData = [1, 2, 3, 4, 5, 6, 7]; // Complete binary tree
+          problemHTML = `<b class="text-white">Level Order Traversal:</b> Duyệt cây nhị phân theo từng tầng. Đẩy node con của node hiện tại vào cuối Queue.`;
+        } else if (currentTabId === "multi_bfs") {
+          gridData = [
+            [2, 1, 0],
+            [1, 1, 0],
+            [0, 1, 1],
+          ];
+          problemHTML = `<b class="text-white">Rotting Oranges (Cam thối lây lan):</b> 
+          <i data-lucide="biohazard" class="w-4 h-4 inline text-rose-500"></i> (2: Thối), 
+          <i data-lucide="apple" class="w-4 h-4 inline text-emerald-400"></i> (1: Tươi), Trống (0). 
+          Lây nhiễm theo 4 hướng mỗi phút.`;
+        } else if (currentTabId === "sliding_deque") {
+          inputData = [1, 3, -1, -3, 5, 3, 6, 7];
+          problemHTML = `<b class="text-white">Sliding Window Max (K=3):</b> Tìm số lớn nhất trong cửa sổ. <b class="text-blue-400">Deque lưu Index</b>. Rút số nhỏ ở Đuôi để ép Deque giảm dần.`;
+        } else if (currentTabId === "shortest_path") {
+          gridRows = 4;
+          gridCols = 4;
+          // 0: đường, 1: tường
+          gridData = [
+            [0, 0, 1, 0],
+            [1, 0, 0, 0],
+            [0, 0, 1, 1],
+            [0, 0, 0, 0],
+          ];
+          problemHTML = `<b class="text-white">Đường đi ngắn nhất:</b> Dùng Queue để tìm đường từ <b class="text-emerald-400">S (Start)</b> đến <b class="text-emerald-400">E (End)</b>. Thuật toán loang ra theo 4 hướng và ghi lại số bước xa nhất (Distance).`;
+        } else if (currentTabId === "first_unique_stream") {
+          inputData = ["a", "b", "a", "c", "b", "d"];
+          problemHTML = `<b class="text-white">Ký tự duy nhất (Stream):</b> Luồng ký tự được nạp liên tục. Queue giữ thứ tự theo thời gian. Dùng <b class="text-blue-400">HashMap</b> đếm tần suất để tự động dọn dẹp các ký tự lặp lại bị mắc kẹt ở Đầu Queue.`;
+        }
+
+        document.getElementById("problem-text").innerHTML = problemHTML;
+        document.getElementById("problem-statement").classList.remove("hidden");
+        document.getElementById("output-wrapper").classList.add("hidden");
+        lucide.createIcons();
+
+        renderInputUI();
+        renderQueueUI();
+        renderOutputUI();
+        setMathHTML('Nhấn "Chạy Mô Phỏng" để bắt đầu.');
+      }
+
+      function toggleBtn(s) {
+        isRunning = s;
+        document.getElementById("btn-play").disabled = s;
+        document.getElementById("btn-play-text").innerText = s
+          ? "Đang chạy..."
+          : "Chạy Mô Phỏng";
+      }
+
+      document
+        .getElementById("btn-reset")
+        .addEventListener("click", generateNewData);
+      document
+        .getElementById("speed-slider")
+        .addEventListener(
+          "input",
+          (e) => (currentSpeed = 1550 - Number(e.target.value)),
+        );
+      document.getElementById("btn-play").addEventListener("click", () => {
+        if (!isRunning) handleSimulation();
+      });
+
+      async function handleSimulation() {
+        toggleBtn(true);
+        currentProcessId++;
+        let sid = currentProcessId;
+        try {
+          if (currentTabId === "basic_ops") await startBasic(sid);
+          else if (currentTabId === "tree_bfs") await startTreeBFS(sid);
+          else if (currentTabId === "multi_bfs") await startMultiBFS(sid);
+          else if (currentTabId === "sliding_deque")
+            await startSlidingDeque(sid);
+          else if (currentTabId === "shortest_path")
+            await startShortestPath(sid);
+          else if (currentTabId === "first_unique_stream")
+            await startFirstUniqueStream(sid);
+        } catch (e) {
+          console.error(e);
+        }
+        if (sid === currentProcessId) toggleBtn(false);
+      }
+
+      let qIdCounter = 0; // Để sinh unique ID cho animation CSS
+
+      // === 1. BASIC OPS ===
+      async function startBasic(id) {
+        queueData = [];
+        renderQueueUI();
+        for (let i = 0; i < inputData.length; i++) {
+          if (isAborted(id)) return;
+          let val = inputData[i];
+          setMathHTML(
+            `Lệnh: <b class="text-emerald-400">queue.enqueue(${val})</b>. Thêm ${val} vào cuối (Rear) ống.`,
+          );
+          renderInputUI(i);
+          queueData.push({
+            val: val,
+            id: qIdCounter++,
+            color: "bg-emerald-500 border-emerald-400",
+          });
+          renderQueueUI();
+          await sleep(currentSpeed * 1.5);
+        }
+        renderInputUI(-1, true);
+
+        if (isAborted(id)) return;
+        setMathHTML(
+          `Lệnh: <b class="text-cyan-400">queue.peek()</b>. Nhìn phần tử ở đầu (Front) -> <b class="text-white">${queueData[0].val}</b>.`,
+        );
+        queueData[0].color =
+          "bg-cyan-500 border-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.8)] scale-105 z-10";
+        renderQueueUI();
+        await sleep(currentSpeed * 2);
+
+        while (queueData.length > 0) {
+          if (isAborted(id)) return;
+          let target = queueData[0];
+          target.color =
+            "bg-rose-500 border-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.8)] z-10";
+          setMathHTML(
+            `Lệnh: <b class="text-rose-400">queue.dequeue()</b>. Rút <b class="text-white">${target.val}</b> ra khỏi đầu (Front).`,
+          );
+          renderQueueUI({ [target.id]: { anim: "animate-none scale-110" } });
+          await sleep(currentSpeed * 1.2);
+
+          // Animate trôi ra ngoài bên trái
+          renderQueueUI({
+            [target.id]: { anim: "translate-x-[-50px] opacity-0" },
+          });
+          await sleep(currentSpeed * 0.5);
+
+          queueData.shift();
+          // Reset color for next front
+          if (queueData.length > 0)
+            queueData[0].color = "bg-indigo-600 border-indigo-400";
+          renderQueueUI();
+          await sleep(currentSpeed * 0.5);
+        }
+        setMathHTML(
+          `<span class="text-emerald-400 font-bold">Queue đã rỗng (isEmpty == true).</span>`,
+        );
+      }
+
+      // === 2. TREE BFS (Level Order) ===
+      async function startTreeBFS(id) {
+        queueData = [];
+        outputData = [];
+        renderQueueUI();
+        renderOutputUI();
+
+        setMathHTML(`Enqueue Root: <b class="text-yellow-400">1</b>`);
+        queueData.push({
+          val: 1,
+          idx: 0,
+          id: qIdCounter++,
+          color: "bg-emerald-500 border-emerald-400",
+        });
+        renderInputUI(-1, [0]);
+        renderQueueUI();
+        await sleep(currentSpeed * 1.5);
+
+        let level = 0;
+        while (queueData.length > 0) {
+          if (isAborted(id)) return;
+          let levelSize = queueData.length;
+          let currentLevelArr = [];
+
+          setMathHTML(
+            `<span class="text-indigo-400 font-bold">Bắt đầu Tầng ${level}. Có ${levelSize} Node trong Queue.</span>`,
+          );
+          await sleep(currentSpeed);
+
+          for (let i = 0; i < levelSize; i++) {
+            if (isAborted(id)) return;
+
+            let node = queueData.shift();
+            currentLevelArr.push(node.val);
+
+            setMathHTML(`Dequeue <b class="text-rose-400">${node.val}</b>.`);
+            renderInputUI(
+              node.idx,
+              queueData.map((q) => q.idx),
+            );
+            renderQueueUI();
+            await sleep(currentSpeed);
+
+            // Left child
+            let leftIdx = 2 * node.idx + 1;
+            if (leftIdx < inputData.length) {
+              setMathHTML(
+                `Enqueue Trái của ${node.val} -> <b class="text-emerald-400">${inputData[leftIdx]}</b>`,
+              );
+              queueData.push({
+                val: inputData[leftIdx],
+                idx: leftIdx,
+                id: qIdCounter++,
+                color: "bg-emerald-500 border-emerald-400",
+              });
+              renderInputUI(
+                node.idx,
+                queueData.map((q) => q.idx),
+              );
+              renderQueueUI();
+              await sleep(currentSpeed);
+            }
+            // Right child
+            let rightIdx = 2 * node.idx + 2;
+            if (rightIdx < inputData.length) {
+              setMathHTML(
+                `Enqueue Phải của ${node.val} -> <b class="text-emerald-400">${inputData[rightIdx]}</b>`,
+              );
+              queueData.push({
+                val: inputData[rightIdx],
+                idx: rightIdx,
+                id: qIdCounter++,
+                color: "bg-emerald-500 border-emerald-400",
+              });
+              renderInputUI(
+                node.idx,
+                queueData.map((q) => q.idx),
+              );
+              renderQueueUI();
+              await sleep(currentSpeed);
+            }
+          }
+          outputData.push(currentLevelArr);
+          renderOutputUI();
+          setMathHTML(
+            `<span class="text-emerald-400">Xong Tầng ${level}. Đưa [${currentLevelArr.join(",")}] vào Kết quả.</span>`,
+          );
+          await sleep(currentSpeed * 1.5);
+          level++;
+        }
+        if (isAborted(id)) return;
+        renderInputUI(-1);
+        setMathHTML(
+          `<span class="text-emerald-400 font-bold text-lg">🎉 Duyệt BFS hoàn tất. Đã thăm hết các tầng!</span>`,
+        );
+      }
+
+      // === 3. MULTI-SOURCE BFS (Rotting Oranges) ===
+      async function startMultiBFS(id) {
+        queueData = [];
+        renderQueueUI();
+        let fresh = 0;
+        let time = 0;
+
+        setMathHTML(
+          `Bước 1: Quét toàn bộ mảng. Đếm số Cam tươi và Enqueue tất cả các Cam thối ban đầu.`,
+        );
+        await sleep(currentSpeed);
+
+        for (let r = 0; r < gridRows; r++) {
+          for (let c = 0; c < gridCols; c++) {
+            if (gridData[r][c] === 2) {
+              queueData.push({
+                val: `${r},${c}`,
+                r: r,
+                c: c,
+                id: qIdCounter++,
+                color: "bg-rose-500 border-rose-400",
+              });
+            } else if (gridData[r][c] === 1) {
+              fresh++;
+            }
+          }
+        }
+        renderInputUI();
+        renderQueueUI();
+        setMathHTML(
+          `Tìm thấy <b>${queueData.length}</b> gốc lây nhiễm lúc T=0. Số cam tươi: <b class="text-emerald-400">${fresh}</b>.`,
+        );
+        await sleep(currentSpeed * 2);
+
+        let dirs = [
+          [0, 1],
+          [0, -1],
+          [1, 0],
+          [-1, 0],
+        ];
+
+        while (queueData.length > 0 && fresh > 0) {
+          if (isAborted(id)) return;
+          let size = queueData.length;
+          setMathHTML(
+            `<span class="text-indigo-400 font-bold">Phút thứ ${time + 1}: Lan truyền từ ${size} quả cam thối.</span>`,
+          );
+          await sleep(currentSpeed);
+
+          for (let i = 0; i < size; i++) {
+            if (isAborted(id)) return;
+            let node = queueData.shift();
+            renderQueueUI();
+            renderInputUI(`${node.r},${node.c}`); // Highlight current rotten
+            setMathHTML(
+              `Dequeue [${node.r},${node.c}]. Xét 4 hướng xung quanh...`,
+            );
+            await sleep(currentSpeed);
+
+            for (let [dr, dc] of dirs) {
+              let nr = node.r + dr,
+                nc = node.c + dc;
+              if (
+                nr >= 0 &&
+                nr < gridRows &&
+                nc >= 0 &&
+                nc < gridCols &&
+                gridData[nr][nc] === 1
+              ) {
+                setMathHTML(
+                  `Phát hiện cam tươi tại <b class="text-yellow-400">[${nr},${nc}]</b>. <span class="text-rose-400 font-bold">LÂY NHIỄM!</span>`,
+                );
+                gridData[nr][nc] = 2; // Make it rotten visually later, temp highlight now handled in renderInputUI
+                fresh--;
+                renderInputUI(`${nr},${nc}`); // Highlight lây
+                await sleep(currentSpeed);
+
+                queueData.push({
+                  val: `${nr},${nc}`,
+                  r: nr,
+                  c: nc,
+                  id: qIdCounter++,
+                  color: "bg-rose-500 border-rose-400",
+                });
+                renderQueueUI();
+                await sleep(currentSpeed);
+              }
+            }
+          }
+          time++;
+          renderInputUI(); // Refresh to solid rotten
+          setMathHTML(
+            `<span class="text-amber-400">Xong Phút ${time}. Số cam tươi còn lại: <b>${fresh}</b>.</span>`,
+          );
+          await sleep(currentSpeed * 1.5);
+        }
+
+        if (isAborted(id)) return;
+        renderInputUI();
+        if (fresh === 0) {
+          setMathHTML(
+            `<span class="text-emerald-400 font-bold text-xl">🎉 Tất cả đã thối sau ${time} phút!</span>`,
+          );
+        } else {
+          setMathHTML(
+            `<span class="text-rose-400 font-bold text-xl">❌ Không thể lây hết. Còn sót ${fresh} quả cách ly an toàn.</span>`,
+          );
+        }
+      }
+
+      // === 4. SLIDING DEQUE (WINDOW MAX) ===
+      async function startSlidingDeque(id) {
+        queueData = [];
+        outputData = [];
+        let k = 3;
+        renderQueueUI();
+        renderOutputUI();
+
+        setMathHTML(
+          `<span class="text-blue-400">Duyệt mảng. DEQUE duy trì <b class="text-rose-400">ĐƠN ĐIỆU GIẢM</b> và chứa INDEX. K=${k}.</span>`,
+        );
+        await sleep(currentSpeed);
+
+        for (let i = 0; i < inputData.length; i++) {
+          if (isAborted(id)) return;
+          let val = inputData[i];
+
+          // Tính window bounds for highlights
+          let winL = Math.max(0, i - k + 1);
+          let windowIndices = [];
+          for (let w = winL; w <= i; w++) windowIndices.push(w);
+
+          renderInputUI(i, windowIndices);
+          setMathHTML(
+            `Tiến tới i=${i} (giá trị <b class="text-yellow-400">${val}</b>). Cửa sổ hiện tại: [${winL} .. ${i}]`,
+          );
+          await sleep(currentSpeed * 1.2);
+
+          // 1. Shift (Remove out of bound)
+          if (queueData.length > 0 && queueData[0].val < i - k + 1) {
+            let oldTop = queueData[0];
+            oldTop.color = "bg-slate-600 border-slate-500 text-slate-400";
+            renderQueueUI();
+            setMathHTML(
+              `Trượt cửa sổ: Index ${oldTop.val} ở Front (đầu) đã rớt khỏi khung K=3. <span class="text-slate-400">SHIFT VỨT BỎ!</span>`,
+            );
+            await sleep(currentSpeed * 1.5);
+            queueData.shift();
+            renderQueueUI();
+            await sleep(currentSpeed * 0.5);
+          }
+
+          // 2. Pop (Maintain Decreasing)
+          while (
+            queueData.length > 0 &&
+            inputData[queueData[queueData.length - 1].val] <= val
+          ) {
+            if (isAborted(id)) return;
+            let rear = queueData[queueData.length - 1];
+            rear.color =
+              "bg-rose-500 border-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.8)]";
+            renderQueueUI();
+            setMathHTML(
+              `Đuôi Deque (Idx ${rear.val} = ${inputData[rear.val]}) <= ${val}. Kẻ yếu hơn! -> <span class="text-rose-500 font-bold">POP VỨT BỎ!</span>`,
+            );
+            await sleep(currentSpeed * 1.5);
+            queueData.pop();
+            renderQueueUI();
+            await sleep(currentSpeed * 0.5);
+          }
+
+          // 3. Push
+          if (isAborted(id)) return;
+          setMathHTML(
+            `Push Index <b class="text-emerald-400">${i}</b> vào Đuôi Deque.`,
+          );
+          queueData.push({
+            val: i,
+            id: qIdCounter++,
+            color: "bg-indigo-600 border-indigo-400",
+          });
+          renderQueueUI();
+          await sleep(currentSpeed);
+
+          // 4. Output
+          if (i >= k - 1) {
+            let maxVal = inputData[queueData[0].val];
+            outputData.push(maxVal);
+            renderOutputUI(outputData.length - 1);
+            queueData[0].color =
+              "bg-emerald-500 border-emerald-400 scale-105 z-10 shadow-[0_0_10px_rgba(16,185,129,0.8)]";
+            renderQueueUI();
+            setMathHTML(
+              `Front của Deque (Idx ${queueData[0].val}) đang là MAX của cửa sổ này = <b class="text-emerald-400 text-lg">${maxVal}</b>.`,
+            );
+            await sleep(currentSpeed * 2);
+            queueData[0].color = "bg-indigo-600 border-indigo-400"; // reset
+          }
+        }
+
+        if (isAborted(id)) return;
+        renderInputUI(-1); // reset active
+        setMathHTML(
+          `<span class="text-emerald-400 font-bold text-xl">🎉 Hoàn tất thu thập Sliding Window Maximum siêu tốc O(n)!</span>`,
+        );
+      }
+
+      // === 5. MÊ CUNG: SHORTEST PATH IN GRID ===
+      async function startShortestPath(id) {
+        queueData = [];
+        renderQueueUI();
+
+        setMathHTML(
+          `Đưa điểm xuất phát <b class="text-emerald-400">S(0,0)</b> với Distance = 1 vào Queue.`,
+        );
+        queueData.push({
+          val: { r: 0, c: 0, d: 1 },
+          id: qIdCounter++,
+          color: "bg-emerald-500 border-emerald-400",
+        });
+        gridData[0][0] = "v_1"; // Đánh dấu visited_distance
+        renderInputUI();
+        renderQueueUI();
+        await sleep(currentSpeed * 1.5);
+
+        let dirs = [
+          [0, 1],
+          [1, 0],
+          [0, -1],
+          [-1, 0],
+        ]; // 4 hướng ngang dọc
+        let reached = false;
+
+        while (queueData.length > 0) {
+          if (isAborted(id)) return;
+
+          let node = queueData.shift();
+          let r = node.val.r,
+            c = node.val.c,
+            d = node.val.d;
+
+          setMathHTML(
+            `Dequeue ô <b class="text-rose-400">[${r},${c}]</b>. Khoảng cách đi được: ${d} bước.`,
+          );
+          renderQueueUI();
+          renderInputUI(`${r},${c}`);
+          await sleep(currentSpeed);
+
+          // Kiểm tra xem đã dẫm lên vạch đích (E) chưa
+          if (r === gridRows - 1 && c === gridCols - 1) {
+            setMathHTML(
+              `<span class="text-emerald-400 font-bold text-xl">🎉 Đã đến đích E(${r},${c})! Đường đi ngắn nhất cần = ${d} bước.</span>`,
+            );
+            renderInputUI(`${r},${c}`);
+            reached = true;
+            break;
+          }
+
+          let neighbors = [];
+          for (let [dr, dc] of dirs) {
+            let nr = r + dr,
+              nc = c + dc;
+            // Hợp lệ: Không văng khỏi mảng && chưa thăm (ô = 0)
+            if (
+              nr >= 0 &&
+              nr < gridRows &&
+              nc >= 0 &&
+              nc < gridCols &&
+              gridData[nr][nc] === 0
+            ) {
+              neighbors.push(`[${nr},${nc}]`);
+              gridData[nr][nc] = `v_${d + 1}`; // Đánh dấu đã thăm ngay lập tức để tránh đẩy lặp
+              queueData.push({
+                val: { r: nr, c: nc, d: d + 1 },
+                id: qIdCounter++,
+                color: "bg-indigo-600 border-indigo-400",
+              });
+            }
+          }
+
+          if (neighbors.length > 0) {
+            setMathHTML(
+              `Tìm thấy đường đi hợp lệ xung quanh (Không phải Tường & Chưa thăm). Enqueue: <b class="text-cyan-400">${neighbors.join(", ")}</b>`,
+            );
+            renderInputUI(
+              `${r},${c}`,
+              neighbors.map((n) => n.replace("[", "").replace("]", "")),
+            ); // Highlight hàng xóm sắp vào queue
+            renderQueueUI();
+            await sleep(currentSpeed * 2);
+          }
+        }
+
+        if (isAborted(id)) return;
+        if (!reached) {
+          setMathHTML(
+            `<span class="text-rose-400 font-bold text-xl">❌ Mê cung bị bịt kín! Không còn đường nào đi tới đích.</span>`,
+          );
+          renderInputUI();
+        }
+      }
+
+      // === 6. STREAM: KÝ TỰ DUY NHẤT ĐẦU TIÊN ===
+      async function startFirstUniqueStream(id) {
+        queueData = [];
+        outputData = [];
+        let freqMap = {};
+        renderQueueUI();
+        renderOutputUI();
+
+        for (let i = 0; i < inputData.length; i++) {
+          if (isAborted(id)) return;
+          let char = inputData[i];
+
+          freqMap[char] = (freqMap[char] || 0) + 1;
+
+          setMathHTML(
+            `Đọc <b class="text-yellow-400 text-lg">'${char}'</b> từ luồng (Stream). Bảng Tần suất (Hash Map) của '${char}' = <b class="text-rose-400">${freqMap[char]}</b>.`,
+          );
+          renderInputUI(i);
+          await sleep(currentSpeed * 1.5);
+
+          setMathHTML(
+            `Đẩy <b class="text-yellow-400">'${char}'</b> vào Queue theo đúng thứ tự đến trước, phục vụ trước.`,
+          );
+          queueData.push({
+            val: char,
+            id: qIdCounter++,
+            color: "bg-indigo-600 border-indigo-400",
+          });
+          renderQueueUI();
+          await sleep(currentSpeed * 1.5);
+
+          // Dọn rác (Lazy Deletion) trên đầu hàng đợi
+          while (queueData.length > 0 && freqMap[queueData[0].val] > 1) {
+            if (isAborted(id)) return;
+            let frontChar = queueData[0].val;
+            setMathHTML(
+              `Kiểm tra Front Queue: Ký tự <b class="text-rose-400">'${frontChar}'</b> đã lặp lại (>1 lần). Không còn duy nhất. <span class="text-rose-500 font-bold">VỨT BỎ KHỎI QUEUE!</span>`,
+            );
+            queueData[0].color =
+              "bg-slate-600 border-slate-500 text-slate-400 line-through";
+            renderQueueUI();
+            await sleep(currentSpeed * 1.5);
+
+            queueData.shift();
+            renderQueueUI();
+            await sleep(currentSpeed * 0.5);
+          }
+
+          if (isAborted(id)) return;
+          let unique = queueData.length > 0 ? queueData[0].val : "#";
+          outputData.push(unique);
+          renderOutputUI(outputData.length - 1);
+
+          if (unique !== "#") {
+            setMathHTML(
+              `=> Front Queue hiện tại là <b class="text-emerald-400 text-lg">'${unique}'</b>. Xuất đáp án ra màn hình.`,
+            );
+            if (queueData.length > 0) {
+              queueData[0].color =
+                "bg-emerald-500 border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.8)] z-10 scale-105";
+              renderQueueUI();
+              await sleep(currentSpeed);
+              queueData[0].color = "bg-indigo-600 border-indigo-400"; // revert
+            }
+          } else {
+            setMathHTML(
+              `=> Queue rỗng! Không có ký tự nào duy nhất ở thời điểm hiện tại. Xuất <b class="text-slate-400 text-lg">'#'</b>.`,
+            );
+            await sleep(currentSpeed);
+          }
+        }
+
+        if (isAborted(id)) return;
+        renderInputUI(-1); // Reset trạng thái mảng luồng
+        setMathHTML(
+          `<span class="text-emerald-400 font-bold text-xl">🎉 Đã duyệt xong toàn bộ luồng ký tự!</span>`,
+        );
+      }
+
+      window.onload = initUI;
+    </script>
+  </body>
+</html>
