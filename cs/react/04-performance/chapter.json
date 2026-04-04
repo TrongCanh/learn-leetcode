@@ -1,0 +1,9 @@
+{
+  "name": "04 — Performance",
+  "problems": [
+    { "name": "React.memo Patterns",     "file": "001-memo-usememo-usecallback.md",     "difficulty": "Medium" },
+    { "name": "Code Splitting",           "file": "002-code-splitting.md",                 "difficulty": "Medium" },
+    { "name": "Profiling & Optimization", "file": "003-profiling-optimization.md",         "difficulty": "Hard" },
+    { "name": "Optimization Patterns",    "file": "004-optimization-patterns.md",         "difficulty": "Hard" }
+  ]
+}

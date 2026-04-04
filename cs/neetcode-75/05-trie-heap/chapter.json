@@ -1,0 +1,11 @@
+{
+  "name": "Trie & Heap",
+  "problems": [
+    { "name": "Implement Trie",         "file": "001-implement-trie.md",     "difficulty": "Medium" },
+    { "name": "Design Search Words",    "file": "002-design-search-words.md",  "difficulty": "Medium" },
+    { "name": "Kth Largest in Stream",  "file": "003-kth-largest.md",         "difficulty": "Easy" },
+    { "name": "Top K Frequent",         "file": "004-top-k-frequent.md",        "difficulty": "Medium" },
+    { "name": "Median Data Stream",     "file": "005-median-data-stream.md",   "difficulty": "Medium" },
+    { "name": "Merge K Sorted Lists",  "file": "006-merge-k-sorted.md",       "difficulty": "Hard" }
+  ]
+}

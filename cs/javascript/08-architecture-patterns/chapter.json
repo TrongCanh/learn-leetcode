@@ -1,0 +1,11 @@
+{
+  "name": "08 — Architecture & Patterns",
+  "problems": [
+    { "name": "OOP Fundamentals",          "file": "001-oop-fundamentals.md",     "difficulty": "Medium" },
+    { "name": "Functional Programming",    "file": "002-functional-programming.md", "difficulty": "Medium" },
+    { "name": "Design Patterns in JS",    "file": "003-design-patterns-js.md",   "difficulty": "Hard" },
+    { "name": "Observable Pattern",        "file": "004-observable-pattern.md",   "difficulty": "Hard" },
+    { "name": "Dependency Injection",      "file": "005-dependency-injection.md", "difficulty": "Hard" },
+    { "name": "Clean Architecture",       "file": "006-clean-architecture.md",   "difficulty": "Hard" }
+  ]
+}

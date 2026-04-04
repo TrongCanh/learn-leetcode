@@ -1,0 +1,10 @@
+{
+  "chapters": [
+    "README",
+    "01-fundamentals",
+    "02-tcp-sockets",
+    "03-udp-sockets",
+    "04-advanced",
+    "05-real-world"
+  ]
+}

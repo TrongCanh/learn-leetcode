@@ -1,0 +1,11 @@
+{
+  "name": "01 — Core React",
+  "problems": [
+    { "name": "JSX",                "file": "001-jsx.md",               "difficulty": "Easy" },
+    { "name": "Components",         "file": "002-components.md",        "difficulty": "Easy" },
+    { "name": "Props",              "file": "003-props.md",             "difficulty": "Easy" },
+    { "name": "State",              "file": "004-state.md",             "difficulty": "Easy" },
+    { "name": "Rendering",          "file": "005-rendering.md",         "difficulty": "Medium" },
+    { "name": "VDOM & Reconciler",  "file": "006-vdom-reconciler.md",   "difficulty": "Hard" }
+  ]
+}

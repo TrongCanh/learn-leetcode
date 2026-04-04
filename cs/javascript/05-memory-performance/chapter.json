@@ -1,0 +1,10 @@
+{
+  "name": "05 — Memory & Performance",
+  "problems": [
+    { "name": "Stack vs Heap",         "file": "001-stack-heap.md",             "difficulty": "Hard" },
+    { "name": "Garbage Collection",     "file": "002-garbage-collection.md",     "difficulty": "Hard" },
+    { "name": "Memory Leaks",          "file": "003-memory-leaks.md",          "difficulty": "Hard" },
+    { "name": "Memory Profiling",      "file": "004-memory-profiling.md",      "difficulty": "Hard" },
+    { "name": "V8 Internals",          "file": "005-v8-internals.md",         "difficulty": "Hard" }
+  ]
+}

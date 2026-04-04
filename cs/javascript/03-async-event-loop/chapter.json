@@ -1,0 +1,13 @@
+{
+  "name": "03 — Async & Event Loop",
+  "problems": [
+    { "name": "Call Stack",             "file": "001-call-stack.md",        "difficulty": "Hard" },
+    { "name": "Event Loop",             "file": "002-event-loop.md",       "difficulty": "Hard" },
+    { "name": "Microtask & Macrotask", "file": "003-microtask-macrotask.md", "difficulty": "Hard" },
+    { "name": "Promise",                "file": "004-promise.md",          "difficulty": "Medium" },
+    { "name": "async/await",             "file": "005-async-await.md",       "difficulty": "Medium" },
+    { "name": "Error Handling",          "file": "006-error-handling.md",    "difficulty": "Medium" },
+    { "name": "Parallel Patterns",      "file": "007-parallel-patterns.md", "difficulty": "Medium" },
+    { "name": "Advanced Promise",       "file": "008-promise-patterns.md",  "difficulty": "Hard" }
+  ]
+}

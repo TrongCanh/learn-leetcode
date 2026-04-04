@@ -1,0 +1,13 @@
+{
+  "name": "Sliding Window & Binary Search",
+  "problems": [
+    { "name": "Binary Search",            "file": "001-binary-search.md",             "difficulty": "Easy" },
+    { "name": "Search 2D Matrix",         "file": "002-search-2d-matrix.md",           "difficulty": "Medium" },
+    { "name": "Koko Eating Bananas",      "file": "003-koko-eating-bananas.md",       "difficulty": "Medium" },
+    { "name": "Find Min Rotated Array",   "file": "004-find-min-rotated-array.md",   "difficulty": "Medium" },
+    { "name": "Search Rotated Array",    "file": "005-search-rotated-array.md",      "difficulty": "Medium" },
+    { "name": "Max Average Subarray",    "file": "006-max-average-subarray.md",       "difficulty": "Easy" },
+    { "name": "Max Vowels Substring",     "file": "007-max-vowels-substring.md",      "difficulty": "Medium" },
+    { "name": "Longest Subarray 1's",     "file": "008-longest-subarray-ones.md",    "difficulty": "Medium" }
+  ]
+}

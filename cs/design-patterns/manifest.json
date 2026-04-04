@@ -1,0 +1,9 @@
+{
+  "chapters": [
+    "README",
+    "01-creational-patterns",
+    "02-structural-patterns",
+    "03-behavioral-patterns",
+    "04-state-template-proxy"
+  ]
+}

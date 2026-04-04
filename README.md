@@ -10,19 +10,24 @@
 learn-leetcode/
 │
 ├── dashboard/
-│   ├── index.html     ← Giao diện dashboard
+│   ├── index.html     ← Giao diện dashboard (tự động load từ metadata)
 │   ├── styles.css    ← Toàn bộ CSS (dark/light theme)
-│   ├── app.js        ← Logic + cấu hình TRACKS
+│   ├── app.js        ← Logic — đọc metadata files tự động
 │   └── start.bat     ← Script mở dashboard nhanh
 │
 ├── cs/                ← Computer Science
-│   ├── neetcode-75/  ← ✅ Hoàn thành
-│   ├── design-patterns/ ← 🚧 Đang xây dựng
-│   ├── database/      ← 🚧 Đang xây dựng
-│   └── typescript/    ← 🚧 Đang xây dựng
+│   ├── manifest.json  ← Danh sách tracks
+│   ├── neetcode-75/
+│   │   ├── track.json    ← Metadata: name, icon, domain
+│   │   └── 01-arrays-hashing/
+│   │       └── chapter.json  ← Metadata: problems list
+│   └── javascript/
 │
-└── languages/        ← Ngôn ngữ tự nhiên
-    └── english/       ← 🚧 Đang xây dựng
+├── languages/        ← Ngôn ngữ tự nhiên
+│   └── english/
+│
+└── visualizations/ ← Trực quan hóa thuật toán
+    └── (tự tạo theo quy tắc bên dưới)
 ```
 
 **Quy tắc đặt tên domain:**
@@ -30,6 +35,7 @@ learn-leetcode/
 |--------|---------|----------|
 | `cs`   | `cs/`   | Computer Science (code, algorithm, database...) |
 | `lang` | `languages/` | Ngôn ngữ tự nhiên (English, Vietnamese...) |
+| `viz`  | `visualizations/` | Trực quan hóa thuật toán (HTML pages) |
 
 ---
 
@@ -67,54 +73,125 @@ xdg-open dashboard/index.html
 
 ## 📖 Hướng dẫn thêm Track mới
 
-### Bước 1 — Tạo cấu trúc thư mục
+> Dashboard tự động đọc cấu trúc folder và metadata files. Không cần sửa `app.js`.
+
+### Bước 1 — Cập nhật domain manifest
+
+Thêm track-id vào manifest của domain tương ứng:
+
+```
+cs/manifest.json        → thêm "system-design" vào mảng tracks
+languages/manifest.json → thêm "vietnamese" vào mảng tracks
+visualizations/manifest.json → thêm "sorting" vào mảng tracks
+```
+
+```json
+// cs/manifest.json
+{
+  "tracks": [
+    "neetcode-75",
+    "system-design",   ← thêm dòng này
+    ...
+  ]
+}
+```
+
+### Bước 2 — Tạo cấu trúc thư mục
 
 ```
 cs/<track-id>/
-├── README.md                    ← Tổng quan track (bắt buộc)
+├── track.json                 ← Metadata track (bắt buộc)
+├── manifest.json              ← Danh sách chapters (bắt buộc)
+├── README.md                  ← Tổng quan track
 └── 01-<chapter-slug>/
-    ├── README.md                ← Lý thuyết chương (bắt buộc)
-    ├── 001-<slug>.md            ← Bài 1
-    ├── 002-<slug>.md            ← Bài 2
-    └── ...
+    ├── chapter.json           ← Metadata chapter + problems (bắt buộc)
+    ├── README.md               ← Lý thuyết chương
+    ├── 001-<slug>.md         ← Bài 1
+    └── 002-<slug>.md         ← Bài 2
 ```
 
-- **`track-id`**: viết thường, dùng gạch ngang, VD: `system-design`
-- **`chapter-slug`**: viết thường, dùng gạch ngang, số 2 chữ số đứng trước, VD: `01-fundamentals`
-- **`problem-slug`**: viết thường, dùng gạch ngang, số 3 chữ số đứng trước, VD: `001-load-balancing`
+Quy tắc đặt tên:
+- **`track-id`**: viết thường, gạch ngang. VD: `system-design`
+- **`chapter-slug`**: số 2 chữ số + gạch ngang. VD: `01-fundamentals`
+- **`problem-slug`**: số 3 chữ số + gạch ngang. VD: `001-load-balancing`
 
-### Bước 2 — Khai báo trong `dashboard/app.js`
+### Bước 3 — Tạo metadata files
 
-```javascript
-// Tìm mảng TRACKS trong app.js, thêm object mới:
+#### 3a. `track.json` — metadata track
+
+```json
 {
-  id: 'system-design',           // unique, trùng với track-id
-  name: 'System Design',        // tên hiển thị
-  icon: '🏗️',                    // emoji đại diện
-  domain: 'cs',                 // 'cs' hoặc 'lang'
-  path: 'cs/system-design',     // đường dẫn từ root repo
-  readme: 'README.md',          // file tổng quan
-  chapters: [
+  "name": "System Design",
+  "icon": "🏗️",
+  "domain": "cs"
+}
+```
+
+- `name`: tên hiển thị trên dashboard
+- `icon`: emoji đại diện
+- `domain`: `cs` | `lang` | `viz`
+
+#### 3b. `manifest.json` — danh sách chapters
+
+```json
+{
+  "chapters": [
+    "README",
+    "01-fundamentals",
+    "02-scaling"
+  ]
+}
+```
+
+Quy tắc entries trong `chapters`:
+
+| Entry | Ý nghĩa | Metadata file | `ch.path` |
+|-------|---------|---------------|-----------|
+| `"README"` | Tổng quan track (folder gốc) | `README.json` | `cs/track-id/` |
+| `"01-fundamentals"` | Chapter folder | `chapter.json` | `cs/track-id/01-fundamentals/` |
+| `"intro.md"` | Markdown file riêng | `intro/README.json` | `cs/track-id/` |
+
+> `"README"` là trường hợp đặc biệt — không có subfolder, metadata nằm trong `README.json` tại folder gốc track.
+
+#### 3c. `chapter.json` — metadata chapter + problems
+
+```json
+{
+  "name": "01 — Fundamentals",
+  "problems": [
     {
-      name: 'Fundamentals',     // tên chương (có thể thêm emoji)
-      path: 'cs/system-design/01-fundamentals',
-      readme: 'README.md',
-      problems: [
-        {
-          name: 'Load Balancing',  // tên bài
-          file: '001-load-balancing.md',
-          difficulty: 'Medium'      // 'Easy' | 'Medium' | 'Hard'
-        },
-        // ... thêm bài
-      ]
+      "name": "Load Balancing",
+      "file": "001-load-balancing.md",
+      "difficulty": "Medium"
+    },
+    {
+      "name": "Caching",
+      "file": "002-caching.md",
+      "difficulty": "Medium"
     }
   ]
 }
 ```
 
-### Bước 3 — Tạo nội dung
+- `name`: tên chương (có thể thêm emoji)
+- `problems`: mảng bài tập
+  - `name`: tên bài
+  - `file`: tên file (từ thư mục chapter)
+  - `difficulty`: `Easy` | `Medium` | `Hard`
+  - `type`: `md` (default) hoặc `viz` (mở trong tab mới)
 
-#### 3a. `track/README.md` — Tổng quan track
+Với chapter `README` (folder gốc track), dùng `README.json` thay vì `chapter.json`:
+
+```json
+{
+  "name": "📖 Overview",
+  "problems": []
+}
+```
+
+### Bước 4 — Tạo nội dung markdown
+
+#### 4a. `track/README.md` — Tổng quan track
 
 ```markdown
 # System Design
@@ -127,7 +204,7 @@ Tổng quan về System Design — thiết kế hệ thống từ scale nhỏ đ
 2. [Distributed Systems](./02-distributed-systems/) — ...
 ```
 
-#### 3b. `track/chapter/README.md` — Lý thuyết chương
+#### 4b. `track/chapter/README.md` — Lý thuyết chương
 
 ```markdown
 # 01 — Fundamentals
@@ -144,7 +221,7 @@ Tổng quan về System Design — thiết kế hệ thống từ scale nhỏ đ
 - AWS ALB
 ```
 
-#### 3c. `track/chapter/001-slug.md` — Bài tập
+#### 4c. `track/chapter/001-slug.md` — Bài tập
 
 ```markdown
 # Load Balancing
@@ -259,11 +336,11 @@ A: Thử mở qua `start.bat` hoặc local server. Trình duyệt chặn `fetch(
 **Q: Làm sao để đổi màu theme?**
 A: Sửa CSS variables trong `dashboard/styles.css` phần `:root` (dark) và `[data-theme="light"]`.
 
-**Q: Muốn thêm track nhưng không có bài tập?**
-A: Vẫn khai báo bình thường, `problems: []`. Dashboard vẫn hiển thị track và cho xem README.
+**Q: Thêm track mới không hiện trên dashboard?**
+A: Kiểm tra: ① `domain/manifest.json` có track-id chưa, ② `track-id/track.json` có tồn tại không, ③ `track-id/manifest.json` có khai báo chapters đúng không.
 
 **Q: File .md có thể nằm ngoài chapter không?**
-A: Có — dashboard đọc mọi file `.md` trong chapter folder. Miễn `file` trong TRACKS config trỏ đúng, đều xem được.
+A: Không — mỗi bài phải nằm trong folder chapter và được khai báo trong `chapter.json`.
 
 ---
 
@@ -428,6 +505,9 @@ Nếu viết xong mà chưa đủ 300 dòng → CÂN NHẮC lại:
 ```
 TRƯỚC KHI COMMIT, KIỂM TRA:
 
+  □ Metadata files: track.json, manifest.json, README.json/chapter.json đầy đủ?
+  □ domain/manifest.json: đã thêm track-id?
+  □ track/manifest.json: đã thêm chapter-id?
   □ Câu hỏi mở đầu: thú vị, thực tế, tạo curiosity?
   □ Định nghĩa: rõ ràng, bản chất, không wikipedia?
   □ Code examples: chạy được, có comment, có minh hoạ?
@@ -440,7 +520,7 @@ TRƯỚC KHI COMMIT, KIỂM TRA:
   □ Độ dài: đạt mốc tối thiểu theo loại chủ đề?
   □ Đọc lại: có đoạn nào viết theo kiểu "lý thuyết suông"?
   □ File name: đúng convention (001-xxx.md)?
-  □ Router: đã update dashboard/app.js chưa?
+  □ Dashboard: refresh và kiểm tra track/chapter/problem hiển thị đúng?
 ```
 
 ---
@@ -472,24 +552,42 @@ VÍ DỤ XẤU:
 
 ---
 
-### 7. Quy Tắc Router (dashboard/app.js)
+### 7. Quy Tắc Metadata Files
 
 ```
-KHI THÊM FILE MỚI, CẬP NHẬT:
+HỆ THỐNG TỰ ĐỘNG — KHÔNG CẦN SỬA app.js
 
-① Đường dẫn: path phải match EXACT folder structure
-   path: 'cs/javascript/04-concurrency'  ✅
-   path: 'cs/javascript/04-concurrency/' ❌ (trailing slash)
+Dashboard tự động đọc:
+  domain/manifest.json
+    → thêm track-id vào mảng "tracks"
+  domain/track-id/track.json
+    → metadata: name, icon, domain
+  domain/track-id/manifest.json
+    → thêm chapter-id vào mảng "chapters"
+  domain/track-id/chapter-id/chapter.json
+    → metadata chapter + danh sách problems
+  domain/track-id/README.json
+    → metadata cho README (entry "README" trong manifest)
 
-② File name: phải match EXACT tên file trên disk
-   file: '001-thread-vs-process.md'  ✅
-   file: 'thread-vs-process.md'       ❌ (thiếu số)
+Thêm track mới:
+  ① Tạo folder cs/<track-id>/
+  ② Thêm <track-id> vào cs/manifest.json
+  ③ Tạo track.json + manifest.json
+  ④ Tạo README.json cho entry "README"
 
-③ Chapter path trong problems phải trỏ vào folder chứa file đó
-   path: 'cs/javascript/04-concurrency'  ← folder chứa file
-   file: '001-thread-vs-process.md'    ← file trong folder đó
+Thêm chapter mới:
+  ① Tạo folder cs/<track-id>/<chapter-id>/
+  ② Thêm <chapter-id> vào cs/<track-id>/manifest.json
+  ③ Tạo chapter.json
 
-④ difficulty: chỉ 'Easy' | 'Medium' | 'Hard'
+Thêm bài mới:
+  ① Tạo file .md trong chapter folder
+  ② Thêm entry vào chapter.json
+
+Thêm visualization:
+  ① Tạo file .html trong visualizations/<track-id>/<chapter-id>/
+  ② Thêm entry vào chapter.json với "type": "viz"
+  ③ Thêm <track-id> vào visualizations/manifest.json
 ```
 
 ---
@@ -524,18 +622,19 @@ KHI XÂY DỰNG MỘT TRACK MỚI (ví dụ: Database, System Design):
   □ Outline: 8–12 chapters, chia theo level (Easy→Hard)
   □ Mỗi chapter: README.md với overview + learning path
   □ Priority: viết fundamentals trước, advanced sau
-  □ Router: update dashboard/app.js sau khi viết xong chapter
+  □ Metadata: tạo track.json, manifest.json, chapter.json cho mỗi chapter
   □ README: update track overview + relationship diagram
-  □ Preview: test router trong dashboard trước khi commit
+  □ Preview: mở dashboard, kiểm tra track hiển thị đúng trước khi commit
 
   THỨ TỰ ƯU TIÊN:
-  1. Track README (overview)
-  2. Chapter README (per chapter)
-  3. Fundamentals chapters (01, 02)
-  4. Core chapters (03–06)
-  5. Advanced chapters (07–10)
-  6. Test dashboard router
-  7. Commit
+  1. cs/manifest.json — thêm track-id
+  2. Tạo folder track
+  3. Tạo track.json + manifest.json
+  4. Tạo README.json (metadata cho entry "README" trong manifest)
+  5. Tạo chapter folder + chapter.json
+  6. Viết nội dung markdown
+  7. Test dashboard (hard refresh Ctrl+Shift+R)
+  8. Commit
 ```
 
 ---

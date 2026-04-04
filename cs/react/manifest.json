@@ -1,0 +1,11 @@
+{
+  "chapters": [
+    "README",
+    "01-core-react",
+    "02-hooks-lifecycle",
+    "03-state-management",
+    "04-performance",
+    "05-architecture",
+    "06-deep-dive"
+  ]
+}

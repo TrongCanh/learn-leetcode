@@ -1,0 +1,9 @@
+{
+  "name": "05 — Architecture",
+  "problems": [
+    { "name": "Component Patterns",    "file": "001-component-patterns.md",    "difficulty": "Medium" },
+    { "name": "Folder Structure",      "file": "002-folder-structure.md",     "difficulty": "Medium" },
+    { "name": "API Layer",             "file": "003-api-layer.md",            "difficulty": "Medium" },
+    { "name": "Testing & Debugging",   "file": "004-testing-debugging.md",    "difficulty": "Medium" }
+  ]
+}

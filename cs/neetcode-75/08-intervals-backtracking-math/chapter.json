@@ -1,0 +1,20 @@
+{
+  "name": "Intervals, Backtracking & Math",
+  "problems": [
+    { "name": "Insert Interval",            "file": "001-insert-interval.md",        "difficulty": "Hard" },
+    { "name": "Merge Intervals",            "file": "002-merge-intervals.md",        "difficulty": "Medium" },
+    { "name": "Non-overlapping Intervals",  "file": "003-non-overlapping-intervals.md", "difficulty": "Medium" },
+    { "name": "Meeting Rooms",             "file": "004-meeting-rooms.md",           "difficulty": "Medium" },
+    { "name": "Meeting Rooms II",          "file": "005-meeting-rooms-ii.md",       "difficulty": "Medium" },
+    { "name": "Subsets",                   "file": "006-subsets.md",                 "difficulty": "Medium" },
+    { "name": "Combination Sum",           "file": "007-combination-sum.md",        "difficulty": "Medium" },
+    { "name": "Permutations",              "file": "008-permutations.md",            "difficulty": "Medium" },
+    { "name": "Subsets II",                "file": "009-subsets-ii.md",             "difficulty": "Medium" },
+    { "name": "Permutations II",           "file": "010-permutations-ii.md",       "difficulty": "Medium" },
+    { "name": "Combination Sum II",         "file": "011-combination-sum-ii.md",    "difficulty": "Medium" },
+    { "name": "Power of Two",              "file": "012-power-of-two.md",           "difficulty": "Easy" },
+    { "name": "Number of 1 Bits",          "file": "013-number-of-1-bits.md",     "difficulty": "Easy" },
+    { "name": "Count Primes",              "file": "014-count-primes.md",          "difficulty": "Medium" },
+    { "name": "Rotate Image",              "file": "015-rotate-image.md",         "difficulty": "Medium" }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "name": "09 — Performance Optimization",
+  "problems": [
+    { "name": "Debounce & Throttle",   "file": "001-debounce-throttle.md",    "difficulty": "Medium" },
+    { "name": "Lazy Loading",           "file": "002-lazy-loading.md",         "difficulty": "Medium" },
+    { "name": "Code Splitting",         "file": "003-code-splitting.md",       "difficulty": "Hard" },
+    { "name": "Rendering Performance",  "file": "004-rendering-perf.md",       "difficulty": "Hard" },
+    { "name": "Caching Strategies",     "file": "005-caching.md",              "difficulty": "Hard" }
+  ]
+}

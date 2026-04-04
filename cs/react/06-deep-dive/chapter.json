@@ -1,0 +1,7 @@
+{
+  "name": "06 — Deep Dive",
+  "problems": [
+    { "name": "React Internals",  "file": "001-react-internals.md",   "difficulty": "Hard" },
+    { "name": "Interview Prep",   "file": "002-interview-prep.md",    "difficulty": "Hard" }
+  ]
+}

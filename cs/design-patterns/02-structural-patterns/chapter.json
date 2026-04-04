@@ -1,0 +1,8 @@
+{
+  "name": "Structural Patterns",
+  "problems": [
+    { "name": "Adapter",    "file": "004-adapter.md",         "difficulty": "Medium" },
+    { "name": "Facade",    "file": "005-facade.md",          "difficulty": "Medium" },
+    { "name": "Decorator", "file": "006-decorator.md",       "difficulty": "Medium" }
+  ]
+}

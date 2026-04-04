@@ -1,0 +1,9 @@
+{
+  "name": "06 — Modules",
+  "problems": [
+    { "name": "ESM vs CommonJS",    "file": "001-esm-cjs.md",               "difficulty": "Medium" },
+    { "name": "Dynamic Import",     "file": "002-dynamic-import.md",        "difficulty": "Medium" },
+    { "name": "Module Patterns",    "file": "003-module-patterns.md",       "difficulty": "Medium" },
+    { "name": "Tree Shaking",       "file": "004-tree-shaking.md",         "difficulty": "Medium" }
+  ]
+}

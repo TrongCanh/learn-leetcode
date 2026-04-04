@@ -1,0 +1,10 @@
+{
+  "name": "02 — Hooks & Lifecycle",
+  "problems": [
+    { "name": "useState & useEffect",         "file": "001-usestate-useeffect.md",           "difficulty": "Medium" },
+    { "name": "Stale Closure",                 "file": "002-stale-closure.md",               "difficulty": "Medium" },
+    { "name": "useRef, useMemo, useCallback", "file": "003-useref-usememo-usecallback.md",  "difficulty": "Medium" },
+    { "name": "useReducer & Custom Hooks",    "file": "004-usereducer-custom-hooks.md",      "difficulty": "Medium" },
+    { "name": "Advanced Hooks",                "file": "005-advanced-hooks.md",               "difficulty": "Hard" }
+  ]
+}

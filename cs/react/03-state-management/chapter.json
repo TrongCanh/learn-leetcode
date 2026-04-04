@@ -1,0 +1,8 @@
+{
+  "name": "03 — State Management",
+  "problems": [
+    { "name": "Context API",              "file": "001-context-api.md",      "difficulty": "Medium" },
+    { "name": "Redux Toolkit vs Zustand", "file": "002-redux-zustand.md",    "difficulty": "Medium" },
+    { "name": "Lifting State & Migration", "file": "003-lifting-state-migration.md", "difficulty": "Medium" }
+  ]
+}

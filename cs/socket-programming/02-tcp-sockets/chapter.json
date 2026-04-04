@@ -1,0 +1,8 @@
+{
+  "name": "02 — TCP Sockets",
+  "problems": [
+    { "name": "TCP Server",        "file": "005-tcp-server.md",       "difficulty": "Medium" },
+    { "name": "TCP Client",        "file": "006-tcp-client.md",       "difficulty": "Medium" },
+    { "name": "TCP State Diagram",  "file": "007-tcp-state-diagram.md", "difficulty": "Hard" }
+  ]
+}

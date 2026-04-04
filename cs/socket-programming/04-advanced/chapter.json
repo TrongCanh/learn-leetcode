@@ -1,0 +1,9 @@
+{
+  "name": "04 — Advanced",
+  "problems": [
+    { "name": "Non-blocking I/O",  "file": "011-non-blocking-io.md",   "difficulty": "Hard" },
+    { "name": "Socket Options",   "file": "012-socket-options.md",    "difficulty": "Medium" },
+    { "name": "IPv6",             "file": "013-ipv6.md",              "difficulty": "Medium" },
+    { "name": "Socket Security",  "file": "014-socket-security.md",   "difficulty": "Medium" }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "name": "07 — Use Cases",
+  "problems": [
+    { "name": "Caching",       "file": "026-caching.md",              "difficulty": "Medium" },
+    { "name": "Rate Limiting", "file": "027-rate-limiting.md",         "difficulty": "Medium" },
+    { "name": "Session Store", "file": "028-session-store.md",         "difficulty": "Easy" },
+    { "name": "Leaderboard",   "file": "029-leaderboard.md",           "difficulty": "Medium" },
+    { "name": "Message Queue", "file": "030-message-queue.md",         "difficulty": "Hard" },
+    { "name": "Vector Search", "file": "031-vector-search.md",         "difficulty": "Hard" },
+    { "name": "Redis Stack",   "file": "032-redis-stack.md",           "difficulty": "Medium" }
+  ]
+}

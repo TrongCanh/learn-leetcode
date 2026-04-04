@@ -1,0 +1,10 @@
+{
+  "name": "03 — Features",
+  "problems": [
+    { "name": "Pub/Sub",       "file": "010-pubsub.md",               "difficulty": "Easy" },
+    { "name": "Transactions",  "file": "011-transactions.md",         "difficulty": "Medium" },
+    { "name": "Lua Scripting", "file": "012-lua-scripting.md",         "difficulty": "Hard" },
+    { "name": "Pipelines",     "file": "013-pipelines.md",             "difficulty": "Medium" },
+    { "name": "Modules",       "file": "014-modules.md",               "difficulty": "Medium" }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "name": "State & Template & Proxy",
+  "problems": [
+    { "name": "State",          "file": "010-state.md",           "difficulty": "Medium" },
+    { "name": "Template Method", "file": "011-template-method.md",  "difficulty": "Medium" },
+    { "name": "Proxy",          "file": "012-proxy.md",            "difficulty": "Medium" }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "chapters": [
+    "README",
+    "01-core-data-structures",
+    "02-advanced-structures",
+    "03-features",
+    "04-persistence",
+    "05-clustering-ha",
+    "06-performance",
+    "07-use-cases"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "chapters": [
+    "README",
+    "01-js-core",
+    "02-prototype-oop",
+    "03-async-event-loop",
+    "04-concurrency",
+    "05-memory-performance",
+    "06-modules",
+    "07-runtime-environment",
+    "08-architecture-patterns",
+    "09-performance-optimization",
+    "10-system-design"
+  ]
+}

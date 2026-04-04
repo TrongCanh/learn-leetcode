@@ -1,0 +1,12 @@
+{
+  "name": "07 — Runtime Environment",
+  "problems": [
+    { "name": "Browser APIs",          "file": "001-browser-apis.md",          "difficulty": "Medium" },
+    { "name": "DOM API",               "file": "002-dom-api.md",              "difficulty": "Medium" },
+    { "name": "Node.js Runtime",      "file": "003-nodejs-runtime.md",       "difficulty": "Medium" },
+    { "name": "Browser Engine",       "file": "004-browser-engine.md",       "difficulty": "Medium" },
+    { "name": "Security Model",        "file": "005-security-model.md",       "difficulty": "Medium" },
+    { "name": "WebAssembly",          "file": "006-web-assembly.md",        "difficulty": "Hard" },
+    { "name": "Cross-Platform JS",     "file": "007-cross-platform.md",      "difficulty": "Medium" }
+  ]
+}

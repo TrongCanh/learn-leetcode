@@ -38,6 +38,10 @@
   --oth-bg: rgba(251, 191, 36, 0.1);
   --oth-border: rgba(251, 191, 36, 0.2);
 
+  --viz: #a78bfa;
+  --viz-bg: rgba(167, 139, 250, 0.1);
+  --viz-border: rgba(167, 139, 250, 0.2);
+
   /* State */
   --done: #34d399;
   --done-bg: rgba(52, 211, 153, 0.12);
@@ -95,6 +99,11 @@ html { scroll-behavior: smooth; }
   --oth: #f59e0b;
   --oth-bg: rgba(245, 158, 11, 0.1);
   --oth-border: rgba(245, 158, 11, 0.2);
+
+  --viz: #7c3aed;
+  --viz-bg: rgba(124, 58, 237, 0.1);
+  --viz-border: rgba(124, 58, 237, 0.2);
+
   --done: #10b981;
   --done-bg: rgba(16, 185, 129, 0.12);
   --easy: #059669;
@@ -329,10 +338,12 @@ body {
 .sidebar-track-icon.cs    { background: var(--cs-bg); }
 .sidebar-track-icon.lang  { background: var(--lang-bg); }
 .sidebar-track-icon.other { background: var(--oth-bg); }
+.sidebar-track-icon.viz   { background: var(--viz-bg); }
 
 .sidebar-track.active .sidebar-track-icon.cs    { background: var(--cs); }
 .sidebar-track.active .sidebar-track-icon.lang   { background: var(--lang); }
 .sidebar-track.active .sidebar-track-icon.other  { background: var(--oth); }
+.sidebar-track.active .sidebar-track-icon.viz   { background: var(--viz); }
 
 .sidebar-track-info {
   flex: 1;
@@ -353,6 +364,7 @@ body {
 .sidebar-track.active .sidebar-track-name { color: var(--accent-light); }
 .sidebar-track.active.lang .sidebar-track-name { color: var(--lang); }
 .sidebar-track.active.other .sidebar-track-name { color: var(--oth); }
+.sidebar-track.active.viz  .sidebar-track-name  { color: var(--viz); }
 
 .sidebar-track-badge {
   font-size: 0.65rem;
@@ -471,6 +483,7 @@ body {
 .tab.active[data-domain="all"]  { color: var(--accent-light); border-bottom-color: var(--accent); }
 .tab.active[data-domain="cs"]   { color: var(--cs); border-bottom-color: var(--cs); }
 .tab.active[data-domain="lang"]  { color: var(--lang); border-bottom-color: var(--lang); }
+.tab.active[data-domain="viz"]   { color: var(--viz); border-bottom-color: var(--viz); }
 
 /* ── Main scroll area ── */
 .main-scroll {
@@ -534,6 +547,7 @@ body {
 .track-card.cs::before    { background: linear-gradient(90deg, var(--cs), var(--accent)); }
 .track-card.lang::before  { background: linear-gradient(90deg, var(--lang), #06b6d4); }
 .track-card.other::before { background: linear-gradient(90deg, var(--oth), #f97316); }
+.track-card.viz::before   { background: linear-gradient(90deg, var(--viz), #ec4899); }
 
 .track-card:hover {
   transform: translateY(-4px);
@@ -544,6 +558,7 @@ body {
 .track-card.cs:hover    { border-color: var(--cs); box-shadow: 0 8px 30px rgba(129, 140, 248, 0.2); }
 .track-card.lang:hover  { border-color: var(--lang); box-shadow: 0 8px 30px rgba(52, 211, 153, 0.2); }
 .track-card.other:hover { border-color: var(--oth); box-shadow: 0 8px 30px rgba(251, 191, 36, 0.2); }
+.track-card.viz:hover   { border-color: var(--viz); box-shadow: 0 8px 30px rgba(167, 139, 250, 0.25); }
 
 .track-card:hover::before { opacity: 1; }
 
@@ -643,6 +658,7 @@ body {
 .track-detail-hero.cs::before    { background: var(--cs); }
 .track-detail-hero.lang::before  { background: var(--lang); }
 .track-detail-hero.other::before { background: var(--oth); }
+.track-detail-hero.viz::before   { background: var(--viz); }
 
 .track-detail-icon {
   font-size: 2.8rem;
@@ -750,6 +766,8 @@ body {
 .readme-btn.lang:hover  { background: var(--lang); color: #fff; box-shadow: 0 4px 15px rgba(52, 211, 153, 0.4); }
 .readme-btn.other { background: var(--oth-bg); color: var(--oth); border-color: var(--oth-border); }
 .readme-btn.other:hover { background: var(--oth); color: #000; box-shadow: 0 4px 15px rgba(251, 191, 36, 0.4); }
+.readme-btn.viz   { background: var(--viz-bg); color: var(--viz); border-color: var(--viz-border); }
+.readme-btn.viz:hover   { background: var(--viz); color: #fff; box-shadow: 0 4px 15px rgba(167, 139, 250, 0.4); }
 
 /* ── Chapters ── */
 .chapters-list {
@@ -1097,6 +1115,7 @@ body {
 .modal-domain.cs    { background: var(--cs); color: #fff; }
 .modal-domain.lang  { background: var(--lang); color: #fff; }
 .modal-domain.other { background: var(--oth); color: #fff; }
+.modal-domain.viz   { background: var(--viz); color: #fff; }
 
 .modal-title {
   flex: 1;

@@ -1,0 +1,8 @@
+{
+  "name": "02 — Advanced Structures",
+  "problems": [
+    { "name": "Streams",     "file": "007-streams.md",               "difficulty": "Medium" },
+    { "name": "Geospatial",  "file": "008-geospatial.md",            "difficulty": "Medium" },
+    { "name": "JSON",        "file": "009-json.md",                  "difficulty": "Medium" }
+  ]
+}

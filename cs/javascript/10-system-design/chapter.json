@@ -1,0 +1,10 @@
+{
+  "name": "10 — System Design",
+  "problems": [
+    { "name": "Event-Driven Architecture", "file": "001-event-driven.md",         "difficulty": "Hard" },
+    { "name": "Scaling Techniques",        "file": "002-scaling.md",              "difficulty": "Hard" },
+    { "name": "Background Jobs",           "file": "003-background-jobs.md",     "difficulty": "Hard" },
+    { "name": "CDN & Caching Layers",      "file": "004-cdn-caching.md",          "difficulty": "Hard" },
+    { "name": "State Management Arch",     "file": "005-state-management-arch.md", "difficulty": "Hard" }
+  ]
+}

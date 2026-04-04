@@ -1,0 +1,9 @@
+{
+  "name": "05 — Clustering & HA",
+  "problems": [
+    { "name": "Replication", "file": "018-replication.md",           "difficulty": "Medium" },
+    { "name": "Sentinel",    "file": "019-sentinel.md",              "difficulty": "Hard" },
+    { "name": "Cluster",     "file": "020-cluster.md",               "difficulty": "Hard" },
+    { "name": "Redlock",     "file": "021-redlock.md",               "difficulty": "Hard" }
+  ]
+}

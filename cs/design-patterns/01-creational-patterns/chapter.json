@@ -1,0 +1,8 @@
+{
+  "name": "Creational Patterns",
+  "problems": [
+    { "name": "Singleton",      "file": "001-singleton.md",        "difficulty": "Easy" },
+    { "name": "Factory Method", "file": "002-factory-method.md",  "difficulty": "Easy" },
+    { "name": "Builder",       "file": "003-builder.md",         "difficulty": "Easy" }
+  ]
+}

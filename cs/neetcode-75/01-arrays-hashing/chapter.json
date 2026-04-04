@@ -1,0 +1,13 @@
+{
+  "name": "Arrays & Hashing",
+  "problems": [
+    { "name": "Contains Duplicate",      "file": "001-contains-duplicate.md",          "difficulty": "Easy" },
+    { "name": "Valid Anagram",          "file": "002-valid-anagram.md",                "difficulty": "Easy" },
+    { "name": "Two Sum",                "file": "003-two-sum.md",                      "difficulty": "Easy" },
+    { "name": "Group Anagrams",         "file": "004-group-anagrams.md",               "difficulty": "Medium" },
+    { "name": "Top K Frequent Elements","file": "005-top-k-frequent-elements.md",       "difficulty": "Medium" },
+    { "name": "Product Except Self",    "file": "006-product-of-array-except-self.md",  "difficulty": "Medium" },
+    { "name": "Valid Sudoku",           "file": "007-valid-sudoku.md",                  "difficulty": "Medium" },
+    { "name": "Encode/Decode Strings",  "file": "008-encode-decode-strings.md",         "difficulty": "Medium" }
+  ]
+}

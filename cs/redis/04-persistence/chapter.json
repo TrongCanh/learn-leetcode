@@ -1,0 +1,8 @@
+{
+  "name": "04 — Persistence",
+  "problems": [
+    { "name": "RDB Snapshots", "file": "015-rdb-snapshots.md",         "difficulty": "Medium" },
+    { "name": "AOF",           "file": "016-aof.md",                   "difficulty": "Medium" },
+    { "name": "Hybrid Storage",  "file": "017-hybrid-storage.md",        "difficulty": "Hard" }
+  ]
+}

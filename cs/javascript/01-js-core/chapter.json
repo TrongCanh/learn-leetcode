@@ -1,0 +1,15 @@
+{
+  "name": "01 — JavaScript Core",
+  "problems": [
+    { "name": "Scope",             "file": "001-scope.md",              "difficulty": "Easy" },
+    { "name": "Closure",          "file": "002-closure.md",            "difficulty": "Easy" },
+    { "name": "Hoisting",         "file": "003-hoisting.md",           "difficulty": "Easy" },
+    { "name": "this Binding",     "file": "004-this.md",              "difficulty": "Medium" },
+    { "name": "Data Types",        "file": "005-data-types.md",         "difficulty": "Easy" },
+    { "name": "Execution Context","file": "006-execution-context.md",  "difficulty": "Medium" },
+    { "name": "Spread & Rest",    "file": "007-spread-rest.md",        "difficulty": "Easy" },
+    { "name": "Destructuring",    "file": "008-destructuring.md",      "difficulty": "Easy" },
+    { "name": "Type Coercion",    "file": "009-type-coercion.md",      "difficulty": "Medium" },
+    { "name": "Equality",         "file": "010-equality.md",           "difficulty": "Medium" }
+  ]
+}

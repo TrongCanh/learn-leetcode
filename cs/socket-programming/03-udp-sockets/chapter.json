@@ -1,0 +1,8 @@
+{
+  "name": "03 — UDP Sockets",
+  "problems": [
+    { "name": "UDP Server",          "file": "008-udp-server.md",             "difficulty": "Medium" },
+    { "name": "UDP Client",          "file": "009-udp-client.md",             "difficulty": "Medium" },
+    { "name": "Broadcast & Multicast","file": "010-broadcast-multicast.md",   "difficulty": "Hard" }
+  ]
+}

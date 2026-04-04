@@ -1,0 +1,15 @@
+{
+  "name": "Graphs",
+  "problems": [
+    { "name": "Number of Islands",        "file": "001-number-of-islands.md",     "difficulty": "Medium" },
+    { "name": "Clone Graph",              "file": "002-clone-graph.md",          "difficulty": "Medium" },
+    { "name": "Pacific Atlantic",        "file": "003-pacific-atlantic.md",    "difficulty": "Medium" },
+    { "name": "Course Schedule",          "file": "004-course-schedule.md",      "difficulty": "Medium" },
+    { "name": "Number of Components",     "file": "005-number-of-components.md", "difficulty": "Medium" },
+    { "name": "Rotting Oranges",         "file": "006-rotting-oranges.md",      "difficulty": "Medium" },
+    { "name": "Keys and Rooms",          "file": "007-keys-and-rooms.md",       "difficulty": "Easy" },
+    { "name": "Accounts Merge",          "file": "008-accounts-merge.md",       "difficulty": "Medium" },
+    { "name": "Minimum Knight Moves",    "file": "009-minimum-knight-moves.md", "difficulty": "Medium" },
+    { "name": "Reorder Routes",          "file": "010-reorder-routes.md",       "difficulty": "Medium" }
+  ]
+}

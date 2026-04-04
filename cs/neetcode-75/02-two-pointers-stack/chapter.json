@@ -1,0 +1,13 @@
+{
+  "name": "Two Pointers & Stack",
+  "problems": [
+    { "name": "Valid Parentheses",       "file": "001-valid-parentheses.md",            "difficulty": "Easy" },
+    { "name": "Longest Substring",       "file": "002-longest-substring.md",             "difficulty": "Medium" },
+    { "name": "Container With Most Water","file": "003-container-with-most-water.md",    "difficulty": "Medium" },
+    { "name": "Backspace String Compare", "file": "004-backspace-string-compare.md",     "difficulty": "Easy" },
+    { "name": "Valid Palindrome",        "file": "005-valid-palindrome.md",             "difficulty": "Easy" },
+    { "name": "Remove Duplicates",       "file": "006-remove-duplicates.md",             "difficulty": "Easy" },
+    { "name": "3Sum",                    "file": "007-3sum.md",                          "difficulty": "Medium" },
+    { "name": "Trapping Rain Water",     "file": "008-trapping-rain-water.md",          "difficulty": "Hard" }
+  ]
+}

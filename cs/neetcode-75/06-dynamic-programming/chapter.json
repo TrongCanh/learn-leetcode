@@ -1,0 +1,11 @@
+{
+  "name": "Dynamic Programming",
+  "problems": [
+    { "name": "Climbing Stairs",          "file": "001-climbing-stairs.md",     "difficulty": "Easy" },
+    { "name": "Min Cost Climbing",        "file": "002-min-cost-climbing.md",   "difficulty": "Easy" },
+    { "name": "House Robber",             "file": "003-house-robber.md",        "difficulty": "Medium" },
+    { "name": "Longest Palindromic",      "file": "004-longest-palindromic.md", "difficulty": "Medium" },
+    { "name": "Coin Change",              "file": "005-coin-change.md",          "difficulty": "Medium" },
+    { "name": "Longest Increasing Subseq","file": "006-longest-increasing.md", "difficulty": "Medium" }
+  ]
+}

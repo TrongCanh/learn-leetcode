@@ -1,0 +1,8 @@
+{
+  "name": "05 — Real-World",
+  "problems": [
+    { "name": "HTTP & WebSocket",     "file": "015-http-websocket.md",    "difficulty": "Medium" },
+    { "name": "RPC & gRPC",          "file": "016-rpc-grpc.md",          "difficulty": "Hard" },
+    { "name": "Performance Tuning",  "file": "017-performance-tuning.md", "difficulty": "Hard" }
+  ]
+}

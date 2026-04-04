@@ -1,0 +1,14 @@
+{
+  "name": "Linked List & Trees",
+  "problems": [
+    { "name": "Reverse Linked List",     "file": "001-reverse-linked-list.md",      "difficulty": "Easy" },
+    { "name": "Merge Two Sorted Lists",  "file": "002-merge-two-sorted-lists.md",  "difficulty": "Easy" },
+    { "name": "Reorder List",             "file": "003-reorder-list.md",             "difficulty": "Medium" },
+    { "name": "Remove Nth Node",          "file": "004-remove-nth-node.md",         "difficulty": "Medium" },
+    { "name": "Maximum Depth",           "file": "005-maximum-depth.md",             "difficulty": "Easy" },
+    { "name": "Invert Tree",             "file": "006-invert-tree.md",               "difficulty": "Easy" },
+    { "name": "Same Tree",               "file": "007-same-tree.md",                 "difficulty": "Easy" },
+    { "name": "Subtree",                 "file": "008-subtree.md",                   "difficulty": "Easy" },
+    { "name": "Lowest Common Ancestor",  "file": "009-lowest-common-ancestor.md",  "difficulty": "Medium" }
+  ]
+}

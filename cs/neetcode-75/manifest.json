@@ -1,0 +1,13 @@
+{
+  "chapters": [
+    "README",
+    "01-arrays-hashing",
+    "02-two-pointers-stack",
+    "03-sliding-window-binary-search",
+    "04-linked-list-trees",
+    "05-trie-heap",
+    "06-dynamic-programming",
+    "07-graphs",
+    "08-intervals-backtracking-math"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "name": "Behavioral Patterns",
+  "problems": [
+    { "name": "Observer", "file": "007-observer.md",        "difficulty": "Easy" },
+    { "name": "Strategy", "file": "008-strategy.md",        "difficulty": "Easy" },
+    { "name": "Command",  "file": "009-command.md",          "difficulty": "Medium" }
+  ]
+}

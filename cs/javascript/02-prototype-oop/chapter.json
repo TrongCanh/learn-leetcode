@@ -1,0 +1,11 @@
+{
+  "name": "02 — Prototype & OOP",
+  "problems": [
+    { "name": "Prototype Chain",      "file": "001-prototype-chain.md",   "difficulty": "Medium" },
+    { "name": "ES6 Class Syntax",      "file": "002-class-syntax.md",       "difficulty": "Medium" },
+    { "name": "Inheritance Patterns",   "file": "003-inheritance-patterns.md", "difficulty": "Medium" },
+    { "name": "Mixins",               "file": "004-mixins.md",            "difficulty": "Medium" },
+    { "name": "Object Patterns",       "file": "005-object-patterns.md",  "difficulty": "Medium" },
+    { "name": "Symbols & Well-known",  "file": "006-symbols-wells.md",     "difficulty": "Hard" }
+  ]
+}

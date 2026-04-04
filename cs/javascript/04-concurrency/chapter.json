@@ -1,0 +1,10 @@
+{
+  "name": "04 — Concurrency",
+  "problems": [
+    { "name": "Thread vs Process",   "file": "001-thread-vs-process.md",    "difficulty": "Hard" },
+    { "name": "Web Workers",         "file": "002-web-workers.md",           "difficulty": "Hard" },
+    { "name": "Worker Threads",       "file": "003-worker-threads.md",        "difficulty": "Hard" },
+    { "name": "Cluster",             "file": "004-cluster.md",               "difficulty": "Hard" },
+    { "name": "SharedArrayBuffer",   "file": "005-sharedarraybuffer.md",     "difficulty": "Hard" }
+  ]
+}

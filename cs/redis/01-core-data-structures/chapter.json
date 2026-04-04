@@ -1,0 +1,11 @@
+{
+  "name": "01 — Core Data Structures",
+  "problems": [
+    { "name": "Strings",               "file": "001-strings.md",               "difficulty": "Easy" },
+    { "name": "Lists",                 "file": "002-lists.md",                 "difficulty": "Easy" },
+    { "name": "Sets",                  "file": "003-sets.md",                  "difficulty": "Easy" },
+    { "name": "Sorted Sets",           "file": "004-sorted-sets.md",           "difficulty": "Medium" },
+    { "name": "Hashes",                "file": "005-hashes.md",                "difficulty": "Easy" },
+    { "name": "Bitmaps & HyperLogLog", "file": "006-bitmaps-hyperloglog.md",   "difficulty": "Medium" }
+  ]
+}

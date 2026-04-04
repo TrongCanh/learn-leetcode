@@ -1,0 +1,9 @@
+{
+  "name": "01 — Fundamentals",
+  "problems": [
+    { "name": "Network Basics",   "file": "001-network-basics.md",    "difficulty": "Easy" },
+    { "name": "TCP vs UDP",      "file": "002-tcp-vs-udp.md",        "difficulty": "Easy" },
+    { "name": "Socket API",      "file": "003-socket-api.md",        "difficulty": "Medium" },
+    { "name": "OSI Model",        "file": "004-osi-model.md",        "difficulty": "Easy" }
+  ]
+}
