@@ -155,10 +155,11 @@ Quy tắc entries trong `chapters`:
 
 **Lưu ý đường dẫn file cho visualization:**
 - Viz files nằm ở repo root: `visualizations/sorting/01-sorting/algo.html`
-- Trong `chapter.json`, `file` phải có prefix `../`:
+- Trong `chapter.json`, `file` phải là **absolute path từ root repo** (bắt đầu bằng `/`):
   ```json
-  "file": "../visualizations/sorting/01-sorting/algo.html"
+  "file": "/visualizations/sorting/01-sorting/algo.html"
   ```
+- ❌ Không dùng relative path như `../` hay `../../` — sẽ sai khi iframe resolve từ repo root
 - Viz hiển thị trong modal với width tối đa **1400px**
 
 #### 3c. `chapter.json` — metadata chapter + problems
@@ -596,8 +597,8 @@ Thêm visualization:
   ① Tạo file .html trong visualizations/<track-id>/<chapter-id>/
   ② Thêm entry vào chapter.json với "type": "viz"
   ③ Thêm <track-id> vào visualizations/manifest.json
-  ⚠️ Đường dẫn file phải có prefix `../`:
-     "file": "../visualizations/sorting/01-sorting/algo.html"
+  ⚠️ Đường dẫn file phải là absolute path từ root (bắt đầu bằng `/`):
+     "file": "/visualizations/sorting/01-sorting/algo.html"
 ```
 
 ---

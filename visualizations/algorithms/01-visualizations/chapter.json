@@ -1,0 +1,17 @@
+{
+  "name": "🔀 Visualizations",
+  "problems": [
+    {
+      "name": "Sorting Algorithms",
+      "file": "/visualizations/sorting/01-comparison-sorting/sorting-algorithms.html",
+      "type": "viz",
+      "difficulty": "Easy"
+    },
+    {
+      "name": "Search Algorithms",
+      "file": "/visualizations/algorithms/01-visualizations/search-algorithms.html",
+      "type": "viz",
+      "difficulty": "Easy"
+    }
+  ]
+}
