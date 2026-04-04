@@ -1,0 +1,1042 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trực Quan Hóa Thuật Toán Tìm Kiếm</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .hide-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      /* Hiệu ứng pop-up nhẹ cho ô mảng */
+      .array-box {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+    </style>
+  </head>
+  <body
+    class="bg-slate-50 text-slate-900 font-sans min-h-screen p-4 sm:p-6 lg:p-8"
+  >
+    <div class="max-w-7xl mx-auto space-y-8">
+      <!-- HEADER -->
+      <header class="text-center space-y-4 mb-10">
+        <div
+          class="inline-flex items-center justify-center p-3 bg-indigo-100 text-indigo-600 rounded-full mb-2 shadow-sm"
+        >
+          <i data-lucide="search" class="w-8 h-8"></i>
+        </div>
+        <h1
+          class="text-3xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-600"
+        >
+          Trực Quan Thuật Toán Tìm Kiếm
+        </h1>
+        <p class="text-lg text-slate-600 max-w-2xl mx-auto">
+          Quan sát cách CPU duyệt qua mảng dữ liệu và cách các con trỏ
+          (Pointers) hoạt động theo thời gian thực.
+        </p>
+      </header>
+
+      <!-- BẢNG SO SÁNH -->
+      <div
+        class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 overflow-hidden flex flex-col"
+      >
+        <div class="flex items-center mb-6">
+          <i data-lucide="database" class="w-6 h-6 text-indigo-500 mr-2"></i>
+          <h2 class="text-xl font-bold text-slate-800">
+            Bảng So Sánh Độ Phức Tạp
+          </h2>
+        </div>
+        <div class="overflow-x-auto">
+          <table
+            class="w-full text-left border-collapse whitespace-nowrap min-w-[600px]"
+          >
+            <thead>
+              <tr class="bg-slate-50">
+                <th class="p-4 font-semibold text-slate-700 rounded-tl-xl">
+                  Thuật toán
+                </th>
+                <th class="p-4 font-semibold text-slate-700">Tốt nhất</th>
+                <th class="p-4 font-semibold text-slate-700">
+                  Trung bình / Tệ nhất
+                </th>
+                <th class="p-4 font-semibold text-slate-700 rounded-tr-xl">
+                  Bộ nhớ (Space)
+                </th>
+              </tr>
+            </thead>
+            <tbody id="comparison-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- KHU VỰC CHI TIẾT & MÔ PHỎNG -->
+      <div
+        class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden"
+      >
+        <div
+          id="tabs-container"
+          class="flex overflow-x-auto border-b border-slate-200 hide-scrollbar bg-slate-50"
+        ></div>
+
+        <div
+          class="p-4 sm:p-6 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start"
+        >
+          <!-- INFO -->
+          <div class="lg:col-span-4 space-y-6" id="info-container"></div>
+
+          <!-- VISUALIZER -->
+          <div class="lg:col-span-8 w-full flex flex-col space-y-6">
+            <div
+              class="bg-slate-900 rounded-2xl p-4 sm:p-6 shadow-inner border border-slate-800"
+            >
+              <!-- Controls -->
+              <div
+                class="flex flex-wrap gap-4 items-center justify-between mb-6 pb-4 border-b border-slate-700"
+              >
+                <div class="flex flex-wrap gap-2 items-center w-full sm:w-auto">
+                  <!-- Ô nhập Target -->
+                  <div
+                    class="flex items-center bg-slate-800 rounded-lg px-3 py-2 border border-slate-600 focus-within:border-indigo-500 transition-colors"
+                  >
+                    <span class="text-slate-400 text-sm mr-2 font-medium"
+                      >Tìm số:</span
+                    >
+                    <input
+                      type="number"
+                      id="target-input"
+                      class="bg-transparent text-white w-16 outline-none font-bold text-center"
+                      value="42"
+                    />
+                  </div>
+                  <button
+                    id="btn-play"
+                    class="flex items-center px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  >
+                    <i data-lucide="play" class="w-4 h-4 mr-2"></i>
+                    <span id="btn-play-text">Tìm Kiếm</span>
+                  </button>
+                  <button
+                    id="btn-reset"
+                    class="flex items-center px-3 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition text-sm"
+                  >
+                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                  </button>
+                </div>
+
+                <div
+                  class="flex items-center gap-3 text-slate-300 text-sm mt-2 sm:mt-0"
+                >
+                  <i data-lucide="settings-2" class="w-4 h-4"></i>
+                  <label class="font-medium hidden sm:block">Tốc độ:</label>
+                  <input
+                    type="range"
+                    id="speed-slider"
+                    min="50"
+                    max="800"
+                    value="400"
+                    class="w-24 accent-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <!-- Thông báo trạng thái tìm kiếm -->
+              <div
+                id="search-status"
+                class="text-center mb-4 text-sm font-bold h-6 text-slate-300"
+              >
+                Sẵn sàng tìm kiếm.
+              </div>
+
+              <!-- Vùng Hiển Thị Mảng (Boxes) -->
+              <div
+                id="array-container"
+                class="w-full flex flex-wrap items-center justify-center gap-2 sm:gap-3 px-1 py-4"
+              ></div>
+
+              <!-- Vùng RAM / Memory (Pointers) -->
+              <div
+                id="space-container"
+                class="mt-4 p-4 bg-slate-800 rounded-xl border border-slate-700 w-full min-h-[100px] flex flex-col justify-center transition-all duration-300"
+              ></div>
+            </div>
+
+            <!-- CODE BLOCK -->
+            <div
+              class="relative rounded-2xl overflow-hidden shadow-lg border border-slate-700 bg-[#0f172a]"
+            >
+              <div
+                class="w-full px-4 py-3 bg-[#1e293b] border-b border-slate-700 flex items-center justify-between"
+              >
+                <div class="flex space-x-2">
+                  <div class="w-3 h-3 rounded-full bg-rose-500"></div>
+                  <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+                  <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                </div>
+                <div class="flex items-center text-slate-400 text-xs font-mono">
+                  <i data-lucide="code" class="w-4 h-4 mr-1.5"></i> javascript
+                </div>
+              </div>
+              <pre
+                class="p-4 sm:p-6 overflow-auto text-xs sm:text-sm font-mono leading-relaxed max-h-72"
+              ><code id="code-container" class="text-slate-200"></code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // === DỮ LIỆU THUẬT TOÁN TÌM KIẾM ===
+      const ALGO_DATA = [
+        {
+          id: "linear",
+          name: "Linear Search",
+          vnName: "Tìm kiếm Tuyến tính",
+          best: "O(1)",
+          avgWorst: "O(n)",
+          space: "O(1)",
+          code: `function linearSearch(arr, target) {\n  // Duyệt qua từng phần tử từ đầu đến cuối\n  for (let i = 0; i < arr.length; i++) {\n    if (arr[i] === target) {\n      return i; // Trả về vị trí nếu tìm thấy\n    }\n  }\n  return -1; // Không tìm thấy\n}`,
+          desc: "Thuật toán tìm kiếm cơ bản nhất. Nó kiểm tra tuần tự từng phần tử trong danh sách cho đến khi tìm thấy giá trị khớp hoặc duyệt hết toàn bộ danh sách.",
+          characteristics: [
+            "Hoạt động trên mảng chưa sắp xếp",
+            "Cài đặt cực kỳ đơn giản",
+            "Kém hiệu quả với lượng dữ liệu lớn",
+          ],
+        },
+        {
+          id: "sentinel",
+          name: "Sentinel Search",
+          vnName: "Tìm kiếm Lính canh",
+          best: "O(1)",
+          avgWorst: "O(n)",
+          space: "O(1)",
+          code: `function sentinelSearch(arr, target) {\n  let n = arr.length;\n  let last = arr[n - 1];\n\n  // Gán phần tử cuối cùng làm "lính canh"\n  arr[n - 1] = target;\n  let i = 0;\n\n  // Vòng lặp bỏ qua kiểm tra điều kiện (i < n) giúp tối ưu\n  while (arr[i] !== target) {\n    i++;\n  }\n\n  // Khôi phục phần tử cuối\n  arr[n - 1] = last;\n\n  if (i < n - 1 || arr[n - 1] === target) {\n    return i;\n  }\n  return -1;\n}`,
+          desc: 'Một biến thể cải tiến của Linear Search. Nó gán mục tiêu cần tìm vào cuối mảng làm "lính canh" nhằm loại bỏ việc kiểm tra biên (i < n) trong mỗi lần lặp, giúp tăng nhẹ tốc độ.',
+          characteristics: [
+            "Hoạt động trên mảng chưa sắp xếp",
+            "Tối ưu hơn Linear Search một chút do giảm số lượng phép tính so sánh",
+            "Sửa đổi mảng tạm thời trong lúc chạy",
+          ],
+        },
+        {
+          id: "binary",
+          name: "Binary Search",
+          vnName: "Tìm kiếm Nhị phân",
+          best: "O(1)",
+          avgWorst: "O(log n)",
+          space: "O(1)",
+          code: `function binarySearch(arr, target) {\n  let left = 0;\n  let right = arr.length - 1;\n\n  while (left <= right) {\n    let mid = Math.floor((left + right) / 2);\n    \n    if (arr[mid] === target) {\n      return mid; // Tìm thấy\n    } else if (arr[mid] < target) {\n      left = mid + 1; // Loại nửa trái\n    } else {\n      right = mid - 1; // Loại nửa phải\n    }\n  }\n  return -1; // Không tìm thấy\n}`,
+          desc: 'Hoạt động theo nguyên tắc "Chia để trị". Tại mỗi bước, nó so sánh giá trị cần tìm với phần tử ở giữa mảng. Nếu không khớp, nó sẽ loại bỏ một nửa mảng không chứa phần tử đó và tiếp tục lặp lại.',
+          characteristics: [
+            "Yêu cầu mảng BẮT BUỘC phải được sắp xếp trước",
+            "Tốc độ cực nhanh (chia đôi dữ liệu liên tục)",
+            "Rất phổ biến trong thực tế",
+          ],
+        },
+        {
+          id: "jump",
+          name: "Jump Search",
+          vnName: "Tìm kiếm Nhảy bước",
+          best: "O(1)",
+          avgWorst: "O(√n)",
+          space: "O(1)",
+          code: `function jumpSearch(arr, target) {\n  let n = arr.length;\n  let step = Math.floor(Math.sqrt(n));\n  let prev = 0;\n\n  // Nhảy từng bước để khoanh vùng\n  while (arr[Math.min(step, n) - 1] < target) {\n    prev = step;\n    step += Math.floor(Math.sqrt(n));\n    if (prev >= n) return -1;\n  }\n\n  // Tìm kiếm tuyến tính trong vùng đã khoanh\n  while (arr[prev] < target) {\n    prev++;\n    if (prev === Math.min(step, n)) return -1;\n  }\n\n  if (arr[prev] === target) return prev;\n  return -1;\n}`,
+          desc: 'Thay vì nhảy từng bước một như Linear, thuật toán nhảy một khoảng "step" (thường là √n) để tiết kiệm thời gian. Khi phát hiện mục tiêu nằm giữa 2 bước nhảy, nó dùng Linear Search để dò trong khoảng hẹp đó.',
+          characteristics: [
+            "Yêu cầu mảng đã sắp xếp",
+            "Nhanh hơn Linear Search, chậm hơn Binary Search",
+            "Tối ưu hơn Binary Search trên phần cứng khó quay lui (như băng từ cũ)",
+          ],
+        },
+        {
+          id: "interpolation",
+          name: "Interpolation Search",
+          vnName: "Tìm kiếm Nội suy",
+          best: "O(1)",
+          avgWorst: "O(log(log n))",
+          space: "O(1)",
+          code: `function interpolationSearch(arr, target) {\n  let low = 0;\n  let high = arr.length - 1;\n\n  while (low <= high && target >= arr[low] && target <= arr[high]) {\n    if (low === high) {\n      if (arr[low] === target) return low;\n      return -1;\n    }\n\n    // Tính toán dự đoán vị trí dựa trên giá trị (tương tự lật từ điển)\n    let pos = low + Math.floor(((high - low) / (arr[high] - arr[low])) * (target - arr[low]));\n\n    if (arr[pos] === target) return pos;\n    if (arr[pos] < target) low = pos + 1;\n    else high = pos - 1;\n  }\n  return -1;\n}`,
+          desc: 'Đây là phiên bản "thông minh" của Binary Search. Thay vì luôn chia đôi, nó dùng toán học để "đoán" vị trí của mục tiêu dựa trên phân bố của mảng (giống như cách con người tra từ điển).',
+          characteristics: [
+            "Yêu cầu mảng đã sắp xếp và DỮ LIỆU PHÂN BỐ ĐỀU",
+            "Nếu dữ liệu phân bố đều, tốc độ cực kỳ khủng khiếp O(log(log n))",
+            "Chậm nếu dữ liệu dồn về một phía O(n)",
+          ],
+        },
+        {
+          id: "exponential",
+          name: "Exponential Search",
+          vnName: "Tìm kiếm Lũy thừa",
+          best: "O(1)",
+          avgWorst: "O(log n)",
+          space: "O(1)",
+          code: `function exponentialSearch(arr, target) {\n  let n = arr.length;\n  if (arr[0] === target) return 0;\n\n  // Nhảy vọt theo cấp số nhân (1, 2, 4, 8...)\n  let i = 1;\n  while (i < n && arr[i] <= target) {\n    i = i * 2;\n  }\n\n  // Tìm Binary Search trong khoảng [i/2, min(i, n-1)]\n  return binarySearch(arr, target, Math.floor(i / 2), Math.min(i, n - 1));\n}`,
+          desc: "Thuật toán kết hợp. Nó mở rộng phạm vi theo cấp số nhân (1, 2, 4, 8,...) để nhanh chóng tìm ra đoạn chứa mục tiêu. Sau đó, nó áp dụng Binary Search truyền thống trên đoạn vừa tìm được.",
+          characteristics: [
+            "Yêu cầu mảng đã sắp xếp",
+            "Cực kỳ hữu ích cho các mảng có kích thước KHÔNG GIỚI HẠN (vô hạn)",
+            "Hoạt động rất tốt khi mục tiêu nằm gần phía đầu của mảng",
+          ],
+        },
+      ];
+
+      const ARRAY_SIZE = 20; // Số lượng phần tử
+      let array = [];
+      let currentTabId = ALGO_DATA[0].id;
+      let isSearching = false;
+      let currentSearchId = 0;
+      let currentSpeed = 400; // Nghịch đảo của slider để dễ dùng delay
+
+      // Hàm sinh số HTML Badge
+      const renderBadgeHTML = (text) => {
+        let c = "bg-slate-100 text-slate-800 border-slate-300";
+        if (text === "O(1)" || text === "O(log n)" || text === "O(log(log n))")
+          c = "bg-emerald-100 text-emerald-800 border-emerald-300";
+        else if (text === "O(√n)")
+          c = "bg-lime-100 text-lime-800 border-lime-300";
+        else if (text === "O(n)" || text === "O(n²)")
+          c = "bg-rose-100 text-rose-800 border-rose-300";
+        return `<span class="px-3 py-1 rounded-full border text-sm font-semibold shadow-sm inline-block ${c}">${text}</span>`;
+      };
+
+      // Hàm highlight code
+      const highlightJS = (code) => {
+        let esc = code.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const c = [];
+        esc = esc.replace(/(\/\/.*)/g, (m) => {
+          c.push(m);
+          return `___C_${c.length - 1}___`;
+        });
+        esc = esc.replace(
+          /\b(\d+)\b/g,
+          '<span class="text-orange-300">$1</span>',
+        );
+        esc = esc
+          .replace(
+            /\b(function|let|const|var|if|else|for|while|return|break|continue)\b/g,
+            '<span class="text-pink-400 font-semibold">$1</span>',
+          )
+          .replace(
+            /\b(true|false)\b/g,
+            '<span class="text-purple-400">$1</span>',
+          )
+          .replace(/\b(Math)\b/g, '<span class="text-yellow-300">$1</span>');
+        c.forEach(
+          (com, i) =>
+            (esc = esc.replace(
+              `___C_${i}___`,
+              `<span class="text-slate-500 italic">${com}</span>`,
+            )),
+        );
+        return esc;
+      };
+
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+      const isAborted = (id) => id !== currentSearchId;
+
+      // === KHỞI TẠO VÀ RENDER UI ===
+      function initUI() {
+        document.getElementById("comparison-table-body").innerHTML =
+          ALGO_DATA.map(
+            (a) =>
+              `<tr class="border-b border-slate-100 hover:bg-slate-50/50"><td class="p-4 font-bold text-slate-800">${a.name}</td><td class="p-4">${renderBadgeHTML(a.best)}</td><td class="p-4">${renderBadgeHTML(a.avgWorst)}</td><td class="p-4">${renderBadgeHTML(a.space)}</td></tr>`,
+          ).join("");
+        renderTabs();
+        updateInfoAndCode();
+        generateNewArray();
+        lucide.createIcons();
+      }
+
+      function renderTabs() {
+        document.getElementById("tabs-container").innerHTML = ALGO_DATA.map(
+          (a) =>
+            `<button onclick="changeTab('${a.id}')" class="px-6 py-5 font-bold whitespace-nowrap transition-all duration-200 border-b-2 flex-1 text-center ${a.id === currentTabId ? "text-indigo-600 border-indigo-600 bg-white" : "text-slate-500 hover:text-slate-800 hover:bg-slate-100/50 border-transparent cursor-pointer"}">${a.name}</button>`,
+        ).join("");
+      }
+
+      function updateInfoAndCode() {
+        const a = ALGO_DATA.find((x) => x.id === currentTabId);
+        if (!a) return;
+        document.getElementById("info-container").innerHTML =
+          `<div><h3 class="text-3xl font-extrabold text-slate-900 mb-1">${a.name}</h3><div class="inline-flex items-center px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-sm font-medium">${a.vnName}</div></div><p class="text-slate-600 leading-relaxed text-sm">${a.desc}</p><div class="grid grid-cols-2 gap-4"><div class="bg-blue-50/50 p-4 rounded-2xl border border-blue-100"><span class="text-xs font-semibold block mb-2 text-blue-700">T.Gian (TB)</span>${renderBadgeHTML(a.avgWorst)}</div><div class="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100"><span class="text-xs font-semibold block mb-2 text-emerald-700">Không Gian</span>${renderBadgeHTML(a.space)}</div></div><ul class="space-y-2 text-sm text-slate-700">${a.characteristics.map((c) => `<li class="flex items-start"><i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500 mr-2 shrink-0 mt-0.5"></i><span>${c}</span></li>`).join("")}</ul>`;
+        document.getElementById("code-container").innerHTML = highlightJS(
+          a.code,
+        );
+        lucide.createIcons();
+      }
+
+      // Hàm render mảng dạng hộp vuông (Boxes)
+      function renderArrayUI(
+        comparingIdx = -1,
+        foundIdx = -1,
+        discardedArr = [],
+        pointers = {},
+      ) {
+        const container = document.getElementById("array-container");
+        container.innerHTML = "";
+
+        array.forEach((val, idx) => {
+          const box = document.createElement("div");
+          let bgClass = "bg-slate-700 border-slate-600 text-slate-200";
+          let scaleClass = "scale-100";
+          let opacityClass = "opacity-100";
+          let pointerLabel = "";
+
+          // Xử lý nhãn con trỏ (Pointers) hiển thị trên đầu/dưới hộp
+          if (pointers.left === idx)
+            pointerLabel +=
+              '<span class="text-cyan-400 absolute -top-5 text-[10px] font-bold">L</span>';
+          if (pointers.right === idx)
+            pointerLabel +=
+              '<span class="text-cyan-400 absolute -top-5 text-[10px] font-bold">R</span>';
+          if (pointers.mid === idx)
+            pointerLabel +=
+              '<span class="text-yellow-400 absolute -bottom-5 text-[10px] font-bold">M</span>';
+          if (pointers.prev === idx)
+            pointerLabel +=
+              '<span class="text-purple-400 absolute -top-5 text-[10px] font-bold">prev</span>';
+          if (pointers.step === idx)
+            pointerLabel +=
+              '<span class="text-purple-400 absolute -bottom-5 text-[10px] font-bold">step</span>';
+          if (pointers.pos === idx)
+            pointerLabel +=
+              '<span class="text-yellow-400 absolute -bottom-5 text-[10px] font-bold">pos</span>';
+          if (pointers.bound === idx)
+            pointerLabel +=
+              '<span class="text-purple-400 absolute -bottom-5 text-[10px] font-bold">bound</span>';
+
+          if (discardedArr.includes(idx)) {
+            bgClass = "bg-slate-800/50 border-slate-700/50 text-slate-600";
+            opacityClass = "opacity-40";
+          } else if (idx === foundIdx) {
+            bgClass =
+              "bg-emerald-500 border-emerald-400 text-white shadow-[0_0_15px_rgba(16,185,129,0.8)]";
+            scaleClass = "scale-110 z-10";
+          } else if (idx === comparingIdx) {
+            bgClass =
+              "bg-rose-500 border-rose-400 text-white shadow-[0_0_15px_rgba(244,63,94,0.8)]";
+            scaleClass = "scale-110 z-10";
+          }
+
+          box.className = `array-box relative flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded border-2 font-bold text-sm sm:text-base ${bgClass} ${scaleClass} ${opacityClass}`;
+          box.innerHTML = `${pointerLabel}${val}`;
+
+          // Hiển thị index nhỏ xíu ở góc dưới
+          const idxLabel = document.createElement("span");
+          idxLabel.className =
+            "absolute bottom-0.5 right-1 text-[8px] opacity-50 font-normal";
+          idxLabel.innerText = idx;
+          box.appendChild(idxLabel);
+
+          container.appendChild(box);
+        });
+      }
+
+      // Hiển thị giá trị biến (RAM Space)
+      function renderSpaceUI(variables = [], message = "") {
+        const container = document.getElementById("space-container");
+        let html = `<div class="flex items-center text-slate-300 mb-3 text-sm font-semibold"><i data-lucide="cpu" class="w-4 h-4 mr-2 text-cyan-400"></i> Giám sát Biến (Space Complexity: O(1))</div><p class="text-slate-400 text-xs italic mb-4">${message}</p>`;
+
+        if (variables.length === 0) {
+          html += `<div class="flex items-center justify-center py-2 border border-dashed border-slate-700 rounded-lg"><span class="text-slate-500 text-sm font-mono tracking-widest">- EMPTY -</span></div>`;
+        } else {
+          html += `<div class="flex flex-wrap gap-3">`;
+          variables.forEach((v) => {
+            let col = v.color || "emerald";
+            html += `<div class="px-3 py-1.5 bg-slate-700/50 border border-slate-600 rounded-lg shadow-inner flex items-center"><span class="text-xs text-slate-400 font-medium mr-2">${v.name}:</span><span class="text-sm text-${col}-400 font-mono font-bold">${v.value !== undefined ? v.value : "?"}</span></div>`;
+          });
+          html += `</div>`;
+        }
+        container.innerHTML = html;
+        lucide.createIcons();
+      }
+
+      function setStatus(text, colorClass = "text-slate-300") {
+        const st = document.getElementById("search-status");
+        st.innerHTML = `<span class="${colorClass}">${text}</span>`;
+      }
+
+      // === HÀNH ĐỘNG TƯƠNG TÁC ===
+      function changeTab(id) {
+        if (isSearching) {
+          currentSearchId++;
+          isSearching = false;
+          toggleBtn(false);
+        }
+        currentTabId = id;
+        renderTabs();
+        updateInfoAndCode();
+        generateNewArray();
+      }
+
+      function generateNewArray() {
+        if (isSearching) return;
+
+        // Khởi tạo mảng ngẫu nhiên
+        let set = new Set();
+        while (set.size < ARRAY_SIZE) {
+          set.add(Math.floor(Math.random() * 90) + 10);
+        }
+        array = Array.from(set);
+
+        // Sắp xếp đối với các thuật toán yêu cầu Sort
+        if (currentTabId !== "linear" && currentTabId !== "sentinel") {
+          array.sort((a, b) => a - b);
+        }
+
+        // Chọn ngẫu nhiên 1 số có trong mảng để làm target mặc định
+        const randomTarget = array[Math.floor(Math.random() * array.length)];
+        document.getElementById("target-input").value = randomTarget;
+
+        renderArrayUI();
+        renderSpaceUI([], "Chưa khởi chạy thuật toán");
+        setStatus("Sẵn sàng tìm kiếm.");
+      }
+
+      function toggleBtn(s) {
+        isSearching = s;
+        document.getElementById("btn-play").disabled = s;
+        document.getElementById("btn-play-text").innerText = s
+          ? "Đang duyệt..."
+          : "Tìm Kiếm";
+        document.getElementById("target-input").disabled = s;
+      }
+
+      // Lắng nghe sự kiện UI
+      document
+        .getElementById("btn-reset")
+        .addEventListener("click", generateNewArray);
+      document
+        .getElementById("speed-slider")
+        .addEventListener(
+          "input",
+          (e) => (currentSpeed = 850 - Number(e.target.value)),
+        );
+      document.getElementById("btn-play").addEventListener("click", () => {
+        if (!isSearching) handleSearch();
+      });
+
+      // Hàm gọi chính
+      async function handleSearch() {
+        const targetVal = parseInt(
+          document.getElementById("target-input").value,
+        );
+        if (isNaN(targetVal)) {
+          setStatus("Vui lòng nhập một số hợp lệ!", "text-rose-400");
+          return;
+        }
+
+        toggleBtn(true);
+        currentSearchId++;
+        let sid = currentSearchId;
+
+        setStatus(
+          `Bắt đầu tìm kiếm mục tiêu: <b>${targetVal}</b>`,
+          "text-indigo-400",
+        );
+        renderArrayUI(); // Reset UI
+        renderSpaceUI([], "Đang khởi tạo biến...");
+
+        try {
+          if (currentTabId === "linear")
+            await startLinearSearch(sid, targetVal);
+          else if (currentTabId === "sentinel")
+            await startSentinelSearch(sid, targetVal);
+          else if (currentTabId === "binary")
+            await startBinarySearch(sid, targetVal);
+          else if (currentTabId === "jump")
+            await startJumpSearch(sid, targetVal);
+          else if (currentTabId === "interpolation")
+            await startInterpolationSearch(sid, targetVal);
+          else if (currentTabId === "exponential")
+            await startExponentialSearch(sid, targetVal);
+        } catch (e) {
+          console.error(e);
+        }
+
+        if (sid === currentSearchId) toggleBtn(false);
+      }
+
+      // === LOGIC CÁC THUẬT TOÁN TÌM KIẾM (BẤT ĐỒNG BỘ) ===
+
+      async function startLinearSearch(id, target) {
+        for (let i = 0; i < array.length; i++) {
+          if (isAborted(id)) return;
+
+          setStatus(
+            `Đang kiểm tra chỉ số [${i}]: Giá trị ${array[i]} có bằng ${target} không?`,
+            "text-amber-400",
+          );
+          renderSpaceUI(
+            [
+              { name: "i", value: i, color: "cyan" },
+              { name: "arr[i]", value: array[i], color: "rose" },
+            ],
+            `Duyệt tuần tự O(n) từ trái qua phải.`,
+          );
+          renderArrayUI(i, -1);
+          await sleep(currentSpeed);
+
+          if (array[i] === target) {
+            if (isAborted(id)) return;
+            setStatus(
+              `🎉 ĐÃ TÌM THẤY ${target} TẠI VỊ TRÍ [${i}]!`,
+              "text-emerald-400",
+            );
+            renderArrayUI(-1, i);
+            renderSpaceUI(
+              [{ name: "i", value: i, color: "emerald" }],
+              "Thuật toán kết thúc thành công.",
+            );
+            return;
+          }
+        }
+
+        if (isAborted(id)) return;
+        setStatus(`❌ Không tìm thấy ${target} trong mảng!`, "text-rose-500");
+        renderArrayUI();
+        renderSpaceUI([], "Duyệt hết mảng nhưng không khớp.");
+      }
+
+      async function startSentinelSearch(id, target) {
+        let n = array.length;
+        let last = array[n - 1];
+
+        setStatus(
+          `Gán phần tử cuối [${n - 1}] (lính canh) = ${target}`,
+          "text-amber-400",
+        );
+        array[n - 1] = target;
+        renderSpaceUI(
+          [
+            { name: "last", value: last, color: "purple" },
+            { name: "arr[n-1]", value: target, color: "rose" },
+          ],
+          `Lưu giá trị cuối và thay bằng lính canh.`,
+        );
+        renderArrayUI(-1, -1, [], { bound: n - 1 });
+        await sleep(currentSpeed * 1.5);
+
+        let i = 0;
+        while (array[i] !== target) {
+          if (isAborted(id)) {
+            array[n - 1] = last;
+            return;
+          } // Khôi phục nếu bị hủy
+
+          setStatus(
+            `Đang kiểm tra [${i}]: ${array[i]} !== ${target}. Đi tiếp...`,
+            "text-amber-400",
+          );
+          renderSpaceUI(
+            [{ name: "i", value: i, color: "cyan" }],
+            `Không cần kiểm tra biên (i < n) nhờ lính canh.`,
+          );
+          renderArrayUI(i, -1, [], { bound: n - 1 });
+          await sleep(currentSpeed);
+          i++;
+        }
+
+        // Khôi phục mảng
+        array[n - 1] = last;
+        renderArrayUI(-1, -1, [], { bound: n - 1 });
+        setStatus(
+          `Đã chạm mặt ${target} tại [${i}]. Khôi phục phần tử cuối.`,
+          "text-indigo-400",
+        );
+        await sleep(currentSpeed * 1.5);
+
+        if (isAborted(id)) return;
+        if (i < n - 1 || array[n - 1] === target) {
+          setStatus(
+            `🎉 ĐÃ TÌM THẤY ${target} TẠI VỊ TRÍ [${i}]!`,
+            "text-emerald-400",
+          );
+          renderArrayUI(-1, i);
+          renderSpaceUI(
+            [{ name: "i", value: i, color: "emerald" }],
+            "Tìm kiếm thành công.",
+          );
+        } else {
+          setStatus(
+            `❌ Không tìm thấy ${target} trong mảng! (Đó chỉ là lính canh)`,
+            "text-rose-500",
+          );
+          renderArrayUI();
+          renderSpaceUI([], "Duyệt hết mảng nhưng không khớp.");
+        }
+      }
+
+      async function startBinarySearch(id, target) {
+        let left = 0;
+        let right = array.length - 1;
+        let discarded = [];
+
+        while (left <= right) {
+          if (isAborted(id)) return;
+
+          let mid = Math.floor((left + right) / 2);
+
+          renderSpaceUI(
+            [
+              { name: "left", value: left, color: "cyan" },
+              { name: "right", value: right, color: "cyan" },
+              { name: "mid", value: mid, color: "yellow" },
+              { name: "arr[mid]", value: array[mid], color: "rose" },
+            ],
+            "Tính chỉ số giữa (mid) để so sánh.",
+          );
+
+          setStatus(
+            `Phạm vi: [${left} -> ${right}]. Kiểm tra phần tử giữa mid = ${mid}.`,
+            "text-amber-400",
+          );
+          renderArrayUI(mid, -1, discarded, { left, right, mid });
+          await sleep(currentSpeed * 1.5);
+
+          if (array[mid] === target) {
+            if (isAborted(id)) return;
+            setStatus(
+              `🎉 ĐÃ TÌM THẤY ${target} TẠI VỊ TRÍ [${mid}]!`,
+              "text-emerald-400",
+            );
+            renderArrayUI(-1, mid, discarded, { left, right, mid });
+            return;
+          } else if (array[mid] < target) {
+            if (isAborted(id)) return;
+            setStatus(
+              `${array[mid]} < ${target}. Loại bỏ nửa bên TRÁI.`,
+              "text-slate-400",
+            );
+            for (let k = left; k <= mid; k++) discarded.push(k);
+            left = mid + 1;
+          } else {
+            if (isAborted(id)) return;
+            setStatus(
+              `${array[mid]} > ${target}. Loại bỏ nửa bên PHẢI.`,
+              "text-slate-400",
+            );
+            for (let k = mid; k <= right; k++) discarded.push(k);
+            right = mid - 1;
+          }
+          await sleep(currentSpeed);
+        }
+
+        if (isAborted(id)) return;
+        setStatus(`❌ Không tìm thấy ${target} trong mảng!`, "text-rose-500");
+        renderArrayUI(-1, -1, discarded);
+        renderSpaceUI([], "Khoảng tìm kiếm bị thu hẹp bằng 0 (left > right).");
+      }
+
+      async function startJumpSearch(id, target) {
+        let n = array.length;
+        let step = Math.floor(Math.sqrt(n));
+        let prev = 0;
+
+        // Bước 1: Nhảy
+        while (array[Math.min(step, n) - 1] < target) {
+          if (isAborted(id)) return;
+
+          let currIdx = Math.min(step, n) - 1;
+          renderSpaceUI(
+            [
+              { name: "prev", value: prev, color: "purple" },
+              { name: "step", value: step, color: "purple" },
+              { name: "arr[step-1]", value: array[currIdx], color: "rose" },
+            ],
+            `Nhảy một khoảng √n. So sánh cuối block với target.`,
+          );
+
+          setStatus(
+            `Nhảy: Kiểm tra vị trí [${currIdx}] (${array[currIdx]}) < ${target}. Nhảy tiếp...`,
+            "text-amber-400",
+          );
+          renderArrayUI(currIdx, -1, [], { prev: prev, step: currIdx });
+          await sleep(currentSpeed * 1.5);
+
+          prev = step;
+          step += Math.floor(Math.sqrt(n));
+
+          if (prev >= n) {
+            if (isAborted(id)) return;
+            setStatus(
+              `❌ Vượt qua độ dài mảng. Không tìm thấy ${target}!`,
+              "text-rose-500",
+            );
+            renderArrayUI(-1, -1, [], { prev: n - 1 });
+            return;
+          }
+        }
+
+        if (isAborted(id)) return;
+        let currIdx = Math.min(step, n) - 1;
+        setStatus(
+          `Đã khoanh vùng! ${target} có thể nằm giữa [${prev}] và [${currIdx}]. Chuyển sang duyệt tuần tự.`,
+          "text-indigo-400",
+        );
+        renderArrayUI(currIdx, -1, [], { prev: prev, step: currIdx });
+        await sleep(currentSpeed * 1.5);
+
+        // Bước 2: Tìm kiếm tuyến tính trong block
+        while (array[prev] < target) {
+          if (isAborted(id)) return;
+
+          renderSpaceUI(
+            [
+              { name: "prev", value: prev, color: "cyan" },
+              { name: "arr[prev]", value: array[prev], color: "rose" },
+            ],
+            `Duyệt tuyến tính bên trong block đã khoanh vùng.`,
+          );
+
+          setStatus(`Duyệt chậm: Kiểm tra vị trí [${prev}].`, "text-amber-400");
+          renderArrayUI(prev, -1, [], { prev: prev, step: currIdx });
+          await sleep(currentSpeed);
+
+          prev++;
+
+          if (prev === Math.min(step, n)) {
+            if (isAborted(id)) return;
+            setStatus(
+              `❌ Chạm mốc block tiếp theo. Không tìm thấy ${target}!`,
+              "text-rose-500",
+            );
+            renderArrayUI(-1, -1, [], { prev: prev });
+            return;
+          }
+        }
+
+        if (isAborted(id)) return;
+        if (array[prev] === target) {
+          setStatus(
+            `🎉 ĐÃ TÌM THẤY ${target} TẠI VỊ TRÍ [${prev}]!`,
+            "text-emerald-400",
+          );
+          renderArrayUI(-1, prev, [], { prev: prev });
+          renderSpaceUI(
+            [{ name: "prev", value: prev, color: "emerald" }],
+            "Tìm kiếm thành công.",
+          );
+        } else {
+          setStatus(
+            `❌ Phần tử [${prev}] lớn hơn ${target}. Không tìm thấy!`,
+            "text-rose-500",
+          );
+          renderArrayUI(prev, -1, [], { prev: prev });
+        }
+      }
+
+      async function startInterpolationSearch(id, target) {
+        let low = 0;
+        let high = array.length - 1;
+        let discarded = [];
+
+        while (low <= high && target >= array[low] && target <= array[high]) {
+          if (isAborted(id)) return;
+
+          if (low === high) {
+            if (array[low] === target) {
+              setStatus(
+                `🎉 ĐÃ TÌM THẤY ${target} TẠI VỊ TRÍ [${low}]!`,
+                "text-emerald-400",
+              );
+              renderArrayUI(-1, low, discarded, { left: low });
+              return;
+            }
+            break;
+          }
+
+          // Tính toán dự đoán vị trí pos
+          let pos =
+            low +
+            Math.floor(
+              ((high - low) / (array[high] - array[low])) *
+                (target - array[low]),
+            );
+
+          renderSpaceUI(
+            [
+              { name: "low", value: low, color: "cyan" },
+              { name: "high", value: high, color: "cyan" },
+              { name: "pos", value: pos, color: "yellow" },
+            ],
+            `Toán học: pos = low + ((target - arr[low]) * (high - low) / (arr[high] - arr[low]))`,
+          );
+
+          setStatus(
+            `Dự đoán vị trí pos = ${pos}. Đang kiểm tra arr[${pos}] = ${array[pos]}...`,
+            "text-amber-400",
+          );
+          renderArrayUI(pos, -1, discarded, {
+            left: low,
+            right: high,
+            pos: pos,
+          });
+          await sleep(currentSpeed * 2);
+
+          if (array[pos] === target) {
+            if (isAborted(id)) return;
+            setStatus(
+              `🎉 ĐÃ TÌM THẤY ${target} TẠI VỊ TRÍ [${pos}]!`,
+              "text-emerald-400",
+            );
+            renderArrayUI(-1, pos, discarded, {
+              left: low,
+              right: high,
+              pos: pos,
+            });
+            renderSpaceUI(
+              [{ name: "pos", value: pos, color: "emerald" }],
+              "Dự đoán chuẩn xác, tìm kiếm thành công!",
+            );
+            return;
+          }
+
+          if (array[pos] < target) {
+            if (isAborted(id)) return;
+            setStatus(
+              `${array[pos]} < ${target}. Tìm phía bên PHẢI vị trí pos.`,
+              "text-slate-400",
+            );
+            for (let k = low; k <= pos; k++) discarded.push(k);
+            low = pos + 1;
+          } else {
+            if (isAborted(id)) return;
+            setStatus(
+              `${array[pos]} > ${target}. Tìm phía bên TRÁI vị trí pos.`,
+              "text-slate-400",
+            );
+            for (let k = pos; k <= high; k++) discarded.push(k);
+            high = pos - 1;
+          }
+          await sleep(currentSpeed);
+        }
+
+        if (isAborted(id)) return;
+        setStatus(`❌ Không tìm thấy ${target} trong mảng!`, "text-rose-500");
+        renderArrayUI(-1, -1, discarded);
+        renderSpaceUI(
+          [],
+          "Mục tiêu nằm ngoài khoảng phân bố hoặc không tồn tại.",
+        );
+      }
+
+      async function startExponentialSearch(id, target) {
+        let n = array.length;
+
+        if (array[0] === target) {
+          if (isAborted(id)) return;
+          setStatus(
+            `🎉 ĐÃ TÌM THẤY ${target} NGAY TẠI VỊ TRÍ [0]!`,
+            "text-emerald-400",
+          );
+          renderArrayUI(-1, 0);
+          return;
+        }
+
+        let i = 1;
+        while (i < n && array[i] <= target) {
+          if (isAborted(id)) return;
+
+          renderSpaceUI(
+            [
+              { name: "i", value: i, color: "purple" },
+              { name: "arr[i]", value: array[i], color: "rose" },
+            ],
+            `Nhảy theo cấp số nhân: i = i * 2`,
+          );
+          setStatus(
+            `Nhảy theo lũy thừa: Đang kiểm tra chỉ số i = ${i} (giá trị: ${array[i]}).`,
+            "text-amber-400",
+          );
+          renderArrayUI(i, -1, [], { bound: i });
+          await sleep(currentSpeed * 1.5);
+
+          if (array[i] === target) {
+            setStatus(
+              `🎉 ĐÃ TÌM THẤY ${target} TẠI VỊ TRÍ [${i}]!`,
+              "text-emerald-400",
+            );
+            renderArrayUI(-1, i);
+            return;
+          }
+          i *= 2;
+        }
+
+        if (isAborted(id)) return;
+        let left = Math.floor(i / 2);
+        let right = Math.min(i, n - 1);
+        setStatus(
+          `Đã khoanh vùng! Nằm giữa [${left}, ${right}]. Kích hoạt Binary Search.`,
+          "text-indigo-400",
+        );
+        renderArrayUI(-1, -1, [], { left: left, right: right });
+        await sleep(currentSpeed * 1.5);
+
+        // Binary Search trên vùng đã khoanh
+        let discarded = [];
+        for (let k = 0; k < left; k++) discarded.push(k);
+        for (let k = right + 1; k < n; k++) discarded.push(k);
+
+        while (left <= right) {
+          if (isAborted(id)) return;
+
+          let mid = Math.floor((left + right) / 2);
+          renderSpaceUI(
+            [
+              { name: "left", value: left, color: "cyan" },
+              { name: "right", value: right, color: "cyan" },
+              { name: "mid", value: mid, color: "yellow" },
+            ],
+            "Chạy Binary Search trong đoạn đã khoanh vùng.",
+          );
+
+          setStatus(
+            `Phạm vi: [${left} -> ${right}]. Kiểm tra phần tử giữa mid = ${mid}.`,
+            "text-amber-400",
+          );
+          renderArrayUI(mid, -1, discarded, { left, right, mid });
+          await sleep(currentSpeed * 1.5);
+
+          if (array[mid] === target) {
+            if (isAborted(id)) return;
+            setStatus(
+              `🎉 ĐÃ TÌM THẤY ${target} TẠI VỊ TRÍ [${mid}]!`,
+              "text-emerald-400",
+            );
+            renderArrayUI(-1, mid, discarded, { left, right, mid });
+            return;
+          } else if (array[mid] < target) {
+            setStatus(
+              `${array[mid]} < ${target}. Loại bỏ nửa bên TRÁI.`,
+              "text-slate-400",
+            );
+            for (let k = left; k <= mid; k++) discarded.push(k);
+            left = mid + 1;
+          } else {
+            setStatus(
+              `${array[mid]} > ${target}. Loại bỏ nửa bên PHẢI.`,
+              "text-slate-400",
+            );
+            for (let k = mid; k <= right; k++) discarded.push(k);
+            right = mid - 1;
+          }
+          await sleep(currentSpeed);
+        }
+
+        if (isAborted(id)) return;
+        setStatus(`❌ Không tìm thấy ${target} trong mảng!`, "text-rose-500");
+        renderArrayUI(-1, -1, discarded);
+      }
+
+      // Khởi chạy
+      window.onload = initUI;
+    </script>
+  </body>
+</html>
