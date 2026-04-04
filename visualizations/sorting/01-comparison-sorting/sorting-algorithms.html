@@ -1,0 +1,790 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trực Quan Hóa Thuật Toán Sắp Xếp</title>
+
+    <!-- Nhúng Tailwind CSS qua CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Nhúng thư viện Icon Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+      /* Ẩn scrollbar cho các thẻ có cuộn ngang */
+      .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .hide-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-slate-50 text-slate-900 font-sans min-h-screen p-4 sm:p-6 lg:p-8"
+  >
+    <div class="max-w-7xl mx-auto space-y-8">
+      <!-- HEADER -->
+      <header class="text-center space-y-4 mb-10">
+        <div
+          class="inline-flex items-center justify-center p-3 bg-indigo-100 text-indigo-600 rounded-full mb-2 shadow-sm"
+        >
+          <i data-lucide="bar-chart-3" class="w-8 h-8"></i>
+        </div>
+        <h1
+          class="text-3xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-600"
+        >
+          Trực Quan Hóa Thuật Toán
+        </h1>
+        <p class="text-lg text-slate-600 max-w-2xl mx-auto">
+          Khám phá cách CPU chạy logic (Time) và cách RAM phân bổ ô nhớ (Space)
+          theo thời gian thực (Phiên bản HTML/JS thuần).
+        </p>
+      </header>
+
+      <!-- BẢNG SO SÁNH -->
+      <div
+        class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 overflow-hidden flex flex-col"
+      >
+        <div class="flex items-center mb-6">
+          <i data-lucide="database" class="w-6 h-6 text-indigo-500 mr-2"></i>
+          <h2 class="text-xl font-bold text-slate-800">
+            Bảng So Sánh Độ Phức Tạp
+          </h2>
+        </div>
+        <div class="overflow-x-auto">
+          <table
+            class="w-full text-left border-collapse whitespace-nowrap min-w-[600px]"
+          >
+            <thead>
+              <tr class="bg-slate-50">
+                <th class="p-4 font-semibold text-slate-700 rounded-tl-xl">
+                  Thuật toán
+                </th>
+                <th class="p-4 font-semibold text-slate-700">Thời gian (TB)</th>
+                <th class="p-4 font-semibold text-slate-700 rounded-tr-xl">
+                  Bộ nhớ phụ (Space)
+                </th>
+              </tr>
+            </thead>
+            <tbody id="comparison-table-body">
+              <!-- Nội dung bảng sinh bằng JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- KHU VỰC CHI TIẾT & MÔ PHỎNG -->
+      <div
+        class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden"
+      >
+        <!-- Tabs -->
+        <div
+          id="tabs-container"
+          class="flex overflow-x-auto border-b border-slate-200 hide-scrollbar bg-slate-50"
+        >
+          <!-- Tabs sinh bằng JS -->
+        </div>
+
+        <div
+          class="p-4 sm:p-6 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start"
+        >
+          <!-- Cột Lý Thuyết (Trái) -->
+          <div class="lg:col-span-4 space-y-6" id="info-container">
+            <!-- Thông tin sinh bằng JS -->
+          </div>
+
+          <!-- Cột Mô Phỏng & Code (Phải) -->
+          <div class="lg:col-span-8 w-full flex flex-col space-y-6">
+            <!-- Trình giả lập Visualizer -->
+            <div
+              class="bg-slate-900 rounded-2xl p-4 sm:p-6 shadow-inner border border-slate-800"
+            >
+              <!-- Controls -->
+              <div
+                class="flex flex-wrap gap-4 items-center justify-between mb-6 pb-4 border-b border-slate-700"
+              >
+                <div class="flex gap-2">
+                  <button
+                    id="btn-play"
+                    class="flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  >
+                    <i data-lucide="play" class="w-4 h-4 mr-2"></i>
+                    <span id="btn-play-text">Chạy Mô Phỏng</span>
+                  </button>
+                  <button
+                    id="btn-reset"
+                    class="flex items-center px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition text-sm"
+                  >
+                    <i data-lucide="rotate-ccw" class="w-4 h-4 mr-2"></i> Reset
+                  </button>
+                </div>
+
+                <div class="flex items-center gap-3 text-slate-300 text-sm">
+                  <i data-lucide="settings-2" class="w-4 h-4"></i>
+                  <label class="font-medium hidden sm:block">Tốc độ:</label>
+                  <input
+                    type="range"
+                    id="speed-slider"
+                    min="10"
+                    max="400"
+                    value="310"
+                    class="w-20 sm:w-24 accent-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <!-- Vùng Hiển Thị Mảng -->
+              <div
+                id="array-container"
+                class="h-48 sm:h-56 w-full flex items-end justify-center gap-[2px] sm:gap-1 px-1"
+              >
+                <!-- Các cột sinh bằng JS -->
+              </div>
+
+              <!-- Vùng RAM / Memory -->
+              <div
+                id="space-container"
+                class="mt-4 p-4 bg-slate-800 rounded-xl border border-slate-700 w-full min-h-[100px] flex flex-col justify-center transition-all duration-300"
+              >
+                <!-- Nội dung RAM sinh bằng JS -->
+              </div>
+            </div>
+
+            <!-- Khối Code Editor -->
+            <div
+              class="relative rounded-2xl overflow-hidden shadow-lg border border-slate-700 bg-[#0f172a]"
+            >
+              <div
+                class="w-full px-4 py-3 bg-[#1e293b] border-b border-slate-700 flex items-center justify-between"
+              >
+                <div class="flex space-x-2">
+                  <div class="w-3 h-3 rounded-full bg-rose-500"></div>
+                  <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+                  <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                </div>
+                <div class="flex items-center text-slate-400 text-xs font-mono">
+                  <i data-lucide="code" class="w-4 h-4 mr-1.5"></i> javascript
+                </div>
+              </div>
+              <pre
+                class="p-4 sm:p-6 overflow-auto text-xs sm:text-sm font-mono leading-relaxed max-h-72"
+              ><code id="code-container" class="text-slate-200"></code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCRIPT LOGIC JAVASCRIPT -->
+    <script>
+      // === DỮ LIỆU THUẬT TOÁN ===
+      const SORTING_DATA = [
+        {
+          id: "bubble",
+          name: "Bubble Sort",
+          vnName: "Sắp xếp Nổi bọt",
+          best: "O(n)",
+          average: "O(n²)",
+          worst: "O(n²)",
+          space: "O(1)",
+          code: `function bubbleSort(arr) {\n  let n = arr.length;\n  for (let i = 0; i < n - 1; i++) {\n    let swapped = false;\n    for (let j = 0; j < n - i - 1; j++) {\n      if (arr[j] > arr[j + 1]) {\n        // Hoán đổi nếu phần tử trước lớn hơn\n        [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];\n        swapped = true;\n      }\n    }\n    // Tối ưu: Dừng sớm nếu mảng đã được sắp xếp\n    if (!swapped) break;\n  }\n  return arr;\n}`,
+          desc: "Thuật toán lặp qua mảng nhiều lần, so sánh các cặp phần tử liền kề và hoán đổi chúng nếu sai thứ tự. Lặp lại cho đến khi không cần hoán đổi.",
+          characteristics: [
+            "Stable (Ổn định)",
+            "In-place (Tại chỗ)",
+            "Phù hợp kiểm tra mảng đã sắp xếp chưa",
+          ],
+        },
+        {
+          id: "selection",
+          name: "Selection Sort",
+          vnName: "Sắp xếp Chọn",
+          best: "O(n²)",
+          average: "O(n²)",
+          worst: "O(n²)",
+          space: "O(1)",
+          code: `function selectionSort(arr) {\n  let n = arr.length;\n  for (let i = 0; i < n - 1; i++) {\n    // Giả sử phần tử đầu tiên là nhỏ nhất\n    let minIdx = i;\n    for (let j = i + 1; j < n; j++) {\n      if (arr[j] < arr[minIdx]) {\n        minIdx = j; // Cập nhật vị trí nhỏ nhất\n      }\n    }\n    // Hoán đổi\n    if (minIdx !== i) {\n      [arr[i], arr[minIdx]] = [arr[minIdx], arr[i]];\n    }\n  }\n  return arr;\n}`,
+          desc: "Chia mảng thành 2 phần: đã sắp xếp và chưa sắp xếp. Liên tục tìm phần tử nhỏ nhất từ phần chưa sắp xếp và hoán đổi nó.",
+          characteristics: [
+            "Unstable (Không ổn định)",
+            "In-place (Tại chỗ)",
+            "Số lượng phép hoán đổi bộ nhớ cực ít",
+          ],
+        },
+        {
+          id: "insertion",
+          name: "Insertion Sort",
+          vnName: "Sắp xếp Chèn",
+          best: "O(n)",
+          average: "O(n²)",
+          worst: "O(n²)",
+          space: "O(1)",
+          code: `function insertionSort(arr) {\n  let n = arr.length;\n  for (let i = 1; i < n; i++) {\n    let key = arr[i]; // Lưu tạm giá trị\n    let j = i - 1;\n    \n    // Dời các phần tử lớn hơn key sang phải\n    while (j >= 0 && arr[j] > key) {\n      arr[j + 1] = arr[j];\n      j = j - 1;\n    }\n    // Chèn key vào\n    arr[j + 1] = key;\n  }\n  return arr;\n}`,
+          desc: "Xây dựng mảng đã sắp xếp bằng cách lấy từng phần tử và chèn nó vào đúng vị trí của nó ở phần đã sắp xếp.",
+          characteristics: [
+            "Stable (Ổn định)",
+            "In-place (Tại chỗ)",
+            "Rất hiệu quả với mảng nhỏ hoặc gần sắp xếp xong",
+          ],
+        },
+        {
+          id: "merge",
+          name: "Merge Sort",
+          vnName: "Sắp xếp Trộn",
+          best: "O(n log n)",
+          average: "O(n log n)",
+          worst: "O(n log n)",
+          space: "O(n)",
+          code: `function mergeSort(arr) {\n  if (arr.length <= 1) return arr;\n\n  const mid = Math.floor(arr.length / 2);\n  const left = mergeSort(arr.slice(0, mid));\n  const right = mergeSort(arr.slice(mid));\n\n  return merge(left, right);\n}\n\nfunction merge(left, right) {\n  let result = [];\n  let i = 0, j = 0;\n\n  while (i < left.length && j < right.length) {\n    if (left[i] < right[j]) result.push(left[i++]);\n    else result.push(right[j++]);\n  }\n  return [...result, ...left.slice(i), ...right.slice(j)];\n}`,
+          desc: "Thuật toán chia nửa mảng liên tục, sau đó gộp (merge) dần. Nó tốn nhiều bộ nhớ phụ O(n) do cần tạo mảng con trong quá trình trộn.",
+          characteristics: [
+            "Stable (Ổn định)",
+            "Out-of-place (Cần thêm nhiều bộ nhớ)",
+            "Hiệu suất O(n log n) đảm bảo mọi trường hợp",
+          ],
+        },
+        {
+          id: "quick",
+          name: "Quick Sort",
+          vnName: "Sắp xếp Nhanh",
+          best: "O(n log n)",
+          average: "O(n log n)",
+          worst: "O(n²)",
+          space: "O(log n)",
+          code: `function quickSort(arr, low = 0, high = arr.length - 1) {\n  if (low < high) {\n    // Phân hoạch mảng, lấy vị trí chốt (pivot)\n    let pi = partition(arr, low, high);\n\n    // Đệ quy sắp xếp 2 nửa (tiêu tốn Call Stack)\n    quickSort(arr, low, pi - 1);\n    quickSort(arr, pi + 1, high);\n  }\n  return arr;\n}\n\nfunction partition(arr, low, high) {\n  let pivot = arr[high];\n  let i = low - 1;\n\n  for (let j = low; j < high; j++) {\n    if (arr[j] < pivot) {\n      i++;\n      [arr[i], arr[j]] = [arr[j], arr[i]];\n    }\n  }\n  [arr[i + 1], arr[high]] = [arr[high], arr[i + 1]];\n  return i + 1;\n}`,
+          desc: "Thuật toán phân chia. Không tạo mảng phụ, nhưng sử dụng Stack (ngăn xếp) của hệ thống để gọi đệ quy. Space Complexity chính là chiều sâu cây đệ quy.",
+          characteristics: [
+            "Unstable (Không ổn định)",
+            "In-place (Tối ưu bộ nhớ)",
+            "Tốc độ cực kỳ nhanh nhờ tính tối ưu bộ nhớ cache",
+          ],
+        },
+      ];
+
+      // === STATE & BIẾN TOÀN CỤC ===
+      const ARRAY_SIZE = 25;
+      let array = [];
+      let currentTabId = SORTING_DATA[0].id;
+      let isSorting = false;
+      let currentSortId = 0; // ID quản lý luồng để cancel đệ quy
+      let currentSpeed = 100;
+
+      // === HÀM RENDER TIỆN ÍCH ===
+      const renderBadgeHTML = (text) => {
+        let color = "bg-slate-100 text-slate-800 border-slate-300";
+        if (text === "O(1)" || text === "O(log n)")
+          color = "bg-emerald-100 text-emerald-800 border-emerald-300";
+        else if (text === "O(n)")
+          color = "bg-lime-100 text-lime-800 border-lime-300";
+        else if (text === "O(n log n)")
+          color = "bg-amber-100 text-amber-800 border-amber-300";
+        else if (text === "O(n²)")
+          color = "bg-rose-100 text-rose-800 border-rose-300";
+        return `<span class="px-3 py-1 rounded-full border text-sm font-semibold shadow-sm inline-block ${color}">${text}</span>`;
+      };
+
+      const highlightJS = (code) => {
+        let escapedCode = code.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const comments = [];
+        escapedCode = escapedCode.replace(/(\/\/.*)/g, (match) => {
+          comments.push(match);
+          return `___COMMENT_${comments.length - 1}___`;
+        });
+        escapedCode = escapedCode.replace(
+          /\b(\d+)\b/g,
+          '<span class="text-orange-300">$1</span>',
+        );
+        escapedCode = escapedCode
+          .replace(
+            /\b(function|let|const|var|if|else|for|while|return|break|continue)\b/g,
+            '<span class="text-pink-400 font-semibold">$1</span>',
+          )
+          .replace(
+            /\b(true|false)\b/g,
+            '<span class="text-purple-400">$1</span>',
+          );
+        comments.forEach((comment, i) => {
+          escapedCode = escapedCode.replace(
+            `___COMMENT_${i}___`,
+            `<span class="text-slate-500 italic">${comment}</span>`,
+          );
+        });
+        return escapedCode;
+      };
+
+      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+      // === HÀM VẼ GIAO DIỆN (DOM) ===
+      function initUI() {
+        // 1. Render Table
+        const tableBody = document.getElementById("comparison-table-body");
+        tableBody.innerHTML = SORTING_DATA.map(
+          (algo) => `
+        <tr class="border-b border-slate-100 hover:bg-slate-50/50">
+          <td class="p-4 font-bold text-slate-800">${algo.name}</td>
+          <td class="p-4">${renderBadgeHTML(algo.average)}</td>
+          <td class="p-4">${renderBadgeHTML(algo.space)}</td>
+        </tr>
+      `,
+        ).join("");
+
+        renderTabs();
+        updateInfoAndCode();
+        generateNewArray();
+        lucide.createIcons(); // Khởi tạo icon
+      }
+
+      function renderTabs() {
+        const tabsContainer = document.getElementById("tabs-container");
+        tabsContainer.innerHTML = SORTING_DATA.map((algo) => {
+          const isActive = algo.id === currentTabId;
+          const activeClass = isActive
+            ? "text-indigo-600 border-indigo-600 bg-white"
+            : "text-slate-500 hover:text-slate-800 hover:bg-slate-100/50 border-transparent cursor-pointer";
+          return `
+          <button onclick="changeTab('${algo.id}')" class="px-6 py-5 font-bold whitespace-nowrap transition-all duration-200 border-b-2 flex-1 text-center ${activeClass}">
+            ${algo.name}
+          </button>
+        `;
+        }).join("");
+      }
+
+      function updateInfoAndCode() {
+        const algo = SORTING_DATA.find((a) => a.id === currentTabId);
+
+        // Update Info
+        document.getElementById("info-container").innerHTML = `
+        <div>
+          <h3 class="text-3xl font-extrabold text-slate-900 mb-1">${algo.name}</h3>
+          <div class="inline-flex items-center px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-sm font-medium">
+            ${algo.vnName}
+          </div>
+        </div>
+        <p class="text-slate-600 leading-relaxed text-sm">${algo.desc}</p>
+        <div class="grid grid-cols-2 gap-4">
+          <div class="bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
+             <span class="text-xs font-semibold block mb-2 text-blue-700">T.Gian (TB)</span>
+             ${renderBadgeHTML(algo.average)}
+          </div>
+          <div class="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100">
+             <span class="text-xs font-semibold block mb-2 text-emerald-700">Không Gian</span>
+             ${renderBadgeHTML(algo.space)}
+          </div>
+        </div>
+        <ul class="space-y-2 text-sm text-slate-700">
+          ${algo.characteristics
+            .map(
+              (char) => `
+            <li class="flex items-start">
+              <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500 mr-2 shrink-0 mt-0.5"></i>
+              <span>${char}</span>
+            </li>
+          `,
+            )
+            .join("")}
+        </ul>
+      `;
+
+        // Update Code
+        document.getElementById("code-container").innerHTML = highlightJS(
+          algo.code,
+        );
+        lucide.createIcons();
+      }
+
+      function renderArrayUI(
+        comparingIdx = [],
+        swappingIdx = [],
+        sortedIdx = [],
+      ) {
+        const container = document.getElementById("array-container");
+        container.innerHTML = "";
+
+        array.forEach((val, idx) => {
+          let colorClass = "bg-indigo-400";
+          let shadowClass = "";
+
+          if (sortedIdx.includes(idx)) {
+            colorClass = "bg-emerald-500";
+            shadowClass = "shadow-[0_0_8px_rgba(16,185,129,0.6)]";
+          } else if (swappingIdx.includes(idx)) {
+            colorClass = "bg-amber-400";
+            shadowClass = "shadow-[0_0_10px_rgba(251,191,36,0.8)]";
+          } else if (comparingIdx.includes(idx)) {
+            colorClass = "bg-rose-500";
+            shadowClass = "shadow-[0_0_10px_rgba(244,63,94,0.8)]";
+          }
+
+          const bar = document.createElement("div");
+          bar.className = `w-full max-w-[28px] rounded-t-sm sm:rounded-t-md transition-all duration-150 ${colorClass} ${shadowClass}`;
+          bar.style.height = `${val}%`;
+          container.appendChild(bar);
+        });
+      }
+
+      function renderSpaceUI(type, message, data = {}) {
+        const container = document.getElementById("space-container");
+        let html = `
+        <div class="flex items-center text-slate-300 mb-3 text-sm font-semibold">
+          <i data-lucide="cpu" class="w-4 h-4 mr-2 text-cyan-400"></i>
+          Giám sát RAM / Không gian bộ nhớ (Space Complexity)
+        </div>
+        <p class="text-slate-400 text-xs italic mb-4">${message}</p>
+      `;
+
+        if (type === "none") {
+          html += `
+          <div class="flex items-center justify-center py-2 border border-dashed border-slate-700 rounded-lg">
+             <span class="text-slate-500 text-sm font-mono tracking-widest">- EMPTY -</span>
+          </div>`;
+        } else if (type === "variable") {
+          html += `
+          <div class="flex items-center gap-3">
+             <div class="px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg shadow-inner flex items-center">
+                <span class="text-xs text-slate-300 font-medium mr-3">${data.label}:</span>
+                <span class="text-sm text-emerald-400 font-mono font-bold">${data.value}</span>
+             </div>
+          </div>`;
+        } else if (type === "arrays") {
+          const drawArr = (title, colorText, colorBg, arrData) => `
+          <div class="flex items-center gap-2 overflow-x-auto hide-scrollbar">
+            <span class="text-xs ${colorText} font-mono w-16">${title}:</span>
+            ${arrData.length === 0 ? '<span class="text-xs text-slate-500 italic">trống</span>' : ""}
+            ${arrData.map((v) => `<div class="px-2 py-1 ${colorBg} border text-xs rounded min-w-[30px] text-center shrink-0 animate-pulse text-white">${v}</div>`).join("")}
+          </div>
+        `;
+          html += `<div class="flex flex-col gap-3">
+          ${drawArr("Left []", "text-rose-300", "bg-rose-500/20 border-rose-500", data.leftArray)}
+          ${drawArr("Right []", "text-cyan-300", "bg-cyan-500/20 border-cyan-500", data.rightArray)}
+        </div>`;
+        } else if (type === "stack") {
+          let stackHtml = '<div class="flex items-end gap-1 mt-2 h-16">';
+          for (let i = 0; i < data.depth; i++) {
+            const isTop = i === data.depth - 1;
+            const bg = isTop
+              ? "bg-indigo-500 h-full animate-bounce"
+              : "bg-indigo-900/60 h-[70%]";
+            stackHtml += `<div class="w-10 rounded-t-sm flex items-center justify-center text-[10px] font-bold text-white transition-all ${bg}">T${i + 1}</div>`;
+          }
+          stackHtml += "</div>";
+          html += stackHtml;
+        }
+
+        container.innerHTML = html;
+        lucide.createIcons(); // render icon
+      }
+
+      // === HÀNH ĐỘNG TƯƠNG TÁC ===
+      function changeTab(algoId) {
+        if (isSorting) {
+          currentSortId++; // Hủy luồng hiện tại
+          isSorting = false;
+          toggleButtons(false);
+        }
+        currentTabId = algoId;
+        renderTabs();
+        updateInfoAndCode();
+        generateNewArray();
+      }
+
+      function generateNewArray() {
+        if (isSorting) return;
+        array = Array.from(
+          { length: ARRAY_SIZE },
+          () => Math.floor(Math.random() * 90) + 10,
+        );
+        renderArrayUI([], [], []);
+        renderSpaceUI("none", "Chưa khởi chạy thuật toán");
+      }
+
+      function toggleButtons(sorting) {
+        const btnPlay = document.getElementById("btn-play");
+        const textPlay = document.getElementById("btn-play-text");
+        isSorting = sorting;
+        btnPlay.disabled = sorting;
+        textPlay.innerText = sorting ? "Đang chạy..." : "Chạy Mô Phỏng";
+      }
+
+      // Lắng nghe sự kiện
+      document
+        .getElementById("btn-reset")
+        .addEventListener("click", generateNewArray);
+      document.getElementById("speed-slider").addEventListener("input", (e) => {
+        currentSpeed = 410 - Number(e.target.value);
+      });
+      document.getElementById("btn-play").addEventListener("click", () => {
+        if (!isSorting) handleSort();
+      });
+
+      // === LOGIC SẮP XẾP BẤT ĐỒNG BỘ ===
+      async function handleSort() {
+        toggleButtons(true);
+        currentSortId++;
+        let sortId = currentSortId;
+        let sortedLog = [];
+
+        try {
+          if (currentTabId === "bubble")
+            await startBubbleSort(sortId, sortedLog);
+          else if (currentTabId === "selection")
+            await startSelectionSort(sortId, sortedLog);
+          else if (currentTabId === "insertion")
+            await startInsertionSort(sortId, sortedLog);
+          else if (currentTabId === "merge")
+            await startMergeSort(sortId, 0, array.length - 1, sortedLog);
+          else if (currentTabId === "quick")
+            await startQuickSort(sortId, 0, array.length - 1, 1, sortedLog);
+
+          if (sortId === currentSortId) {
+            // Hiệu ứng hoàn thành
+            renderArrayUI([], [], []);
+            for (let i = 0; i < array.length; i++) {
+              sortedLog.push(i);
+              renderArrayUI([], [], sortedLog);
+              await sleep(15);
+            }
+            renderSpaceUI(
+              "none",
+              "Sắp xếp hoàn tất. Bộ nhớ phụ đã được giải phóng toàn bộ.",
+            );
+          }
+        } catch (err) {
+          console.error(err);
+        }
+
+        if (sortId === currentSortId) {
+          toggleButtons(false);
+        }
+      }
+
+      const isAborted = (id) => id !== currentSortId;
+
+      async function startBubbleSort(id, sortedLog) {
+        let n = array.length;
+        renderSpaceUI(
+          "variable",
+          "Bubble Sort chạy in-place. Hoán đổi không cần cấp phát thêm mảng.",
+          { label: "Bộ nhớ (O(1))", value: "Vòng lặp" },
+        );
+
+        for (let i = 0; i < n - 1; i++) {
+          let swapped = false;
+          for (let j = 0; j < n - i - 1; j++) {
+            if (isAborted(id)) return;
+            renderArrayUI([j, j + 1], [], sortedLog);
+            await sleep(currentSpeed);
+
+            if (array[j] > array[j + 1]) {
+              if (isAborted(id)) return;
+              renderSpaceUI(
+                "variable",
+                "Dùng O(1) space để hoán đổi 2 phần tử.",
+                { label: "Biến tạm", value: `temp = ${array[j]}` },
+              );
+
+              [array[j], array[j + 1]] = [array[j + 1], array[j]];
+              renderArrayUI([], [j, j + 1], sortedLog);
+              swapped = true;
+              await sleep(currentSpeed);
+            }
+          }
+          sortedLog.push(n - i - 1);
+          if (!swapped) break;
+        }
+      }
+
+      async function startSelectionSort(id, sortedLog) {
+        let n = array.length;
+        for (let i = 0; i < n - 1; i++) {
+          let minIdx = i;
+          renderSpaceUI(
+            "variable",
+            "Chỉ tốn O(1) bộ nhớ để ghi nhớ vị trí nhỏ nhất.",
+            { label: "Lưu chỉ số", value: `minIdx = ${minIdx}` },
+          );
+
+          for (let j = i + 1; j < n; j++) {
+            if (isAborted(id)) return;
+            renderArrayUI([minIdx, j], [], sortedLog);
+            await sleep(currentSpeed);
+
+            if (array[j] < array[minIdx]) {
+              minIdx = j;
+              renderSpaceUI(
+                "variable",
+                "Đã tìm thấy phần tử nhỏ hơn, cập nhật lại minIdx.",
+                { label: "Cập nhật", value: `minIdx = ${minIdx}` },
+              );
+            }
+          }
+          if (minIdx !== i) {
+            if (isAborted(id)) return;
+            [array[i], array[minIdx]] = [array[minIdx], array[i]];
+            renderArrayUI([], [i, minIdx], sortedLog);
+            await sleep(currentSpeed);
+          }
+          sortedLog.push(i);
+        }
+        sortedLog.push(n - 1);
+      }
+
+      async function startInsertionSort(id, sortedLog) {
+        let n = array.length;
+        sortedLog.push(0);
+        for (let i = 1; i < n; i++) {
+          let key = array[i];
+          let j = i - 1;
+
+          renderSpaceUI(
+            "variable",
+            "Nhấc phần tử ra khỏi mảng lưu vào biến tạm để lấy không gian dịch chuyển.",
+            { label: "Khóa hiện tại", value: `key = ${key}` },
+          );
+          renderArrayUI([i], [], sortedLog);
+          await sleep(currentSpeed);
+
+          while (j >= 0 && array[j] > key) {
+            if (isAborted(id)) return;
+            array[j + 1] = array[j];
+            renderArrayUI([j], [j + 1], sortedLog);
+            await sleep(currentSpeed);
+            j = j - 1;
+          }
+          if (isAborted(id)) return;
+          array[j + 1] = key;
+          renderArrayUI([], [j + 1], sortedLog);
+          await sleep(currentSpeed);
+
+          sortedLog.length = 0; // Clear array
+          for (let k = 0; k <= i; k++) sortedLog.push(k);
+        }
+      }
+
+      async function startMergeSort(id, l, r, sortedLog) {
+        if (l >= r) return;
+        const m = l + Math.floor((r - l) / 2);
+
+        await startMergeSort(id, l, m, sortedLog);
+        if (isAborted(id)) return;
+        await startMergeSort(id, m + 1, r, sortedLog);
+        if (isAborted(id)) return;
+
+        let n1 = m - l + 1;
+        let n2 = r - m;
+        let L = new Array(n1);
+        let R = new Array(n2);
+        for (let i = 0; i < n1; i++) L[i] = array[l + i];
+        for (let j = 0; j < n2; j++) R[j] = array[m + 1 + j];
+
+        renderSpaceUI(
+          "arrays",
+          `Cấp phát thêm RAM: Tạo mảng tạm Left (size ${n1}) và Right (size ${n2}). Tổng O(n)`,
+          { leftArray: [...L], rightArray: [...R] },
+        );
+        await sleep(currentSpeed * 1.5);
+
+        let i = 0,
+          j = 0,
+          k = l;
+        while (i < n1 && j < n2) {
+          if (isAborted(id)) return;
+          renderArrayUI([l + i, m + 1 + j], [], sortedLog);
+          await sleep(currentSpeed);
+
+          if (L[i] <= R[j]) {
+            array[k] = L[i];
+            i++;
+          } else {
+            array[k] = R[j];
+            j++;
+          }
+
+          renderSpaceUI(
+            "arrays",
+            `Đang trộn giá trị ${array[k]} về mảng gốc, giải phóng từ từ RAM.`,
+            { leftArray: L.slice(i), rightArray: R.slice(j) },
+          );
+          renderArrayUI([], [k], sortedLog);
+          await sleep(currentSpeed);
+          k++;
+        }
+
+        while (i < n1) {
+          if (isAborted(id)) return;
+          array[k] = L[i];
+          i++;
+          renderSpaceUI("arrays", "Đổ nốt mảng Left còn dư về mảng gốc.", {
+            leftArray: L.slice(i),
+            rightArray: [],
+          });
+          renderArrayUI([], [k], sortedLog);
+          await sleep(currentSpeed);
+          k++;
+        }
+        while (j < n2) {
+          if (isAborted(id)) return;
+          array[k] = R[j];
+          j++;
+          renderSpaceUI("arrays", "Đổ nốt mảng Right còn dư về mảng gốc.", {
+            leftArray: [],
+            rightArray: R.slice(j),
+          });
+          renderArrayUI([], [k], sortedLog);
+          await sleep(currentSpeed);
+          k++;
+        }
+      }
+
+      async function startQuickSort(id, low, high, depth, sortedLog) {
+        renderSpaceUI(
+          "stack",
+          `Bộ nhớ O(log n) bị tiêu tốn do Call Stack đệ quy. Ngăn xếp hiện tại: Tầng ${depth}`,
+          { depth: depth },
+        );
+        if (low < high) {
+          let pivot = array[high];
+          let i = low - 1;
+
+          for (let j = low; j < high; j++) {
+            if (isAborted(id)) return;
+            renderArrayUI([j, high], [], sortedLog);
+            await sleep(currentSpeed);
+
+            if (array[j] < pivot) {
+              i++;
+              if (i !== j) {
+                [array[i], array[j]] = [array[j], array[i]];
+                renderArrayUI([], [i, j], sortedLog);
+                await sleep(currentSpeed);
+              }
+            }
+          }
+          if (isAborted(id)) return;
+          [array[i + 1], array[high]] = [array[high], array[i + 1]];
+          renderArrayUI([], [i + 1, high], sortedLog);
+          await sleep(currentSpeed);
+
+          let pi = i + 1;
+          sortedLog.push(pi);
+
+          await startQuickSort(id, low, pi - 1, depth + 1, sortedLog);
+          if (isAborted(id)) return;
+          await startQuickSort(id, pi + 1, high, depth + 1, sortedLog);
+        } else if (low === high) {
+          sortedLog.push(low);
+        }
+        renderSpaceUI(
+          "stack",
+          `Hàm return, thu hồi Call Stack. Lùi về tầng ${depth - 1}`,
+          { depth: Math.max(0, depth - 1) },
+        );
+      }
+
+      // Khởi chạy khi load trang
+      initUI();
+    </script>
+  </body>
+</html>

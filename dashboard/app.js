@@ -521,8 +521,21 @@ function toggleDone(trackId, chapterIdx, problemIdx) {
 // Visualization helpers
 // ─────────────────────────────────────────────────
 function openViz(vizPath) {
-  // vizPath is relative to repo root, open in new tab
-  window.open(vizPath, '_blank');
+  const modal = document.getElementById('modal');
+  const body = modal.querySelector('.modal-body');
+
+  // Hide prev/next when viewing viz (no prev/next for HTML pages)
+  document.getElementById('modalPrev').style.display = 'none';
+  document.getElementById('modalNext').style.display = 'none';
+
+  // Wider modal for viz content
+  document.querySelector('.modal-box').classList.add('viz-modal');
+
+  // Load viz in iframe
+  body.innerHTML = `<iframe src="${vizPath}" class="viz-iframe" sandbox="allow-scripts"></iframe>`;
+
+  modal.classList.add('show');
+  document.body.style.overflow = 'hidden';
 }
 
 function openProblemViz(trackId, chapterIdx, problemIdx) {
@@ -535,6 +548,10 @@ function openProblemViz(trackId, chapterIdx, problemIdx) {
   if (!isReadme) {
     const problem = ch.problems[problemIdx];
     if (problem.type === 'viz') {
+      const dc = domainClass(track.domain);
+      document.getElementById('modalDomain').className = `modal-domain ${dc}`;
+      document.getElementById('modalDomain').textContent = DOMAIN_LABELS[track.domain] ?? track.domain.toUpperCase();
+      document.getElementById('modalTitle').textContent = problem.name;
       openViz(problem.file);
       return;
     }
@@ -548,6 +565,13 @@ function openProblemViz(trackId, chapterIdx, problemIdx) {
 // Modal / Content
 // ─────────────────────────────────────────────────
 function openProblem(trackId, chapterIdx, problemIdx) {
+  // Restore prev/next for markdown content
+  document.getElementById('modalPrev').style.display = '';
+  document.getElementById('modalNext').style.display = '';
+  const iframe = document.querySelector('.viz-iframe');
+  if (iframe) iframe.remove();
+  document.querySelector('.modal-box').classList.remove('viz-modal');
+
   const track = TRACKS.find(t => t.id === trackId);
   if (!track) return;
 
@@ -649,6 +673,13 @@ function closeModal() {
   document.getElementById('modal').classList.remove('show');
   document.body.style.overflow = '';
   currentItem = null;
+  // Restore prev/next buttons for markdown content
+  document.getElementById('modalPrev').style.display = '';
+  document.getElementById('modalNext').style.display = '';
+  // Remove iframe if any
+  const iframe = document.querySelector('.viz-iframe');
+  if (iframe) iframe.remove();
+  document.querySelector('.modal-box').classList.remove('viz-modal');
 }
 
 // ─────────────────────────────────────────────────

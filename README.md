@@ -153,6 +153,14 @@ Quy tắc entries trong `chapters`:
 
 > `"README"` là trường hợp đặc biệt — không có subfolder, metadata nằm trong `README.json` tại folder gốc track.
 
+**Lưu ý đường dẫn file cho visualization:**
+- Viz files nằm ở repo root: `visualizations/sorting/01-sorting/algo.html`
+- Trong `chapter.json`, `file` phải có prefix `../`:
+  ```json
+  "file": "../visualizations/sorting/01-sorting/algo.html"
+  ```
+- Viz hiển thị trong modal với width tối đa **1400px**
+
 #### 3c. `chapter.json` — metadata chapter + problems
 
 ```json
@@ -588,6 +596,8 @@ Thêm visualization:
   ① Tạo file .html trong visualizations/<track-id>/<chapter-id>/
   ② Thêm entry vào chapter.json với "type": "viz"
   ③ Thêm <track-id> vào visualizations/manifest.json
+  ⚠️ Đường dẫn file phải có prefix `../`:
+     "file": "../visualizations/sorting/01-sorting/algo.html"
 ```
 
 ---

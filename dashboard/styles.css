@@ -1090,6 +1090,10 @@ body {
   border: 1px solid var(--border);
 }
 
+.modal-box.viz-modal {
+  max-width: 1400px;
+}
+
 .modal-header {
   padding: 14px 20px;
   background: var(--surface);
@@ -1179,6 +1183,15 @@ body {
   padding: 28px 36px;
   max-height: calc(100vh - 140px);
   overflow-y: auto;
+}
+
+.viz-iframe {
+  width: 100%;
+  height: calc(100vh - 160px);
+  border: none;
+  border-radius: 8px;
+  background: #fff;
+}
   font-size: 14.5px;
   line-height: 1.75;
 }
