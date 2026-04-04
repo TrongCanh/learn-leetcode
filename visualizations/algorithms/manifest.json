@@ -6,6 +6,7 @@
     "04-linked-list",
     "05-tree",
     "06-graph",
-    "07-heap"
+    "07-heap",
+    "08-dynamic-programming"
   ]
 }

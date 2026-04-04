@@ -1,0 +1,1120 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trực Quan Hóa Quy Hoạch Động (Dynamic Programming)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .hide-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      .dp-cell {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      @keyframes pulse-cell {
+        0% {
+          box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+        }
+        70% {
+          box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+        }
+      }
+
+      .cell-active {
+        animation: pulse-cell 1.5s infinite;
+        border-color: #10b981 !important;
+        background-color: #064e3b !important;
+        color: white;
+        transform: scale(1.1);
+        z-index: 20;
+        box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+      }
+      .cell-dependency {
+        border-color: #f59e0b !important;
+        background-color: #78350f !important;
+        color: #fbbf24 !important;
+        transform: scale(1.05);
+        z-index: 10;
+        box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+      }
+      .cell-filled {
+        background-color: #1e293b;
+        border-color: #3b82f6;
+        color: #e2e8f0;
+      }
+      .cell-empty {
+        background-color: #0f172a;
+        border-color: #334155;
+        color: #475569;
+      }
+      .cell-base {
+        background-color: #312e81;
+        border-color: #6366f1;
+        color: #c7d2fe;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-slate-50 text-slate-900 font-sans min-h-screen p-4 sm:p-6 lg:p-8"
+  >
+    <div class="max-w-7xl mx-auto space-y-8">
+      <!-- HEADER -->
+      <header class="text-center space-y-4 mb-10">
+        <div
+          class="inline-flex items-center justify-center p-3 bg-indigo-100 text-indigo-600 rounded-full mb-2 shadow-sm"
+        >
+          <i data-lucide="grid" class="w-8 h-8"></i>
+        </div>
+        <h1
+          class="text-3xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-cyan-600"
+        >
+          Quy Hoạch Động (DP)
+        </h1>
+        <p class="text-lg text-slate-600 max-w-3xl mx-auto">
+          Kỹ thuật chia bài toán lớn thành bài toán nhỏ và
+          <b>ghi nhớ kết quả</b> để không bao giờ phải tính lại.<br />
+          <span
+            class="inline-block mt-2 px-3 py-1 bg-amber-100 text-amber-800 rounded-lg text-sm font-semibold border border-amber-200"
+          >
+            🔥 Insight: DP = Trạng thái (State) + Phương trình chuyển đổi
+            (Transition) + Bài toán cơ sở (Base Case)
+          </span>
+        </p>
+      </header>
+
+      <!-- LÝ THUYẾT TRỌNG TÂM -->
+      <div
+        class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 overflow-hidden"
+      >
+        <div class="flex items-center mb-6">
+          <i data-lucide="book-open" class="w-6 h-6 text-indigo-500 mr-2"></i>
+          <h2 class="text-xl font-bold text-slate-800">
+            Giải ngố Quy Hoạch Động (DP) từ số 0
+          </h2>
+        </div>
+
+        <div class="space-y-6 text-sm text-slate-700">
+          <!-- Ví dụ thực tế -->
+          <div
+            class="bg-indigo-50 p-4 sm:p-5 rounded-xl border border-indigo-100"
+          >
+            <h3 class="font-bold text-indigo-800 mb-2 flex items-center">
+              <i
+                data-lucide="lightbulb"
+                class="w-5 h-5 mr-2 text-amber-500"
+              ></i>
+              Bản chất thực sự của DP là gì?
+            </h3>
+            <p class="mb-3">
+              Hãy tưởng tượng tôi viết lên bảng:
+              <code
+                class="bg-white px-2 py-1 rounded text-indigo-600 font-bold shadow-sm border border-indigo-200"
+                >1 + 1 + 1 + 1 + 1 = ?</code
+              >. Bạn nhẩm đếm và trả lời <b>"Bằng 5!"</b>.
+            </p>
+            <p>
+              Ngay sau đó, tôi viết thêm <code>+ 1</code> vào cuối dãy trên. Bạn
+              lập tức trả lời <b>"Bằng 6!"</b> mà không cần đếm lại 5 số 1 ban
+              đầu. Tại sao vậy?
+            </p>
+            <p
+              class="mt-3 font-medium text-indigo-900 border-l-4 border-indigo-400 pl-3"
+            >
+              Vì bạn đã <b>ghi nhớ</b> kết quả trước đó là 5, và chỉ việc lấy
+              <code>5 + 1 = 6</code>. Đó chính xác là tư duy của Quy hoạch động:
+              Ghi nhớ quá khứ để không bao giờ phải tính lại từ đầu!
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            <!-- 3 Bước cốt lõi -->
+            <div
+              class="bg-slate-900 p-5 rounded-xl border border-slate-700 text-slate-300 h-full"
+            >
+              <h3 class="font-bold text-white mb-4 flex items-center text-base">
+                <i data-lucide="key" class="w-5 h-5 mr-2 text-amber-400"></i> 3
+                Bước giải mọi bài toán DP
+              </h3>
+              <ul class="space-y-5">
+                <li>
+                  <span class="text-cyan-400 font-bold block text-sm mb-1"
+                    >1. Khai báo Trạng thái (State):</span
+                  >
+                  Biến bài toán thành các mảng 1 chiều <code>dp[i]</code> hoặc
+                  bảng 2 chiều <code>dp[i][j]</code>. Bạn phải định nghĩa rõ
+                  bằng lời: <i>"dp[i] mang ý nghĩa gì?"</i> (VD: dp[i] là số xu
+                  ít nhất để đổi được i đồng).
+                </li>
+                <li>
+                  <span class="text-emerald-400 font-bold block text-sm mb-1"
+                    >2. Bài toán cơ sở (Base Case):</span
+                  >
+                  Điểm xuất phát thấp nhất mà ta nhẩm ra kết quả ngay lập tức
+                  (không cần thuật toán). VD: Cần 0 đồng xu để đổi lấy 0 đồng ➔
+                  <code>dp[0] = 0</code>.
+                </li>
+                <li>
+                  <span class="text-rose-400 font-bold block text-sm mb-1"
+                    >3. Phương trình chuyển đổi (Transition):</span
+                  >
+                  Công thức Toán học liên kết hiện tại với quá khứ. Đây là linh
+                  hồn của thuật toán. (VD: Muốn bước lên bậc thang i, ta có thể
+                  bước từ bậc i-1 hoặc i-2 ➔
+                  <code>dp[i] = dp[i-1] + dp[i-2]</code>).
+                </li>
+              </ul>
+            </div>
+
+            <!-- Top-Down vs Bottom-Up & Dấu hiệu -->
+            <div class="space-y-6 h-full flex flex-col">
+              <div
+                class="bg-slate-50 p-5 rounded-xl border border-slate-100 flex-1"
+              >
+                <h3 class="font-bold text-slate-800 mb-3 flex items-center">
+                  <i
+                    data-lucide="git-merge"
+                    class="w-5 h-5 mr-2 text-blue-500"
+                  ></i>
+                  2 Cách Cài đặt Cốt lõi
+                </h3>
+                <ul class="space-y-4">
+                  <li>
+                    <b class="text-indigo-600 block mb-1"
+                      >1. Top-Down (Memoization - Ghi nhớ):</b
+                    >
+                    Dùng hàm Đệ quy đi từ N lùi về 0. Cứ tính xong bài toán nào
+                    thì ném kết quả vào Hash Map (Cache) để lưu lại. Tư duy rất
+                    tự nhiên, nhưng rủi ro tràn Stack bộ nhớ.
+                  </li>
+                  <li>
+                    <b class="text-emerald-600 block mb-1"
+                      >2. Bottom-Up (Tabulation - Điền bảng):</b
+                    >
+                    Bỏ đệ quy hoàn toàn! Tạo mảng và dùng vòng lặp FOR điền từ
+                    Base Case (0) tiến dần lên N. Tốc độ thực thi chớp nhoáng.
+                    <span
+                      class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold shadow-sm inline-block mt-1"
+                      >Giao diện bên dưới đang mô phỏng cách này!</span
+                    >
+                  </li>
+                </ul>
+              </div>
+
+              <div class="bg-amber-50 p-4 rounded-xl border border-amber-100">
+                <h3 class="font-bold text-amber-800 mb-2 flex items-center">
+                  <i data-lucide="search" class="w-4 h-4 mr-2"></i> Khi nào thì
+                  nên dùng DP?
+                </h3>
+                <p>
+                  Khi đề bài bắt tìm: <b>Lớn nhất/Nhỏ nhất</b> (Max/Min),
+                  <b>Dài nhất/Ngắn nhất</b> (Longest/Shortest), hoặc
+                  <b>Đếm tổng số cách</b>. Kèm theo đó, các bài toán con phải bị
+                  <b class="underline">lặp lại cực kỳ nhiều lần</b> (Overlapping
+                  Subproblems).
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BẢNG ĐÁNH GIÁ -->
+      <div
+        class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 overflow-hidden flex flex-col"
+      >
+        <div class="flex items-center mb-6">
+          <i data-lucide="award" class="w-6 h-6 text-indigo-500 mr-2"></i>
+          <h2 class="text-xl font-bold text-slate-800">
+            Các Pattern Tiêu Biểu
+          </h2>
+        </div>
+        <div class="overflow-x-auto">
+          <table
+            class="w-full text-left border-collapse whitespace-nowrap min-w-[600px]"
+          >
+            <thead>
+              <tr class="bg-slate-50">
+                <th class="p-4 font-semibold text-slate-700 rounded-tl-xl">
+                  Dạng bài / Mảng
+                </th>
+                <th class="p-4 font-semibold text-slate-700">
+                  Ví dụ tiêu biểu
+                </th>
+                <th class="p-4 font-semibold text-slate-700">
+                  Đặc điểm / Kỹ thuật
+                </th>
+                <th class="p-4 font-semibold text-slate-700 rounded-tr-xl">
+                  Độ Phức Tạp (Time)
+                </th>
+              </tr>
+            </thead>
+            <tbody id="comparison-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- MAIN UI -->
+      <div
+        class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden"
+      >
+        <div
+          id="tabs-container"
+          class="flex overflow-x-auto border-b border-slate-200 hide-scrollbar bg-slate-50"
+        ></div>
+
+        <div
+          class="p-4 sm:p-6 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start"
+        >
+          <div class="lg:col-span-4 space-y-6" id="info-container"></div>
+
+          <div class="lg:col-span-8 w-full flex flex-col space-y-6">
+            <div
+              class="bg-slate-900 rounded-2xl p-4 sm:p-6 shadow-inner border border-slate-800"
+            >
+              <div
+                class="flex flex-wrap gap-4 items-center justify-between mb-4 pb-4 border-b border-slate-700"
+              >
+                <div class="flex gap-2">
+                  <button
+                    id="btn-play"
+                    class="flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-semibold transition disabled:opacity-50 text-sm"
+                  >
+                    <i data-lucide="play" class="w-4 h-4 mr-2"></i>
+                    <span id="btn-play-text">Chạy Mô Phỏng</span>
+                  </button>
+                  <button
+                    id="btn-reset"
+                    class="flex items-center px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition text-sm"
+                  >
+                    <i data-lucide="rotate-ccw" class="w-4 h-4 mr-2"></i> Trạng
+                    thái ban đầu
+                  </button>
+                </div>
+                <div class="flex items-center gap-3 text-slate-300 text-sm">
+                  <i data-lucide="settings-2" class="w-4 h-4"></i>
+                  <label class="font-medium hidden sm:block">Tốc độ:</label>
+                  <input
+                    type="range"
+                    id="speed-slider"
+                    min="50"
+                    max="1500"
+                    value="600"
+                    class="w-24 accent-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div
+                id="problem-statement"
+                class="bg-indigo-900/40 border border-indigo-500/30 rounded-xl p-4 mb-4 text-sm sm:text-base text-indigo-100 flex items-start gap-3 hidden"
+              >
+                <i
+                  data-lucide="target"
+                  class="w-5 h-5 text-indigo-400 shrink-0 mt-0.5"
+                ></i>
+                <div id="problem-text" class="leading-relaxed"></div>
+              </div>
+
+              <div
+                id="math-computation"
+                class="bg-slate-800 rounded-xl p-3 mb-6 text-center font-mono text-sm sm:text-base border border-slate-600 text-slate-300 min-h-[48px] flex items-center justify-center"
+              >
+                Sẵn sàng mô phỏng.
+              </div>
+
+              <!-- Vùng Hiển Thị DP Table -->
+              <div
+                class="flex flex-col items-center justify-center w-full relative mb-4 overflow-x-auto hide-scrollbar"
+              >
+                <div
+                  class="text-xs text-cyan-400 mb-4 font-semibold uppercase tracking-wider flex items-center gap-2 w-full text-center justify-center"
+                >
+                  <i data-lucide="table-2" class="w-4 h-4"></i> Bảng DP
+                  (Tabulation)
+                </div>
+
+                <!-- Grid Container -->
+                <div
+                  id="dp-table-container"
+                  class="flex flex-col gap-1 p-2 bg-slate-950 rounded-xl border border-slate-700 shadow-inner"
+                >
+                  <!-- Javascript will inject grid here -->
+                </div>
+
+                <!-- Legend -->
+                <div
+                  class="flex items-center gap-4 mt-6 text-xs text-slate-400 font-mono"
+                >
+                  <div class="flex items-center gap-1">
+                    <div
+                      class="w-3 h-3 bg-[#312e81] border border-[#6366f1] rounded-sm"
+                    ></div>
+                    Base Case
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <div
+                      class="w-3 h-3 bg-[#1e293b] border border-[#3b82f6] rounded-sm"
+                    ></div>
+                    Đã tính
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <div
+                      class="w-3 h-3 bg-[#78350f] border border-[#f59e0b] rounded-sm"
+                    ></div>
+                    Đang tra cứu
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <div
+                      class="w-3 h-3 bg-[#064e3b] border border-[#10b981] rounded-sm"
+                    ></div>
+                    Kết quả mới
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Code Block -->
+            <div
+              class="relative rounded-2xl overflow-hidden shadow-lg border border-slate-700 bg-[#0f172a]"
+            >
+              <div
+                class="w-full px-4 py-3 bg-[#1e293b] border-b border-slate-700 flex items-center justify-between"
+              >
+                <div class="flex space-x-2">
+                  <div class="w-3 h-3 rounded-full bg-rose-500"></div>
+                  <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+                  <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                </div>
+                <div class="flex items-center text-slate-400 text-xs font-mono">
+                  <i data-lucide="code" class="w-4 h-4 mr-1.5"></i> javascript
+                </div>
+              </div>
+              <pre
+                class="p-4 sm:p-6 overflow-auto text-xs sm:text-sm font-mono leading-relaxed max-h-72"
+              ><code id="code-container" class="text-slate-200"></code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // === DỮ LIỆU PATTERNS DP ===
+      const ALGO_DATA = [
+        {
+          id: "fibonacci",
+          name: "1. Dãy Fibonacci",
+          vnName: "Mảng 1D Cơ bản",
+          tech: "Trạng thái 1 chiều",
+          space: "O(n)",
+          time: "O(n)",
+          code: `// Bài toán: Tìm số Fibonacci thứ n\nfunction fibonacci(n) {\n  if (n <= 1) return n;\n  \n  let dp = new Array(n + 1).fill(0);\n  \n  // Bài toán cơ sở (Base Case)\n  dp[0] = 0;\n  dp[1] = 1;\n\n  for (let i = 2; i <= n; i++) {\n    // Phương trình trạng thái:\n    // F(n) = F(n-1) + F(n-2)\n    dp[i] = dp[i - 1] + dp[i - 2];\n  }\n  \n  return dp[n];\n}`,
+          desc: "Bài học vỡ lòng của Quy hoạch động. Mảng <code>dp[i]</code> lưu số Fibonacci thứ i. Thay vì gọi đệ quy cồng kềnh, ta điền mảng từ trái sang phải. Mỗi ô mới được cộng gộp từ 2 ô liền trước nó.",
+          characteristics: [
+            "State: dp[i] là số Fibo thứ i",
+            "Transition: dp[i] = dp[i-1] + dp[i-2]",
+            "Có thể tối ưu Space O(1) bằng cách chỉ giữ 2 biến.",
+          ],
+        },
+        {
+          id: "coin_change",
+          name: "2. Đổi Tiền (Coin Change)",
+          vnName: "Mảng 1D Nâng cao",
+          tech: "Unbounded Knapsack",
+          space: "O(Amount)",
+          time: "O(Amount * Coins)",
+          code: `// Bài toán: Tìm SỐ LƯỢNG ĐỒNG XU ÍT NHẤT để đổi được số tiền Amount\nfunction coinChange(coins, amount) {\n  // Khởi tạo mảng bằng Infinity (Vô cực)\n  let dp = new Array(amount + 1).fill(Infinity);\n  \n  // Base Case: Để đổi 0 đồng, cần 0 đồng xu\n  dp[0] = 0;\n\n  // Duyệt từng mức tiền từ 1 đến Amount\n  for (let i = 1; i <= amount; i++) {\n    for (let coin of coins) {\n      if (i - coin >= 0) {\n        // Transition: Chọn cách tốt nhất giữa KHÔNG LẤY đồng này và LẤY đồng này\n        dp[i] = Math.min(dp[i], dp[i - coin] + 1);\n      }\n    }\n  }\n  \n  return dp[amount] === Infinity ? -1 : dp[amount];\n}`,
+          desc: "Một biến thể của bài toán Cái túi (Knapsack) nhưng được phép dùng vô hạn số lần mỗi đồng xu. Tại mỗi số tiền <code>i</code>, ta thử cộng thêm 1 đồng xu bất kỳ, và lấy kết quả từ quá khứ <code>dp[i - coin]</code> để tìm ra cách tốn ít xu nhất.",
+          characteristics: [
+            "State: dp[i] là số xu ít nhất để đổi i đồng",
+            "Transition: dp[i] = min(dp[i], dp[i - c] + 1)",
+          ],
+        },
+        {
+          id: "min_path",
+          name: "3. Đường Đi Ngắn Nhất (Grid)",
+          vnName: "Mảng 2D (Lưới)",
+          tech: "2D Tabulation",
+          space: "O(m*n)",
+          time: "O(m*n)",
+          code: `// Bài toán: Tìm đường đi từ góc trên-trái xuống dưới-phải sao cho TỔNG CÁC SỐ LÀ NHỎ NHẤT (Chỉ được đi xuống hoặc sang phải)\nfunction minPathSum(grid) {\n  let m = grid.length, n = grid[0].length;\n  let dp = Array.from(Array(m), () => new Array(n).fill(0));\n  \n  dp[0][0] = grid[0][0];\n  \n  // Khởi tạo hàng đầu tiên (chỉ có thể đến từ bên trái)\n  for (let j = 1; j < n; j++) dp[0][j] = dp[0][j-1] + grid[0][j];\n  \n  // Khởi tạo cột đầu tiên (chỉ có thể đến từ phía trên)\n  for (let i = 1; i < m; i++) dp[i][0] = dp[i-1][0] + grid[i][0];\n\n  // Điền phần còn lại của bảng\n  for (let i = 1; i < m; i++) {\n    for (let j = 1; j < n; j++) {\n      // Transition: Chi phí = Ô hiện tại + Cạnh rẻ hơn (Trên hoặc Trái)\n      dp[i][j] = grid[i][j] + Math.min(dp[i-1][j], dp[i][j-1]);\n    }\n  }\n  return dp[m-1][n-1];\n}`,
+          desc: "DP trên lưới 2D cực kỳ phổ biến. Để đi đến ô (i, j), ta chỉ có 2 con đường: Đi từ ô phía trên (i-1, j) hoặc ô bên trái (i, j-1). Do đó, tổng chi phí nhỏ nhất tại (i, j) sẽ phụ thuộc vào việc chọn đường nào rẻ hơn giữa 2 ô đó.",
+          characteristics: [
+            "State: dp[i][j] là chi phí nhỏ nhất tới ô (i,j)",
+            "Transition: dp[i][j] = cost + min(Top, Left)",
+          ],
+        },
+        {
+          id: "knapsack",
+          name: "4. Cái Túi (0/1 Knapsack)",
+          vnName: "2D DP (Items x Capacity)",
+          tech: "Bảng DP 2 chiều",
+          space: "O(n*W)",
+          time: "O(n*W)",
+          code: `// Bài toán: Lấy đồ vật bỏ vào túi tải trọng W sao cho TỔNG GIÁ TRỊ lớn nhất. Mỗi đồ vật chỉ lấy 1 lần.\nfunction knapsack(weights, values, W) {\n  let n = weights.length;\n  // Tạo bảng (n+1) hàng, (W+1) cột\n  let dp = Array.from(Array(n + 1), () => new Array(W + 1).fill(0));\n\n  for (let i = 1; i <= n; i++) {\n    let wt = weights[i-1];\n    let val = values[i-1];\n    \n    for (let w = 1; w <= W; w++) {\n      if (wt <= w) {\n        // Chọn MAX giữa KHÔNG LẤY món i và LẤY món i\n        dp[i][w] = Math.max(dp[i-1][w], val + dp[i-1][w - wt]);\n      } else {\n        // Túi không chứa nổi món này -> Buộc phải KHÔNG LẤY\n        dp[i][w] = dp[i-1][w];\n      }\n    }\n  }\n  return dp[n][W];\n}`,
+          desc: "Vua của các bài toán DP. Trục dọc là Đồ Vật (Item), trục ngang là Sức chứa túi (Capacity). Tại mỗi ô <code>dp[i][w]</code>, ta có sự lựa chọn: Hoặc là KHÔNG lấy đồ vật i (lấy y xì kết quả hàng trên <code>dp[i-1][w]</code>), hoặc là LẤY nó (Nhận Value hiện tại + Lùi lại quá khứ ở hàng trên tìm vị trí túi còn chỗ trống).",
+          characteristics: [
+            "Phải phân tách rõ 2 chiều: Xét đồ vật gì? Túi sức chứa bao nhiêu?",
+            "Transition: dp[i][w] = max(Bỏ qua, Lấy i + dp[i-1][w - wt[i]])",
+          ],
+        },
+        {
+          id: "lcs",
+          name: "5. Chuỗi Con Chung Dài Nhất",
+          vnName: "LCS (2 Strings)",
+          tech: "2D String Matching",
+          space: "O(m*n)",
+          time: "O(m*n)",
+          code: `// Bài toán: Tìm độ dài Chuỗi con chung dài nhất (Longest Common Subsequence) của S1 và S2\nfunction longestCommonSubsequence(s1, s2) {\n  let m = s1.length, n = s2.length;\n  let dp = Array.from(Array(m + 1), () => new Array(n + 1).fill(0));\n\n  for (let i = 1; i <= m; i++) {\n    for (let j = 1; j <= n; j++) {\n      if (s1[i-1] === s2[j-1]) {\n        // Khớp ký tự! Chiều dài = 1 + kết quả quá khứ ở đường CHÉO\n        dp[i][j] = 1 + dp[i-1][j-1];\n      } else {\n        // Không khớp! Lấy kết quả TỐT NHẤT từ việc bỏ ký tự s1 hoặc bỏ ký tự s2\n        dp[i][j] = Math.max(dp[i-1][j], dp[i][j-1]);\n      }\n    }\n  }\n  return dp[m][n];\n}`,
+          desc: "DP trên chuỗi. Trục dọc là chuỗi S1, trục ngang là chuỗi S2. Nếu 2 ký tự khớp nhau, ta +1 vào đường chéo (nghĩa là bỏ 2 ký tự này đi và xét phần còn lại). Nếu không khớp, ta thử bỏ ký tự ở S1 hoặc bỏ ký tự ở S2 xem đường nào cho chuỗi chung dài hơn.",
+          characteristics: [
+            "State: dp[i][j] là LCS của chuỗi s1[0..i] và s2[0..j]",
+            "Transition: Khớp -> Chéo + 1. Không khớp -> max(Trên, Trái)",
+          ],
+        },
+      ];
+
+      let currentTabId = ALGO_DATA[0].id;
+      let isRunning = false;
+      let currentProcessId = 0;
+      let currentSpeed = 600;
+
+      // --- DP State ---
+      let dpMatrix = []; // Bảng 2D hiển thị DP
+      let dpRowHeaders = []; // VD: ["", "A", "B", "C"]
+      let dpColHeaders = []; // VD: ["", "X", "Y"]
+      let topLabels = []; // Nhãn ở trên cột (VD: Cân nặng W)
+      let leftLabels = []; // Nhãn ở trái hàng (VD: Items)
+
+      // Grid (Cho Min Path Sum)
+      let extraMatrix = [];
+
+      // Tiện ích UI
+      const renderBadgeHTML = (text) => {
+        let c = "bg-slate-100 text-slate-800 border-slate-300";
+        if (text.includes("O(1)"))
+          c = "bg-emerald-100 text-emerald-800 border-emerald-300";
+        if (text.includes("O(n)") || text.includes("Amount"))
+          c = "bg-cyan-100 text-cyan-800 border-cyan-300";
+        if (text.includes("O(n*W)") || text.includes("O(m*n)"))
+          c = "bg-rose-100 text-rose-800 border-rose-300";
+        return `<span class="px-3 py-1 rounded-full border text-sm font-semibold shadow-sm inline-block ${c}">${text}</span>`;
+      };
+
+      const highlightJS = (code) => {
+        let esc = code.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const c = [];
+        esc = esc.replace(/(\/\/.*)/g, (m) => {
+          c.push(m);
+          return `___C_${c.length - 1}___`;
+        });
+
+        // Đổi số thành placeholder trước để tránh bị trùng lặp chữ 'class' hoặc số trong tên màu CSS
+        esc = esc.replace(/\b(\d+)\b/g, "___NUM_$1___");
+
+        esc = esc
+          .replace(
+            /\b(function|let|const|var|if|else|for|while|return|break|continue|class|constructor)\b/g,
+            '<span class="text-pink-400 font-semibold">$1</span>',
+          )
+          .replace(
+            /\b(true|false|null|isNaN|Number|Infinity)\b/g,
+            '<span class="text-purple-400">$1</span>',
+          )
+          .replace(
+            /\b(Math|max|min|fill|length|from|slice)\b/g,
+            '<span class="text-yellow-300">$1</span>',
+          )
+          .replace(
+            /\b(new|Array)\b/g,
+            '<span class="text-indigo-300">$1</span>',
+          );
+
+        // Phục hồi lại các con số và bọc thẻ span an toàn
+        esc = esc.replace(
+          /___NUM_(\d+)___/g,
+          '<span class="text-cyan-300">$1</span>',
+        );
+
+        c.forEach(
+          (com, i) =>
+            (esc = esc.replace(
+              `___C_${i}___`,
+              `<span class="text-slate-500 italic">${com}</span>`,
+            )),
+        );
+        return esc;
+      };
+
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+      const isAborted = (id) => id !== currentProcessId;
+
+      function renderTabs() {
+        document.getElementById("tabs-container").innerHTML = ALGO_DATA.map(
+          (a) =>
+            `<button onclick="changeTab('${a.id}')" class="px-5 py-4 font-bold whitespace-nowrap transition-all duration-200 border-b-2 flex-1 text-center ${a.id === currentTabId ? "text-indigo-600 border-indigo-600 bg-white" : "text-slate-500 hover:text-slate-800 hover:bg-slate-100/50 border-transparent cursor-pointer"} text-sm sm:text-base">${a.name}</button>`,
+        ).join("");
+      }
+
+      function initUI() {
+        document.getElementById("comparison-table-body").innerHTML =
+          ALGO_DATA.map(
+            (a) =>
+              `<tr class="border-b border-slate-100 hover:bg-slate-50/50"><td class="p-4 font-bold text-slate-800">${a.name}</td><td class="p-4 text-slate-700 text-sm font-semibold text-indigo-600">${a.vnName}</td><td class="p-4 text-slate-700 text-sm italic">${a.tech}</td><td class="p-4">${renderBadgeHTML(a.time)}</td></tr>`,
+          ).join("");
+        renderTabs();
+        updateInfoAndCode();
+        generateNewData();
+        lucide.createIcons();
+      }
+
+      function updateInfoAndCode() {
+        const a = ALGO_DATA.find((x) => x.id === currentTabId);
+        if (!a) return;
+        document.getElementById("info-container").innerHTML =
+          `<div><h3 class="text-3xl font-extrabold text-slate-900 mb-1">${a.name}</h3><div class="inline-flex items-center px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium">${a.vnName}</div></div><p class="text-slate-600 leading-relaxed text-sm">${a.desc}</p><ul class="space-y-2 text-sm text-slate-700 mt-4">${a.characteristics.map((c) => `<li class="flex items-start"><i data-lucide="check-circle-2" class="w-4 h-4 text-indigo-500 mr-2 shrink-0 mt-0.5"></i><span>${c}</span></li>`).join("")}</ul>`;
+        document.getElementById("code-container").innerHTML = highlightJS(
+          a.code,
+        );
+        lucide.createIcons();
+      }
+
+      function setMathHTML(htmlContent) {
+        document.getElementById("math-computation").innerHTML = htmlContent;
+      }
+
+      // --- RENDER DP TABLE ---
+      function renderDPTable(
+        activeR = -1,
+        activeC = -1,
+        dependencies = [],
+        isBaseCase = false,
+      ) {
+        const container = document.getElementById("dp-table-container");
+        let html = "";
+        let numRows = dpMatrix.length;
+        let numCols = dpMatrix[0].length;
+
+        // Vẽ cột header (Top)
+        if (topLabels.length > 0) {
+          html += `<div class="flex">`;
+          if (leftLabels.length > 0)
+            html += `<div class="w-12 h-8 sm:w-16 sm:h-10 shrink-0"></div>`; // Góc trống
+          for (let c = 0; c < numCols; c++) {
+            html += `<div class="w-10 h-8 sm:w-12 sm:h-10 flex items-center justify-center font-mono text-xs font-bold text-slate-400 shrink-0">${topLabels[c] !== undefined ? topLabels[c] : ""}</div>`;
+          }
+          html += `</div>`;
+        }
+
+        for (let r = 0; r < numRows; r++) {
+          html += `<div class="flex">`;
+
+          // Vẽ hàng header (Left)
+          if (leftLabels.length > 0) {
+            html += `<div class="w-12 h-10 sm:w-16 sm:h-12 flex items-center justify-end pr-2 font-mono text-xs font-bold text-slate-400 shrink-0">${leftLabels[r] !== undefined ? leftLabels[r] : ""}</div>`;
+          }
+
+          for (let c = 0; c < numCols; c++) {
+            let val = dpMatrix[r][c];
+            let displayVal = val === null ? "" : val === Infinity ? "∞" : val;
+
+            let bgClass = "cell-empty";
+
+            // Xác định trạng thái ô
+            if (val !== null) bgClass = "cell-filled";
+            if (isBaseCase && val !== null && activeR === -1)
+              bgClass = "cell-base"; // Base cases default color
+
+            let isDependency = dependencies.some(
+              (d) => d[0] === r && d[1] === c,
+            );
+            if (isDependency) bgClass = "cell-dependency";
+
+            if (r === activeR && c === activeC) bgClass = "cell-active";
+
+            // Extra info for Min Path Sum (Original Grid values)
+            let extraHTML = "";
+            if (
+              currentTabId === "min_path" &&
+              extraMatrix[r] &&
+              extraMatrix[r][c] !== undefined
+            ) {
+              extraHTML = `<span class="absolute top-0.5 left-1 text-[8px] text-cyan-400 font-mono">g:${extraMatrix[r][c]}</span>`;
+            }
+
+            html += `
+                 <div class="dp-cell relative w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center border font-bold text-sm sm:text-base shrink-0 mx-[1px] rounded-sm ${bgClass}">
+                    ${extraHTML}
+                    ${displayVal}
+                 </div>
+               `;
+          }
+          html += `</div>`;
+        }
+        container.innerHTML = html;
+      }
+
+      function changeTab(id) {
+        if (isRunning) {
+          currentProcessId++;
+          isRunning = false;
+          toggleBtn(false);
+        }
+        currentTabId = id;
+        renderTabs();
+        updateInfoAndCode();
+        generateNewData();
+      }
+
+      function generateNewData() {
+        if (isRunning) return;
+        let problemHTML = "";
+
+        // Reset Data
+        dpMatrix = [];
+        topLabels = [];
+        leftLabels = [];
+        extraMatrix = [];
+
+        if (currentTabId === "fibonacci") {
+          let n = 8;
+          dpMatrix = [new Array(n + 1).fill(null)];
+          topLabels = Array.from({ length: n + 1 }, (_, i) => `i=${i}`);
+
+          problemHTML = `<b class="text-white">Dãy Fibonacci:</b> Điền bảng 1D. Tính F(<b class="text-indigo-400">8</b>). <br/>Base case: <b class="text-emerald-400">dp[0] = 0, dp[1] = 1</b>. Transition: <b class="text-yellow-400">dp[i] = dp[i-1] + dp[i-2]</b>.`;
+        } else if (currentTabId === "coin_change") {
+          let amount = 7;
+          let coins = [1, 3, 4];
+          dpMatrix = [new Array(amount + 1).fill(null)];
+          topLabels = Array.from({ length: amount + 1 }, (_, i) => `A=${i}`);
+
+          problemHTML = `<b class="text-white">Đổi tiền (Coin Change):</b> Cần đổi Amount = <b class="text-indigo-400">${amount}</b>. Có các đồng xu: <b class="text-cyan-400">[1, 3, 4]</b>.<br/>Transition: Thử từng đồng xu, lấy <b class="text-yellow-400">Min(hiện_tại, dp[i - coin] + 1)</b>.`;
+        } else if (currentTabId === "min_path") {
+          extraMatrix = [
+            [1, 3, 1],
+            [1, 5, 1],
+            [4, 2, 1],
+          ];
+          let m = 3,
+            n = 3;
+          dpMatrix = Array.from(Array(m), () => new Array(n).fill(null));
+          topLabels = Array.from({ length: n }, (_, i) => `c=${i}`);
+          leftLabels = Array.from({ length: m }, (_, i) => `r=${i}`);
+
+          problemHTML = `<b class="text-white">Đường đi rẻ nhất (Grid 3x3):</b> Chỉ đi [Xuống] hoặc [Phải]. Cần tìm tổng nhỏ nhất đến đích góc phải dưới.<br/>Transition: Chi phí = Ô hiện tại + <b class="text-yellow-400">Min(Trái, Trên)</b>.`;
+        } else if (currentTabId === "knapsack") {
+          let W = 5;
+          let items = [
+            { w: 2, v: 3 },
+            { w: 3, v: 4 },
+            { w: 4, v: 5 },
+            { w: 1, v: 6 },
+          ]; // Trọng lượng và Giá trị
+          let n = items.length;
+
+          dpMatrix = Array.from(Array(n + 1), () =>
+            new Array(W + 1).fill(null),
+          );
+          topLabels = Array.from({ length: W + 1 }, (_, i) => `w=${i}`);
+          leftLabels = [
+            "0 (Rỗng)",
+            "1 (w2,v3)",
+            "2 (w3,v4)",
+            "3 (w4,v5)",
+            "4 (w1,v6)",
+          ];
+
+          problemHTML = `<b class="text-white">0/1 Knapsack (Balo):</b> Sức chứa W = <b class="text-indigo-400">${W}</b>. Có 4 món đồ.<br/>Transition: <b class="text-yellow-400">Max( Bỏ_qua(hàng trên), Lấy_món_này + Tốt_nhất_phần_còn_lại(hàng trên, lùi sức chứa) )</b>.`;
+        } else if (currentTabId === "lcs") {
+          let s1 = "ABCBDAB";
+          let s2 = "BDCABA";
+          // Let's use smaller strings for visual fitting
+          s1 = "GAC";
+          s2 = "AGCAT";
+          let m = s1.length,
+            n = s2.length;
+
+          dpMatrix = Array.from(Array(m + 1), () =>
+            new Array(n + 1).fill(null),
+          );
+          topLabels = ["Ø", ...s2.split("")];
+          leftLabels = ["Ø", ...s1.split("")];
+
+          problemHTML = `<b class="text-white">Longest Common Subsequence (LCS):</b> S1 = "<b class="text-cyan-400">${s1}</b>", S2 = "<b class="text-rose-400">${s2}</b>".<br/>Khớp ký tự ➔ <b class="text-emerald-400">Chéo + 1</b>. Lệch ký tự ➔ <b class="text-yellow-400">Max(Trên, Trái)</b>.`;
+        }
+
+        document.getElementById("problem-text").innerHTML = problemHTML;
+        document.getElementById("problem-statement").classList.remove("hidden");
+        lucide.createIcons();
+
+        renderDPTable();
+        setMathHTML(
+          'Nhấn "Chạy Mô Phỏng" để thuật toán bắt đầu điền bảng (Tabulation).',
+        );
+      }
+
+      function toggleBtn(s) {
+        isRunning = s;
+        document.getElementById("btn-play").disabled = s;
+        document.getElementById("btn-play-text").innerText = s
+          ? "Đang chạy..."
+          : "Chạy Mô Phỏng";
+      }
+
+      document
+        .getElementById("btn-reset")
+        .addEventListener("click", generateNewData);
+      document
+        .getElementById("speed-slider")
+        .addEventListener(
+          "input",
+          (e) => (currentSpeed = 1550 - Number(e.target.value)),
+        );
+      document.getElementById("btn-play").addEventListener("click", () => {
+        if (!isRunning) handleSimulation();
+      });
+
+      // --- CORE DP ALGORITHMS ---
+      async function handleSimulation() {
+        toggleBtn(true);
+        currentProcessId++;
+        let sid = currentProcessId;
+        try {
+          if (currentTabId === "fibonacci") await startFibonacci(sid);
+          else if (currentTabId === "coin_change") await startCoinChange(sid);
+          else if (currentTabId === "min_path") await startMinPathSum(sid);
+          else if (currentTabId === "knapsack") await startKnapsack(sid);
+          else if (currentTabId === "lcs") await startLCS(sid);
+        } catch (e) {
+          console.error(e);
+        }
+        if (sid === currentProcessId) toggleBtn(false);
+      }
+
+      // === 1. FIBONACCI ===
+      async function startFibonacci(id) {
+        let n = dpMatrix[0].length - 1;
+
+        // Base cases
+        setMathHTML(
+          `Thiết lập Base cases: <b class="text-indigo-400">dp[0] = 0</b> và <b class="text-indigo-400">dp[1] = 1</b>.`,
+        );
+        dpMatrix[0][0] = 0;
+        dpMatrix[0][1] = 1;
+        renderDPTable(-1, -1, [], true);
+        await sleep(currentSpeed * 1.5);
+
+        for (let i = 2; i <= n; i++) {
+          if (isAborted(id)) return;
+
+          let v1 = dpMatrix[0][i - 1];
+          let v2 = dpMatrix[0][i - 2];
+
+          setMathHTML(
+            `Tính dp[${i}]: Tra cứu 2 ô trước đó. dp[${i}] = dp[${i - 1}] + dp[${i - 2}] = <b class="text-amber-400">${v1}</b> + <b class="text-amber-400">${v2}</b>.`,
+          );
+          renderDPTable(0, i, [
+            [0, i - 1],
+            [0, i - 2],
+          ]); // Highlight active and deps
+          await sleep(currentSpeed * 1.5);
+
+          dpMatrix[0][i] = v1 + v2;
+          renderDPTable(0, i, []); // Just active, value filled
+          setMathHTML(
+            `Điền kết quả: dp[${i}] = <b class="text-emerald-400 text-xl">${dpMatrix[0][i]}</b>.`,
+          );
+          await sleep(currentSpeed);
+        }
+
+        if (isAborted(id)) return;
+        renderDPTable(-1, -1);
+        setMathHTML(
+          `<span class="text-emerald-400 font-bold text-xl">🎉 Hoàn tất! F(${n}) = ${dpMatrix[0][n]}. O(n) Time.</span>`,
+        );
+      }
+
+      // === 2. COIN CHANGE ===
+      async function startCoinChange(id) {
+        let amount = dpMatrix[0].length - 1;
+        let coins = [1, 3, 4];
+
+        // Init
+        for (let i = 0; i <= amount; i++) dpMatrix[0][i] = Infinity;
+
+        setMathHTML(
+          `Khởi tạo toàn bộ = <b class="text-slate-400">∞</b>. Base case: đổi 0 đồng cần <b class="text-indigo-400">0</b> xu.`,
+        );
+        dpMatrix[0][0] = 0;
+        renderDPTable(-1, -1, [], true);
+        await sleep(currentSpeed * 1.5);
+
+        for (let i = 1; i <= amount; i++) {
+          for (let coin of coins) {
+            if (isAborted(id)) return;
+
+            if (i - coin >= 0) {
+              let prevVal = dpMatrix[0][i - coin];
+              let currentBest = dpMatrix[0][i];
+              let displayPrev = prevVal === Infinity ? "∞" : prevVal;
+              let displayCurr = currentBest === Infinity ? "∞" : currentBest;
+
+              setMathHTML(
+                `Mục tiêu: <b class="text-indigo-400">${i} đồng</b>. Thử dùng đồng xu <b class="text-cyan-400">[${coin}]</b>.<br/>Cần thêm kết quả của (${i} - ${coin} = ${i - coin} đồng). Tra cứu dp[${i - coin}] = <b class="text-amber-400">${displayPrev}</b>.`,
+              );
+              renderDPTable(0, i, [[0, i - coin]]);
+              await sleep(currentSpeed * 1.5);
+
+              let newVal = prevVal + 1;
+              if (newVal < dpMatrix[0][i]) {
+                dpMatrix[0][i] = newVal;
+                setMathHTML(
+                  `Kỷ lục mới! Tốt hơn cách cũ (${displayCurr}). Cập nhật dp[${i}] = <b class="text-emerald-400 text-lg">${newVal}</b> xu.`,
+                );
+                renderDPTable(0, i, []);
+                await sleep(currentSpeed);
+              } else {
+                setMathHTML(
+                  `Cách này tốn ${newVal} xu, không tốt hơn cách cũ (${displayCurr}). Bỏ qua.`,
+                );
+                await sleep(currentSpeed * 0.8);
+              }
+            } else {
+              setMathHTML(
+                `Mục tiêu: <b class="text-indigo-400">${i} đồng</b>. Đồng xu <b class="text-cyan-400">[${coin}]</b> quá lớn. Bỏ qua.`,
+              );
+              renderDPTable(0, i, []);
+              await sleep(currentSpeed * 0.8);
+            }
+          }
+        }
+
+        if (isAborted(id)) return;
+        renderDPTable(-1, -1);
+        setMathHTML(
+          `<span class="text-emerald-400 font-bold text-xl">🎉 Hoàn tất! Để đổi ${amount} đồng, cần ít nhất ${dpMatrix[0][amount]} xu.</span>`,
+        );
+      }
+
+      // === 3. MIN PATH SUM ===
+      async function startMinPathSum(id) {
+        let m = dpMatrix.length,
+          n = dpMatrix[0].length;
+
+        setMathHTML(
+          `Base case: Khởi đầu tại ô [0][0]. Chi phí = <b class="text-indigo-400">${extraMatrix[0][0]}</b>.`,
+        );
+        dpMatrix[0][0] = extraMatrix[0][0];
+        renderDPTable(-1, -1, [], true);
+        await sleep(currentSpeed * 1.5);
+
+        // Điền hàng 0
+        for (let j = 1; j < n; j++) {
+          if (isAborted(id)) return;
+          setMathHTML(
+            `Khởi tạo hàng 0: Chỉ có thể đi từ TRÁI sang. dp[0][${j}] = dp[0][${j - 1}] + grid[0][${j}]`,
+          );
+          renderDPTable(0, j, [[0, j - 1]]);
+          await sleep(currentSpeed);
+          dpMatrix[0][j] = dpMatrix[0][j - 1] + extraMatrix[0][j];
+          renderDPTable(0, j, []);
+          await sleep(currentSpeed * 0.5);
+        }
+
+        // Điền cột 0
+        for (let i = 1; i < m; i++) {
+          if (isAborted(id)) return;
+          setMathHTML(
+            `Khởi tạo cột 0: Chỉ có thể đi từ TRÊN xuống. dp[${i}][0] = dp[${i - 1}][0] + grid[${i}][0]`,
+          );
+          renderDPTable(i, 0, [[i - 1, 0]]);
+          await sleep(currentSpeed);
+          dpMatrix[i][0] = dpMatrix[i - 1][0] + extraMatrix[i][0];
+          renderDPTable(i, 0, []);
+          await sleep(currentSpeed * 0.5);
+        }
+
+        // Điền các ô còn lại
+        for (let i = 1; i < m; i++) {
+          for (let j = 1; j < n; j++) {
+            if (isAborted(id)) return;
+
+            let top = dpMatrix[i - 1][j];
+            let left = dpMatrix[i][j - 1];
+            let cost = extraMatrix[i][j];
+
+            setMathHTML(
+              `Tại ô [${i}][${j}] có giá trị lưới là <b class="text-cyan-400">${cost}</b>.<br/>Tra cứu: Từ TRÊN xuống mất <b class="text-amber-400">${top}</b>, từ TRÁI sang mất <b class="text-amber-400">${left}</b>. Chọn đường RẺ NHẤT!`,
+            );
+            renderDPTable(i, j, [
+              [i - 1, j],
+              [i, j - 1],
+            ]);
+            await sleep(currentSpeed * 2);
+
+            let chosen = Math.min(top, left);
+            dpMatrix[i][j] = cost + chosen;
+            setMathHTML(
+              `Chọn đường rẻ là <b class="text-amber-400">${chosen}</b>. Cập nhật dp[${i}][${j}] = ${cost} + ${chosen} = <b class="text-emerald-400 text-lg">${dpMatrix[i][j]}</b>.`,
+            );
+            renderDPTable(i, j, []);
+            await sleep(currentSpeed * 1.5);
+          }
+        }
+
+        if (isAborted(id)) return;
+        renderDPTable(-1, -1);
+        setMathHTML(
+          `<span class="text-emerald-400 font-bold text-xl">🎉 Hoàn tất! Chi phí nhỏ nhất đi đến đích là ${dpMatrix[m - 1][n - 1]}.</span>`,
+        );
+      }
+
+      // === 4. 0/1 KNAPSACK ===
+      async function startKnapsack(id) {
+        let W = dpMatrix[0].length - 1;
+        let items = [
+          { w: 2, v: 3 },
+          { w: 3, v: 4 },
+          { w: 4, v: 5 },
+          { w: 1, v: 6 },
+        ];
+        let n = items.length;
+
+        // Fill row 0 and col 0 with 0
+        for (let i = 0; i <= n; i++) dpMatrix[i][0] = 0;
+        for (let j = 0; j <= W; j++) dpMatrix[0][j] = 0;
+
+        setMathHTML(
+          `Base cases: Túi sức chứa 0, hoặc Không có đồ vật nào ➔ Giá trị = <b class="text-indigo-400">0</b>.`,
+        );
+        renderDPTable(-1, -1, [], true);
+        await sleep(currentSpeed * 1.5);
+
+        for (let i = 1; i <= n; i++) {
+          let wt = items[i - 1].w;
+          let val = items[i - 1].v;
+
+          for (let w = 1; w <= W; w++) {
+            if (isAborted(id)) return;
+
+            if (wt <= w) {
+              let excludeVal = dpMatrix[i - 1][w];
+              let includeVal = val + dpMatrix[i - 1][w - wt];
+
+              setMathHTML(
+                `Món ${i} (w:<b class="text-cyan-400">${wt}</b>, v:<b class="text-emerald-400">${val}</b>), Túi còn <b class="text-indigo-400">${w}kg</b>.<br/>- Bỏ qua: giữ nguyên Value cũ <b class="text-amber-400">${excludeVal}</b> (Ô phía trên).<br/>- Lấy: Lùi ${wt}kg ở hàng trên, lấy Value <b class="text-amber-400">${dpMatrix[i - 1][w - wt]}</b> + ${val} = <b>${includeVal}</b>.`,
+              );
+              renderDPTable(i, w, [
+                [i - 1, w],
+                [i - 1, w - wt],
+              ]);
+              await sleep(currentSpeed * 2.5);
+
+              dpMatrix[i][w] = Math.max(excludeVal, includeVal);
+              setMathHTML(
+                `Chọn MAX giữa (${excludeVal}, ${includeVal}) ➔ dp[${i}][${w}] = <b class="text-emerald-400 text-lg">${dpMatrix[i][w]}</b>.`,
+              );
+              renderDPTable(i, w, []);
+              await sleep(currentSpeed);
+            } else {
+              setMathHTML(
+                `Món ${i} nặng <b class="text-cyan-400">${wt}kg</b>. Túi chỉ chứa được <b class="text-indigo-400">${w}kg</b>. Quá nặng!<br/>Bắt buộc BỎ QUA. Lấy giá trị từ hàng trên: <b class="text-amber-400">${dpMatrix[i - 1][w]}</b>.`,
+              );
+              renderDPTable(i, w, [[i - 1, w]]);
+              await sleep(currentSpeed * 1.5);
+
+              dpMatrix[i][w] = dpMatrix[i - 1][w];
+              renderDPTable(i, w, []);
+              await sleep(currentSpeed);
+            }
+          }
+        }
+        if (isAborted(id)) return;
+        renderDPTable(-1, -1);
+        setMathHTML(
+          `<span class="text-emerald-400 font-bold text-xl">🎉 Knapsack hoàn tất! Giá trị cao nhất thu được = ${dpMatrix[n][W]}.</span>`,
+        );
+      }
+
+      // === 5. LONGEST COMMON SUBSEQUENCE (LCS) ===
+      async function startLCS(id) {
+        let s1 = "GAC",
+          s2 = "AGCAT";
+        let m = s1.length,
+          n = s2.length;
+
+        // Fill row 0 and col 0 with 0
+        for (let i = 0; i <= m; i++) dpMatrix[i][0] = 0;
+        for (let j = 0; j <= n; j++) dpMatrix[0][j] = 0;
+
+        setMathHTML(
+          `Base cases: Chuỗi rỗng so với bất kỳ chuỗi nào cũng có LCS = <b class="text-indigo-400">0</b>.`,
+        );
+        renderDPTable(-1, -1, [], true);
+        await sleep(currentSpeed * 1.5);
+
+        for (let i = 1; i <= m; i++) {
+          for (let j = 1; j <= n; j++) {
+            if (isAborted(id)) return;
+
+            let char1 = s1[i - 1];
+            let char2 = s2[j - 1];
+
+            if (char1 === char2) {
+              let prevDiag = dpMatrix[i - 1][j - 1];
+              setMathHTML(
+                `Ký tự <b class="text-yellow-400">'${char1}'</b> KHỚP NHAU! LCS tăng thêm 1.<br/>Lấy kết quả cũ từ đường chéo (bỏ cả 2 ký tự): dp[${i - 1}][${j - 1}] = <b class="text-amber-400">${prevDiag}</b>.`,
+              );
+              renderDPTable(i, j, [[i - 1, j - 1]]);
+              await sleep(currentSpeed * 2);
+
+              dpMatrix[i][j] = 1 + prevDiag;
+              setMathHTML(
+                `Cập nhật dp[${i}][${j}] = 1 + ${prevDiag} = <b class="text-emerald-400 text-lg">${dpMatrix[i][j]}</b>.`,
+              );
+              renderDPTable(i, j, []);
+              await sleep(currentSpeed);
+            } else {
+              let top = dpMatrix[i - 1][j];
+              let left = dpMatrix[i][j - 1];
+              setMathHTML(
+                `Ký tự <b class="text-cyan-400">'${char1}'</b> khác <b class="text-rose-400">'${char2}'</b>. Lệch pha!<br/>Lấy MAX giữa việc bỏ char1 (ô TRÊN: <b class="text-amber-400">${top}</b>) hoặc bỏ char2 (ô TRÁI: <b class="text-amber-400">${left}</b>).`,
+              );
+              renderDPTable(i, j, [
+                [i - 1, j],
+                [i, j - 1],
+              ]);
+              await sleep(currentSpeed * 2.5);
+
+              dpMatrix[i][j] = Math.max(top, left);
+              setMathHTML(
+                `Chọn đường tốt hơn ➔ dp[${i}][${j}] = <b class="text-emerald-400 text-lg">${dpMatrix[i][j]}</b>.`,
+              );
+              renderDPTable(i, j, []);
+              await sleep(currentSpeed);
+            }
+          }
+        }
+        if (isAborted(id)) return;
+        renderDPTable(-1, -1);
+        setMathHTML(
+          `<span class="text-emerald-400 font-bold text-xl">🎉 LCS hoàn tất! Chiều dài chuỗi con chung lớn nhất = ${dpMatrix[m][n]}.</span>`,
+        );
+      }
+
+      // Khởi chạy
+      window.onload = initUI;
+    </script>
+  </body>
+</html>

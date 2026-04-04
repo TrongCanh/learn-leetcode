@@ -1,0 +1,11 @@
+{
+  "name": "📊 Dynamic Programming",
+  "problems": [
+    {
+      "name": "Dynamic Programming",
+      "file": "/visualizations/algorithms/08-dynamic-programming/dynamic-programming.html",
+      "type": "viz",
+      "difficulty": "Hard"
+    }
+  ]
+}
