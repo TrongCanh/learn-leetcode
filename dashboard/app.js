@@ -104,6 +104,18 @@ async function discoverTracks() {
 }
 
 // ─────────────────────────────────────────────────
+// Session state (remember last viewed track/chapter)
+// ─────────────────────────────────────────────────
+function saveSessionState() {
+  localStorage.setItem('study_active_domain', activeDomain);
+  localStorage.setItem('study_active_track', activeTrackId || '');
+  localStorage.setItem('study_open_chapters', JSON.stringify(openChapters));
+  if (currentItem) {
+    localStorage.setItem('study_last_item', JSON.stringify(currentItem));
+  }
+}
+
+// ─────────────────────────────────────────────────
 // State
 // ─────────────────────────────────────────────────
 let TRACKS = [];
@@ -257,6 +269,7 @@ function renderTabs() {
 
 function switchTab(domain) {
   activeDomain = domain;
+  saveSessionState();
   goToList();
 }
 
@@ -341,6 +354,10 @@ function renderTrackDetail() {
   const dc = domainClass(track.domain);
 
   if (!openChapters[track.id]) openChapters[track.id] = new Set();
+  // Ensure openChapters[track.id] is a Set (localStorage stores plain arrays)
+  if (!(openChapters[track.id] instanceof Set)) {
+    openChapters[track.id] = new Set(openChapters[track.id] || []);
+  }
 
   const chapterSections = track.chapters.map((ch, ci) => {
     const isOpen = openChapters[track.id].has(ci);
@@ -436,6 +453,7 @@ function toggleChapter(trackId, chapterIdx) {
   } else {
     openChapters[trackId].add(chapterIdx);
   }
+  saveSessionState();
   renderTrackDetail();
 }
 
@@ -469,6 +487,7 @@ function goToTrack(trackId) {
   activeTrackId = trackId;
   currentView = 'track';
   closeMobileSidebar();
+  saveSessionState();
   const track = TRACKS.find(t => t.id === trackId);
   openChapters[trackId] = new Set();
   if (track) {
@@ -482,6 +501,7 @@ function goToList() {
   activeTrackId = null;
   currentView = 'list';
   closeMobileSidebar();
+  saveSessionState();
   renderView();
 }
 
@@ -588,13 +608,13 @@ function openProblemViz(trackId, chapterIdx, problemIdx) {
   }
 
   // Fall back to markdown modal
-  openProblem(trackId, chapterIdx, problemIdx);
+  openProblem(trackId, chapterIdx, problemIdx, isReadme);
 }
 
 // ─────────────────────────────────────────────────
 // Modal / Content
 // ─────────────────────────────────────────────────
-function openProblem(trackId, chapterIdx, problemIdx) {
+function openProblem(trackId, chapterIdx, problemIdx, isReadme) {
   // Restore prev/next for markdown content
   document.getElementById('modalPrev').style.display = '';
   document.getElementById('modalNext').style.display = '';
@@ -690,11 +710,8 @@ function navigateModal(dir) {
 
   if (nextIdx >= 0 && nextIdx < allItems.length) {
     const next = allItems[nextIdx];
-    if (next.type === 'viz') {
-      openProblemViz(trackId, next.ci, next.pi);
-    } else {
-      openProblem(trackId, next.ci, next.pi);
-    }
+    // openProblemViz routes correctly for both viz and md
+    openProblemViz(trackId, next.ci, next.pi);
   }
 }
 
@@ -731,10 +748,50 @@ document.addEventListener('keydown', e => {
 
 async function init() {
   TRACKS = await discoverTracks();
+
+  // Restore last session state
+  const savedDomain = localStorage.getItem('study_active_domain');
+  const savedTrack = localStorage.getItem('study_active_track');
+  const savedOpenChapters = localStorage.getItem('study_open_chapters');
+  const savedLastItem = localStorage.getItem('study_last_item');
+
+  if (savedDomain) activeDomain = savedDomain;
+  if (savedTrack) activeTrackId = savedTrack;
+  if (savedOpenChapters) {
+    try {
+      const parsed = JSON.parse(savedOpenChapters);
+      // Convert plain objects with numeric keys back to Sets
+      openChapters = {};
+      for (const [k, v] of Object.entries(parsed)) {
+        openChapters[k] = Array.isArray(v) ? new Set(v) : new Set();
+      }
+    } catch {}
+  }
+  if (savedLastItem) {
+    try { lastViewedItem = JSON.parse(savedLastItem); } catch {}
+  }
+
   renderSidebar();
   renderTopbar();
   renderTabs();
-  renderList();
+
+  // Restore last view
+  if (activeTrackId && TRACKS.find(t => t.id === activeTrackId)) {
+    const track = TRACKS.find(t => t.id === activeTrackId);
+    // Always populate openChapters if empty (pick first non-empty chapter)
+    if (track && track.chapters.length > 0 && !openChapters[activeTrackId]) {
+      const firstNonEmpty = track.chapters.findIndex(ch => ch.problems.length > 0);
+      openChapters[activeTrackId] = new Set(firstNonEmpty >= 0 ? [firstNonEmpty] : []);
+      // Also auto-open the chapter that contains lastViewedItem
+      if (lastViewedItem && lastViewedItem.trackId === activeTrackId) {
+        openChapters[activeTrackId].add(lastViewedItem.chapterIdx);
+      }
+    }
+    currentView = 'track';
+    renderTrackDetail();
+  } else {
+    renderList();
+  }
 }
 
 init();
