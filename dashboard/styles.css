@@ -970,6 +970,21 @@ body {
   opacity: 0.5;
 }
 
+.problem-row.viewed {
+  background: var(--accent-bg);
+  opacity: 0.85;
+}
+
+.problem-row.viewed .problem-name {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.problem-row.viewed .problem-view {
+  opacity: 1;
+  color: var(--accent);
+}
+
 .check-btn {
   width: 22px;
   height: 22px;

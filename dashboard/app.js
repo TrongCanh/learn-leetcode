@@ -111,7 +111,8 @@ let activeDomain = 'all';
 let currentView = 'list';   // 'list' | 'track'
 let activeTrackId = null;
 let openChapters = {};      // { [trackId]: Set<chapterIdx> }
-let currentItem = null;     // { trackId, chapterIdx, problemIdx }
+let currentItem = null;     // { trackId, chapterIdx, problemIdx } — current open item
+let lastViewedItem = null;  // { trackId, chapterIdx, problemIdx } — last viewed, used for highlight after close
 let progress = JSON.parse(localStorage.getItem('study_progress') || '{}');
 let lastActivity = JSON.parse(localStorage.getItem('last_activity') || '{}');
 
@@ -349,8 +350,9 @@ function renderTrackDetail() {
     const rows = hasProblems ? ch.problems.map((p, pi) => {
       const key = `${track.id}|${ci}|${pi}`;
       const isDone = !!progress[key];
+      const isViewed = !isDone && lastViewedItem && lastViewedItem.trackId === track.id && lastViewedItem.chapterIdx === ci && lastViewedItem.problemIdx === pi;
       return `
-        <div class="problem-row${isDone ? ' done' : ''}" onclick="openProblemViz('${track.id}',${ci},${pi})">
+        <div class="problem-row${isDone ? ' done' : isViewed ? ' viewed' : ''}" onclick="openProblemViz('${track.id}',${ci},${pi})">
           <button class="check-btn${isDone ? ' done' : ''}" onclick="event.stopPropagation();toggleDone('${track.id}',${ci},${pi})">
             ${isDone ? '✓' : ''}
           </button>
@@ -539,9 +541,7 @@ function openViz(vizPath) {
   const repoPath = getRepoPath();
   const fullSrc = repoPath + vizPath;
 
-  // Hide prev/next when viewing viz (no prev/next for HTML pages)
-  document.getElementById('modalPrev').style.display = 'none';
-  document.getElementById('modalNext').style.display = 'none';
+  // Keep prev/next visible for viz navigation
 
   // Wider modal for viz content
   document.querySelector('.modal-box').classList.add('viz-modal');
@@ -567,6 +567,21 @@ function openProblemViz(trackId, chapterIdx, problemIdx) {
       document.getElementById('modalDomain').className = `modal-domain ${dc}`;
       document.getElementById('modalDomain').textContent = DOMAIN_LABELS[track.domain] ?? track.domain.toUpperCase();
       document.getElementById('modalTitle').textContent = problem.name;
+
+      // Build allItems for viz (prev/next) — include READMEs + all problems (md + viz)
+      const allItems = [];
+      track.chapters.forEach((c, ci) => {
+        allItems.push({ ci, pi: -1 });
+        c.problems.forEach((_, pi) => allItems.push({ ci, pi }));
+      });
+
+      currentItem = { trackId, chapterIdx, problemIdx };
+      lastViewedItem = { trackId, chapterIdx, problemIdx };
+
+      const curIdx = allItems.findIndex(it => it.ci === chapterIdx && it.pi === problemIdx);
+      document.getElementById('modalPrev').disabled = curIdx <= 0;
+      document.getElementById('modalNext').disabled = curIdx === allItems.length - 1;
+
       openViz(problem.file);
       return;
     }
@@ -592,8 +607,7 @@ function openProblem(trackId, chapterIdx, problemIdx) {
 
   const ch = track.chapters[chapterIdx];
   currentItem = { trackId, chapterIdx, problemIdx };
-
-  const isReadme = problemIdx === -1;
+  lastViewedItem = { trackId, chapterIdx, problemIdx };
 
   let title;
   let targetFile;
@@ -668,9 +682,7 @@ function navigateModal(dir) {
   const allItems = [];
   track.chapters.forEach((c, ci) => {
     allItems.push({ ci, pi: -1 });
-    c.problems.forEach((p, pi) => {
-      if (p.type !== 'viz') allItems.push({ ci, pi });
-    });
+    c.problems.forEach((_, pi) => allItems.push({ ci, pi }));
   });
 
   const curIdx = allItems.findIndex(it => it.ci === chapterIdx && it.pi === problemIdx);
@@ -687,17 +699,8 @@ function navigateModal(dir) {
 }
 
 function closeModal() {
-  // Auto-mark current item as done when closing
-  if (currentItem && currentItem.problemIdx !== -1) {
-    const key = `${currentItem.trackId}|${currentItem.chapterIdx}|${currentItem.problemIdx}`;
-    if (!progress[key]) {
-      saveDone(key, true);
-    }
-  }
-
   document.getElementById('modal').classList.remove('show');
   document.body.style.overflow = '';
-  currentItem = null;
   // Restore prev/next buttons for markdown content
   document.getElementById('modalPrev').style.display = '';
   document.getElementById('modalNext').style.display = '';
@@ -705,6 +708,8 @@ function closeModal() {
   const iframe = document.querySelector('.viz-iframe');
   if (iframe) iframe.remove();
   document.querySelector('.modal-box').classList.remove('viz-modal');
+  currentItem = null;
+  if (lastViewedItem) renderTrackDetail();
 }
 
 // ─────────────────────────────────────────────────
