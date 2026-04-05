@@ -43,36 +43,31 @@ async function discoverChapters(trackPath) {
   const manifest = await loadJSON('../' + trackPath + '/manifest.json');
   if (!manifest || !manifest.chapters) return [];
 
-  const chapters = [];
-  for (const entry of manifest.chapters) {
+  // Load all chapter manifests in parallel
+  const metaEntries = await Promise.all(manifest.chapters.map(async entry => {
     let meta;
     if (entry === 'README') {
-      // Special case: README at track root level
       meta = await loadJSON(`../${trackPath}/README.json`);
     } else if (entry.endsWith('.md')) {
-      // Entry is a markdown file (e.g. "intro.md")
       meta = await loadJSON(`../${trackPath}/${entry.replace('.md', '')}/README.json`);
     } else {
-      // Entry is a folder (e.g. "01-fundamentals")
       meta = await loadJSON(`../${trackPath}/${entry}/chapter.json`)
            || await loadJSON(`../${trackPath}/${entry}/README.json`);
     }
-    if (!meta) continue;
+    return meta ? { entry, meta } : null;
+  }));
 
-    chapters.push({
-      name: meta.name || entry,
-      path: (entry === 'README' || entry.endsWith('.md')) ? trackPath : `${trackPath}/${entry}`,
-      readme: 'README.md',
-      problems: (meta.problems || []).map(p => ({
-        name: p.name,
-        file: p.file,
-        difficulty: p.difficulty || 'Medium',
-        type: p.type || 'md'   // 'md' | 'viz'
-      }))
-    });
-  }
-
-  return chapters;
+  return metaEntries.filter(Boolean).map(({ entry, meta }) => ({
+    name: meta.name || entry,
+    path: (entry === 'README' || entry.endsWith('.md')) ? trackPath : `${trackPath}/${entry}`,
+    readme: 'README.md',
+    problems: (meta.problems || []).map(p => ({
+      name: p.name,
+      file: p.file,
+      difficulty: p.difficulty || 'Medium',
+      type: p.type || 'md'
+    }))
+  }));
 }
 
 async function discoverTracks() {
@@ -82,23 +77,27 @@ async function discoverTracks() {
     const manifest = await loadJSON('../' + domainPath + '/manifest.json');
     if (!manifest || !manifest.tracks) continue;
 
-    for (const trackId of manifest.tracks) {
-      const meta = await loadJSON(`../${domainPath}/${trackId}/track.json`);
-      if (!meta) continue;
+    // Load all track metadata in parallel
+    const trackMetas = await Promise.all(
+      manifest.tracks.map(id => loadJSON(`../${domainPath}/${id}/track.json`).then(meta => meta ? { id, meta } : null))
+    );
 
-      const track = {
-        id: trackId,
+    // Load chapters in parallel per track
+    const trackChapters = await Promise.all(
+      trackMetas.filter(Boolean).map(({ id }) => discoverChapters(`${domainPath}/${id}`))
+    );
+
+    trackMetas.filter(Boolean).forEach(({ id, meta }, i) => {
+      tracks.push({
+        id,
         name: meta.name,
         icon: meta.icon || '📁',
         domain: domain,
-        path: `${domainPath}/${trackId}`,
+        path: `${domainPath}/${id}`,
         readme: 'README.md',
-        chapters: []
-      };
-
-      track.chapters = await discoverChapters(track.path);
-      tracks.push(track);
-    }
+        chapters: trackChapters[i]
+      });
+    });
   }
 
   return tracks;
@@ -616,14 +615,12 @@ function openProblem(trackId, chapterIdx, problemIdx) {
   document.getElementById('modalDomain').textContent = domainLabel;
   document.getElementById('modalTitle').textContent = title;
 
-  // Build all-items list (README + problems), skip viz items
+  // Build all-items list (README + all problems including viz)
   const allItems = [];
   track.chapters.forEach((c, ci) => {
-    allItems.push({ ci, pi: -1, title: '📖 ' + c.name });
+    allItems.push({ ci, pi: -1, type: 'md' });
     c.problems.forEach((p, pi) => {
-      if (p.type !== 'viz') {
-        allItems.push({ ci, pi, title: p.name });
-      }
+      allItems.push({ ci, pi, type: p.type || 'md' });
     });
   });
 
@@ -681,11 +678,23 @@ function navigateModal(dir) {
 
   if (nextIdx >= 0 && nextIdx < allItems.length) {
     const next = allItems[nextIdx];
-    openProblem(trackId, next.ci, next.pi);
+    if (next.type === 'viz') {
+      openProblemViz(trackId, next.ci, next.pi);
+    } else {
+      openProblem(trackId, next.ci, next.pi);
+    }
   }
 }
 
 function closeModal() {
+  // Auto-mark current item as done when closing
+  if (currentItem && currentItem.problemIdx !== -1) {
+    const key = `${currentItem.trackId}|${currentItem.chapterIdx}|${currentItem.problemIdx}`;
+    if (!progress[key]) {
+      saveDone(key, true);
+    }
+  }
+
   document.getElementById('modal').classList.remove('show');
   document.body.style.overflow = '';
   currentItem = null;
