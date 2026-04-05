@@ -1,0 +1,1085 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trực Quan Hóa Thuật Toán Dijkstra</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .hide-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      .anim-node {
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .anim-edge {
+        transition: all 0.4s ease;
+      }
+
+      @keyframes pulse-amber {
+        0% {
+          box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+        }
+        70% {
+          box-shadow: 0 0 0 15px rgba(245, 158, 11, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+        }
+      }
+
+      /* Node States */
+      .node-unvisited {
+        background-color: #1e293b;
+        border-color: #475569;
+        color: #94a3b8;
+      }
+      .node-discovered {
+        background-color: #0c4a6e;
+        border-color: #0ea5e9;
+        color: #bae6fd;
+        box-shadow: 0 0 10px rgba(14, 165, 233, 0.5);
+      }
+      .node-active {
+        animation: pulse-amber 1.5s infinite;
+        border-color: #f59e0b !important;
+        background-color: #78350f !important;
+        color: white;
+        transform: translate(-50%, -50%) scale(1.2) !important;
+        z-index: 20;
+      }
+      .node-settled {
+        background-color: #064e3b !important;
+        border-color: #10b981 !important;
+        color: white !important;
+        box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+      }
+
+      /* Edge States */
+      .edge-normal {
+        stroke: #475569;
+        stroke-width: 2;
+      }
+      .edge-active {
+        stroke: #f59e0b;
+        stroke-width: 4;
+        filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.8));
+        z-index: 10;
+      }
+      .edge-settled {
+        stroke: #10b981;
+        stroke-width: 3;
+      }
+      .edge-rejected {
+        stroke: #ef4444;
+        stroke-width: 2;
+        stroke-dasharray: 5, 5;
+        opacity: 0.5;
+      }
+
+      /* Mũi tên SVG */
+      #arrow-normal {
+        fill: #475569;
+      }
+      #arrow-active {
+        fill: #f59e0b;
+      }
+      #arrow-settled {
+        fill: #10b981;
+      }
+
+      /* Grid Styles */
+      .grid-cell {
+        transition: all 0.3s ease;
+      }
+      .cell-unvisited {
+        background-color: #1e293b;
+        border-color: #334155;
+        color: #cbd5e1;
+      }
+      .cell-discovered {
+        background-color: #0c4a6e;
+        border-color: #0ea5e9;
+        color: white;
+      }
+      .cell-active {
+        animation: pulse-amber 1s infinite;
+        background-color: #78350f;
+        border-color: #f59e0b;
+        color: white;
+        transform: scale(1.1);
+        z-index: 10;
+      }
+      .cell-settled {
+        background-color: #064e3b;
+        border-color: #10b981;
+        color: white;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-slate-50 text-slate-900 font-sans min-h-screen p-4 sm:p-6 lg:p-8"
+  >
+    <div class="max-w-7xl mx-auto space-y-8">
+      <!-- HEADER -->
+      <header class="text-center space-y-4 mb-6">
+        <div
+          class="inline-flex items-center justify-center p-3 bg-amber-100 text-amber-600 rounded-full mb-2 shadow-sm"
+        >
+          <i data-lucide="map" class="w-8 h-8"></i>
+        </div>
+        <h1
+          class="text-3xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-amber-600 to-orange-600"
+        >
+          Thuật toán Dijkstra
+        </h1>
+        <p class="text-lg text-slate-600 max-w-3xl mx-auto">
+          Trái tim của Google Maps. Cỗ máy tìm đường đi ngắn nhất hoàn hảo.
+        </p>
+      </header>
+
+      <!-- LÝ THUYẾT TRỌNG TÂM -->
+      <div
+        class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 overflow-hidden mb-8"
+      >
+        <div class="flex items-center mb-6">
+          <i data-lucide="map-pin" class="w-6 h-6 text-amber-500 mr-2"></i>
+          <h2 class="text-xl font-bold text-slate-800">
+            Giải ngố Dijkstra cho người mới
+          </h2>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+          <!-- Đời thường -->
+          <div
+            class="bg-slate-900 p-5 rounded-xl border border-slate-700 text-slate-300 flex flex-col h-full"
+          >
+            <h3 class="font-bold text-amber-400 mb-3 flex items-center text-lg">
+              <i data-lucide="car" class="w-5 h-5 mr-2"></i> 1. Bản chất (Tìm
+              đường GPS)
+            </h3>
+            <p class="mb-3 text-sm">
+              Bạn đang ở điểm A và muốn đi đến mọi nơi với
+              <b>chi phí xăng (trọng số) rẻ nhất</b>.
+            </p>
+            <ul class="space-y-3 text-sm">
+              <li>
+                <b class="text-emerald-400"
+                  >Sổ tay Khoảng cách (Distance Array):</b
+                >
+                Ban đầu, bạn ghi A tốn 0 đồng, mọi điểm khác chưa biết đường đi
+                nên ghi là <b>Vô cực (∞)</b>.
+              </li>
+              <li>
+                <b class="text-cyan-400">Ưu tiên đường rẻ (Priority Queue):</b>
+                Luôn chọn trạm nào đang có chi phí ghi trong sổ là RẺ NHẤT để
+                khám phá tiếp.
+              </li>
+              <li>
+                <b class="text-rose-400">Thư giãn (Relaxation):</b> Từ trạm hiện
+                tại, bạn nhìn sang hàng xóm. Nếu (Chi phí đến trạm này + Chi phí
+                đoạn đường) < Chi phí cũ của hàng xóm đang ghi trong sổ ➔
+                <b>Xóa số cũ, cập nhật kỷ lục mới!</b>
+              </li>
+              <li>
+                <b class="text-emerald-400">Chốt sổ (Settled):</b> Một khi một
+                trạm được rút ra khỏi Hàng đợi ưu tiên, khoảng cách của nó được
+                coi là NGẮN NHẤT CHÍNH THỨC, không bao giờ thay đổi nữa.
+              </li>
+            </ul>
+          </div>
+
+          <!-- Kỹ thuật và Yếu điểm -->
+          <div
+            class="bg-amber-50 p-5 rounded-xl border border-amber-200 flex flex-col h-full text-amber-900"
+          >
+            <h3 class="font-bold text-amber-800 mb-3 flex items-center text-lg">
+              <i data-lucide="alert-triangle" class="w-5 h-5 mr-2"></i> 2. Bí
+              kíp & Cạm bẫy
+            </h3>
+            <div class="space-y-3 text-sm">
+              <p>
+                <b>Cấu trúc dữ liệu:</b> Bí quyết để Dijkstra chạy nhanh là dùng
+                <b>Min-Heap (Priority Queue)</b> để tìm trạm rẻ nhất trong O(log
+                V) thay vì quét mảng O(V).
+              </p>
+              <p>
+                <b>Sự tàn nhẫn của Trọng số Âm:</b> Dijkstra mang một niềm tin
+                ngây thơ:
+                <i>"Đường càng đi sẽ càng dài ra (trọng số dương)"</i> nên khi
+                nó chốt sổ một trạm, nó không bao giờ nhìn lại.
+              </p>
+              <div
+                class="p-3 bg-white border border-rose-300 rounded-lg text-rose-700"
+              >
+                <b class="flex items-center"
+                  ><i data-lucide="skull" class="w-4 h-4 mr-1"></i> Cạm bẫy
+                  Negative Weight:</b
+                >
+                Nếu có đoạn đường <b>Xăng âm (Đi được cho thêm tiền)</b>,
+                Dijkstra có thể chốt sổ quá sớm và bỏ lỡ con đường đi đường vòng
+                nhưng được "hoàn tiền" dẫn đến chi phí rẻ hơn. (Xem ví dụ Cạm
+                bẫy bên dưới). Để giải quyết trọng số âm, phải dùng thuật toán
+                <b>Bellman-Ford</b>.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MAIN UI -->
+      <div
+        class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden"
+      >
+        <div
+          id="tabs-container"
+          class="flex overflow-x-auto border-b border-slate-200 hide-scrollbar bg-slate-50"
+        ></div>
+
+        <div
+          class="p-4 sm:p-6 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start"
+        >
+          <div class="lg:col-span-4 space-y-6" id="info-container"></div>
+
+          <div class="lg:col-span-8 w-full flex flex-col space-y-6">
+            <div
+              class="bg-slate-900 rounded-2xl p-4 sm:p-6 shadow-inner border border-slate-800"
+            >
+              <div
+                class="flex flex-wrap gap-4 items-center justify-between mb-4 pb-4 border-b border-slate-700"
+              >
+                <div class="flex gap-2">
+                  <button
+                    id="btn-play"
+                    class="flex items-center px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg font-semibold transition disabled:opacity-50 text-sm"
+                  >
+                    <i data-lucide="play" class="w-4 h-4 mr-2"></i>
+                    <span id="btn-play-text">Chạy Mô Phỏng</span>
+                  </button>
+                  <button
+                    id="btn-reset"
+                    class="flex items-center px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition text-sm"
+                  >
+                    <i data-lucide="rotate-ccw" class="w-4 h-4 mr-2"></i> Làm
+                    mới
+                  </button>
+                </div>
+                <div class="flex items-center gap-3 text-slate-300 text-sm">
+                  <i data-lucide="settings-2" class="w-4 h-4"></i>
+                  <label class="font-medium hidden sm:block">Tốc độ:</label>
+                  <input
+                    type="range"
+                    id="speed-slider"
+                    min="50"
+                    max="1500"
+                    value="800"
+                    class="w-24 accent-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div
+                id="problem-statement"
+                class="bg-amber-900/40 border border-amber-500/30 rounded-xl p-4 mb-4 text-sm sm:text-base text-amber-100 flex items-start gap-3 hidden"
+              >
+                <div
+                  id="target-icon-wrapper"
+                  class="text-amber-400 shrink-0 mt-0.5"
+                >
+                  <i data-lucide="target" class="w-5 h-5"></i>
+                </div>
+                <div id="problem-text" class="leading-relaxed"></div>
+              </div>
+
+              <div
+                id="math-computation"
+                class="bg-slate-800 rounded-xl p-3 mb-6 text-center font-mono text-sm sm:text-base border border-slate-600 text-slate-300 min-h-[48px] flex items-center justify-center"
+              >
+                Sẵn sàng mô phỏng.
+              </div>
+
+              <!-- Vùng Hiển Thị Visualizer (Graph / Grid) -->
+              <div
+                class="flex flex-col items-center justify-center w-full relative mb-4"
+              >
+                <!-- Cấu hình hiển thị Graph thông thường -->
+                <div id="graph-wrapper" class="w-full relative hidden">
+                  <div
+                    id="graph-canvas"
+                    class="relative w-full h-[300px] sm:h-[350px] border border-slate-700 rounded-xl bg-slate-950 shadow-inner overflow-hidden"
+                  >
+                    <svg class="absolute w-0 h-0">
+                      <defs>
+                        <marker
+                          id="arrow-normal"
+                          markerWidth="10"
+                          markerHeight="10"
+                          refX="22"
+                          refY="3"
+                          orient="auto"
+                          markerUnits="strokeWidth"
+                        >
+                          <path d="M0,0 L0,6 L9,3 z" fill="#475569" />
+                        </marker>
+                        <marker
+                          id="arrow-active"
+                          markerWidth="10"
+                          markerHeight="10"
+                          refX="22"
+                          refY="3"
+                          orient="auto"
+                          markerUnits="strokeWidth"
+                        >
+                          <path d="M0,0 L0,6 L9,3 z" fill="#f59e0b" />
+                        </marker>
+                        <marker
+                          id="arrow-settled"
+                          markerWidth="10"
+                          markerHeight="10"
+                          refX="22"
+                          refY="3"
+                          orient="auto"
+                          markerUnits="strokeWidth"
+                        >
+                          <path d="M0,0 L0,6 L9,3 z" fill="#10b981" />
+                        </marker>
+                      </defs>
+                    </svg>
+                    <svg
+                      id="graph-lines"
+                      class="absolute top-0 left-0 w-full h-full z-0"
+                    ></svg>
+                    <div
+                      id="graph-weights"
+                      class="absolute top-0 left-0 w-full h-full z-10 pointer-events-none"
+                    ></div>
+                    <div
+                      id="graph-nodes"
+                      class="absolute top-0 left-0 w-full h-full z-20 pointer-events-none"
+                    ></div>
+                  </div>
+                </div>
+
+                <!-- Cấu hình hiển thị Grid 2D -->
+                <div
+                  id="grid-wrapper"
+                  class="w-full relative hidden flex justify-center"
+                >
+                  <div
+                    id="grid-canvas"
+                    class="grid gap-1 p-2 bg-slate-950 border border-slate-700 rounded-xl shadow-inner inline-grid"
+                  >
+                    <!-- Render by JS -->
+                  </div>
+                </div>
+
+                <!-- KHU VỰC BỘ NHỚ: DISTANCE ARRAY & PRIORITY QUEUE -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full mt-6">
+                  <!-- Sổ tay Khoảng cách (Distance Array) -->
+                  <div class="flex flex-col items-center w-full">
+                    <div
+                      class="text-emerald-400 font-mono text-sm font-bold mb-2 uppercase tracking-wider"
+                    >
+                      Mảng Khoảng Cách (dist)
+                    </div>
+                    <div
+                      id="dist-container"
+                      class="flex flex-wrap items-center justify-center gap-2 min-h-[48px] w-full p-3 border border-slate-600 rounded-xl bg-slate-800/50"
+                    >
+                      <!-- JS gen -->
+                    </div>
+                  </div>
+
+                  <!-- Priority Queue -->
+                  <div class="flex flex-col items-center w-full">
+                    <div
+                      class="text-cyan-400 font-mono text-sm font-bold mb-2 uppercase tracking-wider"
+                    >
+                      Hàng đợi Ưu tiên (Min-Heap)
+                    </div>
+                    <div
+                      id="pq-container"
+                      class="flex flex-wrap items-center justify-start gap-2 h-20 w-full p-2 border border-dashed border-slate-600 rounded-xl bg-slate-900 overflow-y-auto"
+                    >
+                      <span
+                        class="text-slate-500 font-mono text-xs w-full text-center mt-2"
+                        >PQ Trống</span
+                      >
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Code Block -->
+            <div
+              class="relative rounded-2xl overflow-hidden shadow-lg border border-slate-700 bg-[#0f172a]"
+            >
+              <div
+                class="w-full px-4 py-3 bg-[#1e293b] border-b border-slate-700 flex items-center justify-between"
+              >
+                <div class="flex space-x-2">
+                  <div class="w-3 h-3 rounded-full bg-rose-500"></div>
+                  <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+                  <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                </div>
+                <div class="flex items-center text-slate-400 text-xs font-mono">
+                  <i data-lucide="code" class="w-4 h-4 mr-1.5"></i> javascript
+                </div>
+              </div>
+              <pre
+                class="p-4 sm:p-6 overflow-auto text-xs sm:text-sm font-mono leading-relaxed max-h-72"
+              ><code id="code-container" class="text-slate-200"></code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // === DỮ LIỆU PATTERNS ===
+      const ALGO_DATA = [
+        {
+          id: "dijkstra_basic",
+          name: "1. Dijkstra Cơ Bản",
+          vnName: "Đồ thị Vô Hướng",
+          tech: "Greedy + Priority Queue",
+          time: "O(E log V)",
+          themeColor: "amber",
+          code: `// Tìm đường đi ngắn nhất từ Start đến mọi đỉnh (Trọng số Dương)\nfunction dijkstra(n, adj, start) {\n  let dist = new Array(n).fill(Infinity);\n  dist[start] = 0;\n  \n  // Priority Queue giả lập (Min-Heap lưu [khoảng_cách, đỉnh])\n  let pq = [[0, start]]; \n\n  while (pq.length > 0) {\n    pq.sort((a, b) => a[0] - b[0]); // O(n log n) - Thực tế dùng Min-Heap O(log n)\n    let [d, u] = pq.shift();\n\n    if (d > dist[u]) continue; // Đỉnh này đã được chốt từ trước\n\n    for (let [v, weight] of adj[u]) {\n      // RELAXATION: Nếu đường qua u tốt hơn đường cũ\n      if (dist[u] + weight < dist[v]) {\n        dist[v] = dist[u] + weight;\n        pq.push([dist[v], v]);\n      }\n    }\n  }\n  return dist;\n}`,
+          desc: "Thuật toán tìm đường đi ngắn nhất gốc rễ. Sử dụng lòng tham (Greedy): Nó luôn chọn đi theo con đường ngắn nhất hiện có bằng Hàng Đợi Ưu Tiên (Min-Heap). Khi nó đã lấy 1 đỉnh ra khỏi Hàng đợi, khoảng cách của đỉnh đó được xem là đã <b>CHỐT (Settled)</b> và không bao giờ đổi nữa.",
+          characteristics: [
+            "Phải dùng Min-Heap để lấy đỉnh rẻ nhất nhanh O(log V)",
+            "Tuyệt đối KHÔNG chạy đúng nếu đồ thị có Trọng số Âm.",
+          ],
+        },
+        {
+          id: "network_delay",
+          name: "2. Network Delay Time",
+          vnName: "Đồ thị Có Hướng",
+          tech: "Dijkstra on Directed Graph",
+          time: "O(E log V)",
+          themeColor: "amber",
+          code: `// Bài toán: Gửi tín hiệu từ máy K. Mất bao lâu để TẤT CẢ các máy nhận được?\nfunction networkDelayTime(times, n, k) {\n  // Dựng đồ thị có hướng: u -> v với chi phí w\n  let adj = Array.from({length: n + 1}, () => []);\n  for (let [u, v, w] of times) adj[u].push([v, w]);\n\n  let dist = new Array(n + 1).fill(Infinity);\n  dist[k] = 0;\n  let pq = [[0, k]];\n\n  while (pq.length > 0) {\n    pq.sort((a, b) => a[0] - b[0]);\n    let [time, u] = pq.shift();\n    if (time > dist[u]) continue;\n\n    for (let [v, w] of adj[u]) {\n      if (dist[u] + w < dist[v]) {\n        dist[v] = dist[u] + w;\n        pq.push([dist[v], v]);\n      }\n    }\n  }\n  \n  // Trả về thời gian lớn nhất (vì máy nhận muộn nhất quyết định tất cả)\n  let maxTime = Math.max(...dist.slice(1));\n  return maxTime === Infinity ? -1 : maxTime;\n}`,
+          desc: "Một ứng dụng thực tế trên LeetCode. Đồ thị lúc này là mạng máy tính Có Hướng (Tín hiệu gửi đi có thể 1 chiều). Thuật toán không thay đổi, nhưng kết quả ta cần là khoảng cách lớn nhất trong mảng `dist`, vì đó là thời gian máy cuối cùng nhận được mạng.",
+          characteristics: [
+            "Áp dụng hoàn hảo cho Cây / Đồ thị có hướng",
+            'Khoảng cách là "Thời gian truyền tín hiệu"',
+          ],
+        },
+        {
+          id: "dijkstra_grid",
+          name: "3. Minimum Path Cost (Lưới)",
+          vnName: "Dijkstra trên Lưới 2D",
+          tech: "2D Grid Pathfinding",
+          time: "O(N² log N)",
+          themeColor: "emerald",
+          code: `// Bài toán: Tìm đường từ góc trên-trái xuống dưới-phải có chi phí nhỏ nhất\nfunction minPathCostGrid(grid) {\n  let R = grid.length, C = grid[0].length;\n  let dist = Array.from({length: R}, () => Array(C).fill(Infinity));\n  dist[0][0] = grid[0][0];\n  \n  let pq = [[grid[0][0], 0, 0]]; // [cost, r, c]\n  let dirs = [[0,1], [1,0], [0,-1], [-1,0]]; // 4 Hướng\n\n  while (pq.length > 0) {\n    pq.sort((a,b) => a[0] - b[0]);\n    let [d, r, c] = pq.shift();\n    if (r === R-1 && c === C-1) return d; // Tới đích!\n    if (d > dist[r][c]) continue;\n\n    for (let [dr, dc] of dirs) {\n      let nr = r + dr, nc = c + dc;\n      if (nr>=0 && nr<R && nc>=0 && nc<C) {\n        // Chi phí mới = Chi phí cũ + Trọng số của ô sắp bước vào\n        if (d + grid[nr][nc] < dist[nr][nc]) {\n          dist[nr][nc] = d + grid[nr][nc];\n          pq.push([dist[nr][nc], nr, nc]);\n        }\n      }\n    }\n  }\n  return -1;\n}`,
+          desc: 'Thay vì các đỉnh (Node) nối bằng dây, lưới 2D là một bảng ma trận. Mỗi ô (Cell) chính là 1 Đỉnh, và bước đi qua trái/phải/lên/xuống là Cạnh nối. Trọng số của cạnh chính là "giá trị của ô mà bạn sắp bước chân vào". Trực quan giống hệ trò chơi phá bom hay tìm đường mê cung gập ghềnh.',
+          characteristics: [
+            "Biến Grid 2D thành đồ thị một cách ngầm định (Implicit Graph)",
+            "Rất phổ biến trong game (Thuật toán tìm đường A* là phiên bản nâng cấp của nó)",
+          ],
+        },
+        {
+          id: "dijkstra_negative",
+          name: "4. Cạm Bẫy (Trọng Số Âm)",
+          vnName: "Why Dijkstra Fails?",
+          tech: "Negative Weight Trap",
+          time: "O(E log V)",
+          themeColor: "rose",
+          code: `// TẠI SAO DIJKSTRA THẤT BẠI KHI CÓ CẠNH ÂM?\n// \n// Dijkstra mang một lòng tin tuyệt đối:\n// "Nếu tôi đã lấy đỉnh X ra khỏi Hàng Đợi Ưu Tiên,\n// tức là khoảng cách đến X đã là RẺ NHẤT, tôi sẽ CHỐT SỔ."\n//\n// Lập luận này dựa trên việc: Mọi con đường đi tiếp\n// chỉ làm khoảng cách tăng lên (Trọng số > 0).\n//\n// NHƯNG, nếu có trọng số Âm (-10):\n// Đi thêm một đoạn đường dài, chi phí lại bị GIẢM ĐI!\n// Dijkstra đã lỡ chốt sổ đỉnh X trước đó sẽ KHÔNG BAO GIỜ\n// quay lại cập nhật cho X, dẫn đến Kết quả SAI.\n\nfunction useBellmanFordInstead() {\n  console.log("Phải dùng thuật toán Bellman-Ford để quét");\n  console.log("toàn bộ các cạnh V-1 lần để đảm bảo an toàn.");\n}`,
+          desc: 'Một câu hỏi kinh điển. Hãy xem mô phỏng: Dijkstra đi đường thẳng mất 2đ (chốt luôn). Nhưng nó không biết nếu đi đường vòng mất 5đ rồi qua một trạm có ma thuật "Trừ 10đ" thì tổng chỉ mất -5đ. Vì đã chốt đỉnh từ trước, Dijkstra lờ đi con đường rẻ hơn này!',
+          characteristics: [
+            "Phô diễn điểm mù của thuật toán lòng tham (Greedy)",
+            "Dẫn dắt đến thuật toán chậm hơn nhưng an toàn hơn: Bellman-Ford O(V*E)",
+          ],
+        },
+      ];
+
+      let currentTabId = ALGO_DATA[0].id;
+      let isRunning = false;
+      let currentProcessId = 0;
+      let currentSpeed = 800;
+
+      // --- Data State ---
+      let graphNodes = [];
+      let graphEdges = []; // {u, v, w}
+      let isDirected = false;
+      let adjList = {};
+      let startNode = 0;
+
+      // Lưới 2D State
+      let isGridMode = false;
+      let gridData = [];
+      let gridRows = 0;
+      let gridCols = 0;
+
+      // Visual State
+      let distArray = []; // Khoảng cách
+      let pqState = []; // [{d, u}]
+      let settledNodes = []; // Đã chốt sổ
+      let activeNode = -1; // Đang relax
+      let activeEdge = null; // Đang relax
+      let discoveredNodes = []; // Đã vào PQ nhưng chưa chốt
+
+      // Tiện ích UI
+      const highlightJS = (code) => {
+        let esc = code.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const c = [];
+        esc = esc.replace(/(\/\/.*)/g, (m) => {
+          c.push(m);
+          return `___C_${c.length - 1}___`;
+        });
+        esc = esc.replace(
+          /\b(\d+)\b/g,
+          '<span class="text-amber-300">$1</span>',
+        );
+        esc = esc
+          .replace(
+            /\b(function|let|const|var|if|else|for|while|return|break|continue|class|constructor)\b/g,
+            '<span class="text-pink-400 font-semibold">$1</span>',
+          )
+          .replace(
+            /\b(true|false|null|isNaN|Number|Infinity)\b/g,
+            '<span class="text-purple-400">$1</span>',
+          )
+          .replace(
+            /\b(Math|max|min|fill|length|from|push|shift|pop)\b/g,
+            '<span class="text-yellow-300">$1</span>',
+          )
+          .replace(/\b(new|Array)\b/g, '<span class="text-cyan-300">$1</span>');
+        c.forEach(
+          (com, i) =>
+            (esc = esc.replace(
+              `___C_${i}___`,
+              `<span class="text-slate-500 italic">${com}</span>`,
+            )),
+        );
+        return esc;
+      };
+
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+      const isAborted = (id) => id !== currentProcessId;
+
+      function renderTabs() {
+        document.getElementById("tabs-container").innerHTML = ALGO_DATA.map(
+          (a) =>
+            `<button onclick="changeTab('${a.id}')" class="px-5 py-4 font-bold whitespace-nowrap transition-all duration-200 border-b-2 flex-1 text-center ${a.id === currentTabId ? "text-amber-600 border-amber-600 bg-white" : "text-slate-500 hover:text-slate-800 hover:bg-slate-100/50 border-transparent cursor-pointer"} text-sm sm:text-base">${a.name}</button>`,
+        ).join("");
+      }
+
+      function initUI() {
+        renderTabs();
+        updateInfoAndCode();
+        generateNewData();
+        lucide.createIcons();
+      }
+
+      function updateInfoAndCode() {
+        const a = ALGO_DATA.find((x) => x.id === currentTabId);
+        if (!a) return;
+        document.getElementById("info-container").innerHTML =
+          `<div><h3 class="text-3xl font-extrabold text-slate-900 mb-1">${a.name}</h3><div class="inline-flex items-center px-3 py-1 bg-amber-100 text-amber-700 rounded-lg text-sm font-medium">${a.vnName}</div></div><p class="text-slate-600 leading-relaxed text-sm">${a.desc}</p><div class="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-4"><span class="text-xs font-semibold block mb-2 text-slate-500">ĐỘ PHỨC TẠP THỜI GIAN</span><span class="px-3 py-1 rounded-full border text-sm font-semibold shadow-sm inline-block bg-${a.themeColor}-100 text-${a.themeColor}-800 border-${a.themeColor}-300">${a.time}</span></div><ul class="space-y-2 text-sm text-slate-700 mt-4">${a.characteristics.map((c) => `<li class="flex items-start"><i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500 mr-2 shrink-0 mt-0.5"></i><span>${c}</span></li>`).join("")}</ul>`;
+        document.getElementById("code-container").innerHTML = highlightJS(
+          a.code,
+        );
+        lucide.createIcons();
+      }
+
+      function setMathHTML(htmlContent) {
+        document.getElementById("math-computation").innerHTML = htmlContent;
+      }
+
+      // --- RENDER VISUALS ---
+      function renderVisualizerUI() {
+        // Tùy theo mode mà hiện Graph hay Grid
+        const graphWrap = document.getElementById("graph-wrapper");
+        const gridWrap = document.getElementById("grid-wrapper");
+
+        if (isGridMode) {
+          graphWrap.classList.add("hidden");
+          gridWrap.classList.remove("hidden");
+          renderGridUI();
+        } else {
+          gridWrap.classList.add("hidden");
+          graphWrap.classList.remove("hidden");
+          renderGraphUI();
+        }
+
+        renderAuxiliaryUI();
+      }
+
+      function renderGraphUI() {
+        const nodesContainer = document.getElementById("graph-nodes");
+        const linesContainer = document.getElementById("graph-lines");
+        const weightsContainer = document.getElementById("graph-weights");
+
+        let htmlNodes = "";
+        let htmlLines = "";
+        let htmlWeights = "";
+
+        // VẼ CẠNH (LINES)
+        graphEdges.forEach((e) => {
+          let u = graphNodes[e.u],
+            v = graphNodes[e.v];
+          let isActive =
+            activeEdge && activeEdge.u === e.u && activeEdge.v === e.v;
+
+          let cls = "anim-edge edge-normal";
+          let marker = isDirected ? "url(#arrow-normal)" : "";
+
+          // Tạm thời nếu Node v đã chốt và u đã chốt, tô xanh con đường
+          // Để trực quan, ta tô cạnh nằm trên cây đường đi ngắn nhất
+          // (Cần một mảng track cha, nhưng đơn giản thì tô active edge là đủ)
+
+          if (isActive) {
+            cls = "anim-edge edge-active";
+            marker = isDirected ? "url(#arrow-active)" : "";
+          }
+
+          let dx = v.x - u.x,
+            dy = v.y - u.y;
+          let dist = Math.sqrt(dx * dx + dy * dy);
+          let ratio = isDirected ? 5 / dist : 0; // Cắt ngắn nếu có mũi tên
+          let x2 = v.x - dx * ratio,
+            y2 = v.y - dy * ratio;
+
+          htmlLines += `<line x1="${u.x}%" y1="${u.y}%" x2="${x2}%" y2="${y2}%" class="${cls}" marker-end="${marker}" />`;
+
+          // Trọng số
+          let midX = (u.x + v.x) / 2;
+          let midY = (u.y + v.y) / 2;
+          midY -= 3; // Nâng lên chút
+
+          let weightBg = isActive
+            ? "bg-amber-500 text-slate-900 shadow-[0_0_5px_rgba(245,158,11,0.8)]"
+            : "bg-slate-700 text-slate-300";
+          let wVal = e.w;
+          if (wVal < 0) weightBg = "bg-rose-600 text-white font-extrabold"; // Highlight âm
+
+          htmlWeights += `<div class="absolute ${weightBg} px-1.5 py-0.5 rounded font-mono text-[10px] font-bold border border-slate-900" style="left: ${midX}%; top: ${midY}%; transform: translate(-50%, -50%); z-index: 15;">${wVal}</div>`;
+        });
+
+        // VẼ ĐỈNH (NODES)
+        graphNodes.forEach((node) => {
+          let i = node.id;
+          let cls = "anim-node node-unvisited";
+          let badge = "";
+
+          if (discoveredNodes.includes(i)) cls = "anim-node node-discovered";
+          if (settledNodes.includes(i)) cls = "anim-node node-settled";
+          if (activeNode === i) cls = "anim-node node-active";
+
+          // Hiển thị Distance nhỏ trên Node
+          let dVal = distArray[i] === Infinity ? "∞" : distArray[i];
+          let badgeColor =
+            distArray[i] !== Infinity
+              ? "bg-amber-500 text-slate-900"
+              : "bg-slate-600 text-slate-300";
+          badge = `<span class="absolute -top-4 left-1/2 -translate-x-1/2 ${badgeColor} text-[9px] font-bold px-1.5 py-0.5 rounded shadow z-30">d:${dVal}</span>`;
+
+          // Mark start
+          if (i === startNode)
+            badge += `<span class="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-[8px] px-1 rounded">START</span>`;
+
+          htmlNodes += `
+           <div class="absolute w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-full border-2 font-bold text-sm sm:text-base shadow-lg cursor-pointer ${cls}" 
+                style="left: ${node.x}%; top: ${node.y}%; transform: translate(-50%, -50%);">
+              ${badge}
+              ${node.label}
+           </div>
+          `;
+        });
+
+        linesContainer.innerHTML = htmlLines;
+        weightsContainer.innerHTML = htmlWeights;
+        nodesContainer.innerHTML = htmlNodes;
+      }
+
+      function renderGridUI() {
+        const container = document.getElementById("grid-canvas");
+        container.style.gridTemplateColumns = `repeat(${gridCols}, minmax(0, 1fr))`;
+
+        let html = "";
+        for (let r = 0; r < gridRows; r++) {
+          for (let c = 0; c < gridCols; c++) {
+            let id = r * gridCols + c;
+            let w = gridData[r][c];
+
+            let cls =
+              "grid-cell cell-unvisited w-12 h-12 flex flex-col items-center justify-center border font-bold text-lg relative rounded-md m-[1px]";
+
+            if (discoveredNodes.includes(id))
+              cls = cls.replace("cell-unvisited", "cell-discovered");
+            if (settledNodes.includes(id))
+              cls = cls.replace(
+                /cell-unvisited|cell-discovered/,
+                "cell-settled",
+              );
+            if (activeNode === id) cls += " cell-active";
+
+            let dVal = distArray[id] === Infinity ? "∞" : distArray[id];
+            let dHtml = `<span class="absolute top-0 left-0.5 text-[8px] opacity-70">d:${dVal}</span>`;
+
+            if (r === 0 && c === 0)
+              html += `<div class="${cls}">${dHtml}<span class="text-xs text-emerald-400 mb-1">Start</span>${w}</div>`;
+            else if (r === gridRows - 1 && c === gridCols - 1)
+              html += `<div class="${cls} border-2 border-dashed border-rose-400">${dHtml}<span class="text-xs text-rose-400 mb-1">End</span>${w}</div>`;
+            else html += `<div class="${cls}">${dHtml}${w}</div>`;
+          }
+        }
+        container.innerHTML = html;
+      }
+
+      function renderAuxiliaryUI() {
+        // 1. Distance Array
+        const distCont = document.getElementById("dist-container");
+        let dHtml = "";
+        distArray.forEach((d, i) => {
+          let dStr = d === Infinity ? "∞" : d;
+          let bg = "bg-slate-700 text-slate-300 border-slate-600";
+          if (settledNodes.includes(i))
+            bg = "bg-emerald-600 text-white border-emerald-500";
+          else if (d !== Infinity) bg = "bg-sky-600 text-white border-sky-500";
+
+          if (activeNode === i)
+            bg =
+              "bg-amber-500 text-slate-900 border-amber-400 scale-110 shadow-md";
+
+          let label = isGridMode
+            ? `[${Math.floor(i / gridCols)},${i % gridCols}]`
+            : `Node ${i}`;
+
+          dHtml += `<div class="flex flex-col items-center mx-1"><span class="text-[9px] text-slate-400 font-mono">${label}</span><div class="w-8 h-8 flex items-center justify-center rounded border-2 font-bold text-sm transition-all duration-300 ${bg}">${dStr}</div></div>`;
+        });
+        distCont.innerHTML = dHtml;
+
+        // 2. Priority Queue
+        const pqCont = document.getElementById("pq-container");
+        if (pqState.length === 0) {
+          pqCont.innerHTML =
+            '<span class="text-slate-500 font-mono text-xs w-full text-center mt-2">PQ Trống</span>';
+        } else {
+          // Sort PQ visual (just to ensure it matches min-heap logic)
+          let sortedPQ = [...pqState].sort((a, b) => a.d - b.d);
+
+          pqCont.innerHTML = sortedPQ
+            .map((item, idx) => {
+              let isMin = idx === 0;
+              let bg = isMin
+                ? "bg-amber-500 text-slate-900 border-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.8)] scale-105"
+                : "bg-cyan-700 text-cyan-100 border-cyan-500";
+              let nodeLabel = isGridMode
+                ? `[${Math.floor(item.u / gridCols)},${item.u % gridCols}]`
+                : `N${item.u}`;
+              return `<div class="flex flex-col items-center justify-center px-2 py-1 rounded border-2 text-xs font-bold transition-all duration-300 shrink-0 ${bg}">
+                 <span>${nodeLabel}</span><span class="border-t border-slate-800/20 w-full text-center text-[10px]">d:${item.d}</span>
+              </div>`;
+            })
+            .join(
+              '<i data-lucide="arrow-right" class="w-3 h-3 text-slate-500 shrink-0"></i>',
+            );
+          lucide.createIcons();
+        }
+      }
+
+      function buildAdjacencyList() {
+        adjList = {};
+        for (
+          let i = 0;
+          i < (isGridMode ? gridRows * gridCols : graphNodes.length);
+          i++
+        )
+          adjList[i] = [];
+
+        if (isGridMode) {
+          let dirs = [
+            [0, 1],
+            [1, 0],
+            [0, -1],
+            [-1, 0],
+          ];
+          for (let r = 0; r < gridRows; r++) {
+            for (let c = 0; c < gridCols; c++) {
+              let u = r * gridCols + c;
+              for (let [dr, dc] of dirs) {
+                let nr = r + dr,
+                  nc = c + dc;
+                if (nr >= 0 && nr < gridRows && nc >= 0 && nc < gridCols) {
+                  let v = nr * gridCols + nc;
+                  adjList[u].push({ v: v, w: gridData[nr][nc] }); // Cost is the weight of target cell
+                }
+              }
+            }
+          }
+        } else {
+          graphEdges.forEach((e) => {
+            adjList[e.u].push({ v: e.v, w: e.w });
+            if (!isDirected) adjList[e.v].push({ v: e.u, w: e.w });
+          });
+        }
+      }
+
+      function changeTab(id) {
+        if (isRunning) {
+          currentProcessId++;
+          isRunning = false;
+          toggleBtn(false);
+        }
+        currentTabId = id;
+        renderTabs();
+        updateInfoAndCode();
+        generateNewData();
+      }
+
+      function generateNewData() {
+        if (isRunning) return;
+        let problemHTML = "";
+
+        // Reset State
+        activeNode = -1;
+        activeEdge = null;
+        settledNodes = [];
+        discoveredNodes = [];
+        pqState = [];
+        isGridMode = false;
+
+        if (currentTabId === "dijkstra_basic") {
+          isDirected = false;
+          graphNodes = [
+            { id: 0, x: 20, y: 50, label: "0" },
+            { id: 1, x: 50, y: 20, label: "1" },
+            { id: 2, x: 50, y: 80, label: "2" },
+            { id: 3, x: 80, y: 50, label: "3" },
+            { id: 4, x: 50, y: 50, label: "4" },
+          ];
+          graphEdges = [
+            { u: 0, v: 1, w: 5 },
+            { u: 0, v: 2, w: 2 },
+            { u: 0, v: 4, w: 1 },
+            { u: 4, v: 1, w: 1 },
+            { u: 2, v: 4, w: 3 },
+            { u: 1, v: 3, w: 2 },
+            { u: 4, v: 3, w: 4 },
+          ];
+          startNode = 0;
+          problemHTML = `<b class="text-white">Dijkstra Tiêu Chuẩn:</b> Đồ thị vô hướng. Xuất phát từ <b class="text-amber-400">Node 0</b>. Đi tìm khoảng cách ngắn nhất đến toàn bộ các đỉnh còn lại. Cứ lấy đỉnh rẻ nhất ra là chốt (Settled).`;
+        } else if (currentTabId === "network_delay") {
+          isDirected = true;
+          graphNodes = [
+            { id: 0, x: 20, y: 50, label: "0" },
+            { id: 1, x: 50, y: 20, label: "1" },
+            { id: 2, x: 50, y: 80, label: "2" },
+            { id: 3, x: 80, y: 50, label: "3" },
+          ];
+          graphEdges = [
+            { u: 0, v: 1, w: 4 },
+            { u: 0, v: 2, w: 1 },
+            { u: 2, v: 1, w: 2 },
+            { u: 1, v: 3, w: 1 },
+            { u: 2, v: 3, w: 5 },
+          ];
+          startNode = 0;
+          problemHTML = `<b class="text-white">Mạng lưới Có Hướng:</b> Tín hiệu gửi từ <b class="text-amber-400">Node 0</b> (1 chiều). Tính xem tốn bao nhiêu thời gian để tất cả nhận được. Lưu ý: Đi đường vòng 0 ➔ 2 ➔ 1 (1+2=3) nhanh hơn đi thẳng 0 ➔ 1 (4)!`;
+        } else if (currentTabId === "dijkstra_grid") {
+          isGridMode = true;
+          gridRows = 3;
+          gridCols = 4;
+          gridData = [
+            [0, 5, 1, 1],
+            [1, 9, 2, 1],
+            [1, 1, 1, 8],
+          ];
+          startNode = 0; // 0,0
+          problemHTML = `<b class="text-white">Tìm Đường Trên Lưới 2D:</b> Mỗi ô có 1 chi phí (Trọng số). Cần đi từ Start (0,0) đến End (2,3). Để tránh ô giá cao (5, 9, 8), Dijkstra sẽ khéo léo len lỏi qua các ô giá rẻ (1) để tới đích.`;
+        } else if (currentTabId === "dijkstra_negative") {
+          isDirected = true;
+          graphNodes = [
+            { id: 0, x: 20, y: 50, label: "0" },
+            { id: 1, x: 80, y: 20, label: "1" },
+            { id: 2, x: 50, y: 80, label: "2" },
+          ];
+          // Đường thẳng 0->1 tốn 2. Đường 0->2 tốn 5, 2->1 tốn -10!
+          graphEdges = [
+            { u: 0, v: 1, w: 2 },
+            { u: 0, v: 2, w: 5 },
+            { u: 2, v: 1, w: -10 },
+          ];
+          startNode = 0;
+          problemHTML = `<b class="text-white">Cạm Bẫy Cạnh Âm:</b> Quan sát kỹ! Dijkstra sẽ vội vàng CHỐT SỔ Node 1 với giá 2đ vì nó lấy Min(2, 5). Nhưng đi vòng qua Node 2 rồi nhận hoàn tiền -10đ thì giá chỉ còn -5đ! Sự tham lam đã làm Dijkstra bị mù.`;
+        }
+
+        let n = isGridMode ? gridRows * gridCols : graphNodes.length;
+        distArray = new Array(n).fill(Infinity);
+
+        buildAdjacencyList();
+
+        document.getElementById("problem-text").innerHTML = problemHTML;
+        document.getElementById("problem-statement").classList.remove("hidden");
+        lucide.createIcons();
+
+        renderVisualizerUI();
+        setMathHTML('Nhấn "Chạy Mô Phỏng" để bắt đầu.');
+      }
+
+      function toggleBtn(s) {
+        isRunning = s;
+        document.getElementById("btn-play").disabled = s;
+        document.getElementById("btn-play-text").innerText = s
+          ? "Đang chạy..."
+          : "Chạy Mô Phỏng";
+      }
+
+      document
+        .getElementById("btn-reset")
+        .addEventListener("click", generateNewData);
+      document
+        .getElementById("speed-slider")
+        .addEventListener(
+          "input",
+          (e) => (currentSpeed = 1550 - Number(e.target.value)),
+        );
+      document.getElementById("btn-play").addEventListener("click", () => {
+        if (!isRunning) handleSimulation();
+      });
+
+      async function handleSimulation() {
+        toggleBtn(true);
+        currentProcessId++;
+        let sid = currentProcessId;
+        try {
+          await startDijkstra(sid);
+        } catch (e) {
+          console.error(e);
+        }
+        if (sid === currentProcessId) toggleBtn(false);
+      }
+
+      // === LÕI THUẬT TOÁN DIJKSTRA ===
+      async function startDijkstra(id) {
+        // Khởi tạo
+        distArray[startNode] = 0;
+        pqState.push({ d: 0, u: startNode });
+        discoveredNodes.push(startNode);
+
+        renderVisualizerUI();
+        setMathHTML(
+          `Khởi tạo: Khoảng cách từ Start đến chính nó = <b class="text-emerald-400">0</b>. Đẩy Start vào Min-Heap.`,
+        );
+        await sleep(currentSpeed * 2);
+
+        while (pqState.length > 0) {
+          if (isAborted(id)) return;
+
+          // Lấy đỉnh có khoảng cách ngắn nhất
+          pqState.sort((a, b) => a.d - b.d);
+          let curr = pqState.shift();
+          let u = curr.u;
+          let d = curr.d;
+
+          activeNode = u;
+          renderVisualizerUI();
+
+          if (d > distArray[u]) {
+            setMathHTML(
+              `Đỉnh ${u} lấy từ PQ có d=${d}, nhưng sổ tay ghi ${distArray[u]} rẻ hơn. <b class="text-slate-400">Bỏ qua (Đã cũ).</b>`,
+            );
+            await sleep(currentSpeed);
+            activeNode = -1;
+            continue;
+          }
+
+          setMathHTML(
+            `Rút đỉnh <b class="text-amber-400 text-lg">${u}</b> (d=${d}) rẻ nhất khỏi PQ. <b class="text-emerald-400">CHỐT SỔ (Settled)</b> đỉnh này!`,
+          );
+          settledNodes.push(u);
+          renderVisualizerUI();
+          await sleep(currentSpeed * 1.5);
+
+          // Nếu là Grid và chạm End
+          if (isGridMode && u === gridRows * gridCols - 1) {
+            setMathHTML(
+              `<span class="text-emerald-400 font-bold text-2xl">🎉 ĐÃ ĐẾN ĐÍCH!</span> Thuật toán dừng sớm. Tổng chi phí: ${d}.`,
+            );
+            activeNode = -1;
+            renderVisualizerUI();
+            return;
+          }
+
+          // Thư giãn các cạnh
+          let neighbors = adjList[u];
+          for (let edge of neighbors) {
+            if (isAborted(id)) return;
+
+            let v = edge.v;
+            let weight = edge.w;
+            activeEdge = { u: u, v: v };
+
+            // Visual highlight
+            let vLabel = isGridMode
+              ? `[${Math.floor(v / gridCols)},${v % gridCols}]`
+              : `Node ${v}`;
+            setMathHTML(
+              `Nhìn sang hàng xóm <b class="text-cyan-400">${vLabel}</b>. Trọng số cạnh W = <b class="text-amber-400">${weight}</b>.`,
+            );
+            renderVisualizerUI();
+            await sleep(currentSpeed * 1.5);
+
+            let newDist = distArray[u] + weight;
+            let oldDist = distArray[v] === Infinity ? "∞" : distArray[v];
+
+            if (newDist < distArray[v]) {
+              setMathHTML(`
+                      <div class="flex flex-col items-center">
+                         <span class="text-emerald-400 font-bold mb-1 uppercase tracking-wider">Thư giãn (Relaxation) - Kỷ Lục Mới!</span>
+                         <span class="bg-slate-900 px-3 py-1 rounded border border-emerald-500/50">Đường mới: ${distArray[u]} + ${weight} = <b class="text-emerald-400 text-lg">${newDist}</b> < Đường cũ: <b class="text-slate-400">${oldDist}</b></span>
+                      </div>
+                   `);
+
+              distArray[v] = newDist;
+              if (!discoveredNodes.includes(v)) discoveredNodes.push(v);
+
+              // Cập nhật PQ
+              pqState.push({ d: newDist, u: v });
+              renderVisualizerUI();
+              await sleep(currentSpeed * 2.5);
+            } else {
+              setMathHTML(
+                `Đường mới (${newDist}) đắt hơn hoặc bằng đường cũ (${oldDist}). <span class="text-rose-400 font-bold">Bỏ qua cạnh này.</span>`,
+              );
+              await sleep(currentSpeed * 1.2);
+            }
+          }
+
+          activeEdge = null;
+          activeNode = -1;
+          renderVisualizerUI();
+        }
+
+        if (isAborted(id)) return;
+
+        if (currentTabId === "dijkstra_negative") {
+          setMathHTML(`
+             <div class="flex flex-col items-center">
+               <span class="text-rose-500 font-bold text-2xl uppercase">THẤT BẠI DO CẠNH ÂM!</span>
+               <span class="text-slate-300 mt-2">Dijkstra chốt sổ Node 1 bằng 2đ. Nó không bao giờ quay lại cập nhật d(1) = -5đ. Đây là lý do ta phải dùng Bellman-Ford khi có trọng số âm!</span>
+             </div>
+           `);
+        } else {
+          setMathHTML(
+            `<span class="text-emerald-400 font-bold text-xl">🎉 Dijkstra hoàn tất! Xem sổ tay Khoảng cách để biết kết quả từ Start đến mọi điểm.</span>`,
+          );
+        }
+      }
+
+      window.onload = initUI;
+    </script>
+  </body>
+</html>

@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trực Quan Hóa Thuật Toán Monotonic Stack</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .hide-scrollbar::-webkit-scrollbar { display: none; } 
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    
+    .anim-cell { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    
+    @keyframes slideInDown {
+      from { transform: translateY(-20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    
+    @keyframes popOutRight {
+      from { transform: translateX(0) scale(1); opacity: 1; }
+      to { transform: translateX(30px) scale(0.8); opacity: 0; }
+    }
+
+    @keyframes pulse-teal {
+      0% { box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.7); }
+      70% { box-shadow: 0 0 0 15px rgba(20, 184, 166, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(20, 184, 166, 0); }
+    }
+
+    .stack-push { animation: slideInDown 0.3s ease-out forwards; }
+    .stack-pop { animation: popOutRight 0.3s ease-in forwards; background-color: #ef4444 !important; border-color: #f87171 !important; color: white !important; }
+    
+    .cell-normal { background-color: #1e293b; border-color: #334155; color: #cbd5e1; }
+    .cell-active { animation: pulse-teal 1.5s infinite; background-color: #0f766e !important; border-color: #14b8a6 !important; color: white; transform: scale(1.15); z-index: 10; }
+    .cell-comparing { background-color: #b45309 !important; border-color: #f59e0b !important; color: white; transform: scale(1.1); z-index: 10; box-shadow: 0 0 15px rgba(245,158,11,0.5); }
+    .cell-success { background-color: #064e3b; border-color: #10b981; color: white; }
+    .cell-disabled { background-color: #0f172a; border-color: #1e293b; color: #475569; opacity: 0.5; }
+
+    /* Stack Container */
+    .stack-container {
+      border-left: 4px solid #334155;
+      border-right: 4px solid #334155;
+      border-bottom: 4px solid #334155;
+      border-radius: 0 0 12px 12px;
+      min-height: 200px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 8px;
+      gap: 4px;
+      background: linear-gradient(to bottom, transparent, rgba(15, 23, 42, 0.5));
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans min-h-screen p-4 sm:p-6 lg:p-8">
+
+  <div class="max-w-7xl mx-auto space-y-8">
+    
+    <!-- HEADER -->
+    <header class="text-center space-y-4 mb-6">
+      <div class="inline-flex items-center justify-center p-3 bg-teal-100 text-teal-600 rounded-full mb-2 shadow-sm">
+        <i data-lucide="layers" class="w-8 h-8"></i>
+      </div>
+      <h1 class="text-3xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-teal-600 to-cyan-600">
+        Monotonic Stack
+      </h1>
+      <p class="text-lg text-slate-600 max-w-3xl mx-auto">
+        Tuyệt kỹ "Ngăn Xếp Đơn Điệu". Vũ khí tối thượng giải quyết các bài toán Next Greater / Smaller trong thời gian O(n).
+      </p>
+    </header>
+
+    <!-- LÝ THUYẾT TRỌNG TÂM -->
+    <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 overflow-hidden mb-8">
+      <div class="flex items-center mb-6">
+        <i data-lucide="book-open" class="w-6 h-6 text-teal-500 mr-2"></i>
+        <h2 class="text-xl font-bold text-slate-800">Giải ngố Monotonic Stack cho người mới</h2>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+        <!-- Đời thường -->
+        <div class="bg-slate-900 p-5 rounded-xl border border-slate-700 text-slate-300 flex flex-col h-full">
+           <h3 class="font-bold text-teal-400 mb-3 flex items-center text-lg"><i data-lucide="eye" class="w-5 h-5 mr-2"></i> 1. Trực giác: "Kẻ cao che khuất kẻ lùn"</h3>
+           <p class="mb-3 text-sm">Hãy tưởng tượng mảng dữ liệu là một hàng người đang đứng xếp hàng. Bạn đứng từ trái nhìn sang phải.</p>
+           <ul class="space-y-3 text-sm">
+              <li><b class="text-emerald-400">Điều hiển nhiên:</b> Nếu một người <b class="text-white">cao to (số lớn)</b> đứng trước, thì những người <b class="text-slate-500">thấp bé (số nhỏ)</b> đứng sau họ sẽ bị che khuất hoàn toàn, không ai nhìn thấy được.</li>
+              <li><b class="text-cyan-400">Ngăn xếp Đơn điệu Giảm (Decreasing Stack):</b> Ta chỉ giữ lại trong Stack những người CÓ THỂ ĐƯỢC NHÌN THẤY.</li>
+              <li>Khi một người mới đến (array[i]) muốn vào Stack: Nó sẽ nhìn kẻ đang đứng ở Cửa Stack (Đỉnh stack). Nếu kẻ ở đỉnh <b>lùn hơn</b> nó, kẻ đó đã trở nên VÔ DỤNG (bị che khuất). ➔ <b class="text-rose-400">ĐÁ BĂNG (POP) kẻ lùn ra khỏi Stack!</b> Cứ thế cho đến khi nó gặp một người cao hơn nó, rồi nó mới chịu đi vào Stack.</li>
+           </ul>
+        </div>
+
+        <!-- Kỹ thuật và Yếu điểm -->
+        <div class="bg-teal-50 p-5 rounded-xl border border-teal-200 flex flex-col h-full text-teal-900">
+           <h3 class="font-bold text-teal-800 mb-3 flex items-center text-lg"><i data-lucide="cpu" class="w-5 h-5 mr-2"></i> 2. Sức mạnh & Tính toán</h3>
+           <div class="space-y-3 text-sm">
+             <p><b>Tại sao lại là O(n) thay vì O(n²)?</b> Mặc dù có một vòng lặp <code>while</code> lồng bên trong vòng lặp <code>for</code>, nhưng hãy để ý: MỖI PHẦN TỬ chỉ được Đẩy vào Stack đúng 1 lần, và bị Rút ra khỏi Stack TỐI ĐA 1 LẦN. Tổng số thao tác cho N phần tử là 2N. Do đó thời gian chạy là O(n) tuyến tính!</p>
+             <div class="p-3 bg-white border border-teal-300 rounded-lg text-teal-700">
+                <b class="flex items-center"><i data-lucide="zap" class="w-4 h-4 mr-1"></i> Hai dạng kinh điển:</b>
+                <ul class="list-disc pl-5 mt-2 space-y-1">
+                  <li><b>Next Greater Element:</b> Dùng Stack Đơn điệu GIẢM (Tìm số Lớn hơn).</li>
+                  <li><b>Next Smaller Element:</b> Dùng Stack Đơn điệu TĂNG (Tìm số Nhỏ hơn).</li>
+                </ul>
+             </div>
+             <p><b>Lưu Value hay Lưu Index?</b> Nếu đề chỉ hỏi "Giá trị đó là bao nhiêu?", ta có thể lưu thẳng Giá trị vào Stack. Nhưng nếu đề hỏi "Khoảng cách là bao xa?" hoặc "Tính diện tích (Hình chữ nhật)", ta BẮT BUỘC phải lưu <b>Index (Chỉ số)</b> vào Stack để tính toán!</p>
+           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN UI -->
+    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+       
+       <div id="tabs-container" class="flex overflow-x-auto border-b border-slate-200 hide-scrollbar bg-slate-50"></div>
+       
+       <div class="p-4 sm:p-6 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+         
+         <div class="lg:col-span-4 space-y-6" id="info-container"></div>
+
+         <div class="lg:col-span-8 w-full flex flex-col space-y-6">
+            <div class="bg-slate-900 rounded-2xl p-4 sm:p-6 shadow-inner border border-slate-800">
+               
+               <!-- Controls -->
+               <div class="flex flex-wrap gap-4 items-center justify-between mb-4 pb-4 border-b border-slate-700">
+                  <div class="flex gap-2">
+                    <button id="btn-play" class="flex items-center px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-lg font-semibold transition disabled:opacity-50 text-sm">
+                      <i data-lucide="play" class="w-4 h-4 mr-2"></i> <span id="btn-play-text">Chạy Mô Phỏng</span>
+                    </button>
+                    <button id="btn-reset" class="flex items-center px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition text-sm">
+                      <i data-lucide="rotate-ccw" class="w-4 h-4 mr-2"></i> Làm mới
+                    </button>
+                  </div>
+                  <div class="flex items-center gap-3 text-slate-300 text-sm">
+                 <i data-lucide="settings-2" class="w-4 h-4"></i>
+                 <label class="font-medium hidden sm:block">Tốc độ:</label>
+                 <input type="range" id="speed-slider" min="50" max="1500" value="800" class="w-24 accent-teal-500">
+               </div>
+            </div>
+
+            <!-- Problem Statement -->
+            <div id="problem-statement" class="bg-teal-900/40 border border-teal-500/30 rounded-xl p-4 mb-4 text-sm sm:text-base text-teal-100 flex items-start gap-3 hidden">
+               <div id="target-icon-wrapper" class="text-teal-400 shrink-0 mt-0.5"><i data-lucide="target" class="w-5 h-5"></i></div>
+               <div id="problem-text" class="leading-relaxed"></div>
+            </div>
+
+            <!-- Log/Math Box -->
+            <div id="math-computation" class="bg-slate-800 rounded-xl p-3 mb-6 text-center font-mono text-sm sm:text-base border border-slate-600 text-slate-300 min-h-[48px] flex items-center justify-center">
+               Sẵn sàng mô phỏng.
+            </div>
+
+            <!-- VISUALIZER CONTAINER -->
+            <div class="flex flex-col items-center justify-center w-full relative mb-4 gap-8">
+                 
+                 <!-- Input Array -->
+                 <div class="flex flex-col items-center w-full">
+                     <div class="text-cyan-400 font-mono text-sm font-bold mb-2 uppercase tracking-wider">Mảng Đầu Vào (Input)</div>
+                     <div id="input-container" class="flex flex-wrap items-center justify-center gap-1 sm:gap-2 w-full">
+                        <!-- JS gen -->
+                     </div>
+                 </div>
+
+                 <!-- Cấu trúc Stack & Output -->
+                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full mt-2">
+                     
+                     <!-- Stack Visualizer -->
+                     <div class="flex flex-col items-center w-full">
+                         <div class="text-teal-400 font-mono text-sm font-bold mb-2 uppercase tracking-wider" id="stack-title">Monotonic Stack</div>
+                         <div id="stack-container" class="stack-container w-32 relative">
+                            <!-- Items push into here -->
+                            <span id="stack-empty-text" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-slate-500 text-xs font-mono">Trống</span>
+                         </div>
+                     </div>
+                     
+                     <!-- Output Array -->
+                     <div class="flex flex-col items-center w-full">
+                         <div class="text-emerald-400 font-mono text-sm font-bold mb-2 uppercase tracking-wider" id="output-title">Mảng Kết Quả (Output)</div>
+                         <div id="output-container" class="flex flex-wrap items-center justify-center gap-2 min-h-[48px] w-full p-3 border border-slate-600 rounded-xl bg-slate-800/50">
+                            <!-- JS gen -->
+                         </div>
+                         
+                         <!-- Additional Info Box (For Max Area in Histogram) -->
+                         <div id="extra-info-box" class="mt-4 hidden p-4 bg-amber-900/40 border border-amber-500/50 rounded-xl text-center">
+                            <div class="text-amber-400 text-xs font-bold uppercase mb-1">Max Area Kỷ Lục</div>
+                            <div id="max-area-val" class="text-3xl font-extrabold text-amber-300">0</div>
+                         </div>
+                     </div>
+
+                 </div>
+
+            </div>
+
+            <!-- Code Block -->
+            <div class="relative rounded-2xl overflow-hidden shadow-lg border border-slate-700 bg-[#0f172a] mt-6">
+              <div class="w-full px-4 py-3 bg-[#1e293b] border-b border-slate-700 flex items-center justify-between">
+                <div class="flex space-x-2"><div class="w-3 h-3 rounded-full bg-rose-500"></div><div class="w-3 h-3 rounded-full bg-amber-500"></div><div class="w-3 h-3 rounded-full bg-emerald-500"></div></div>
+                <div class="flex items-center text-slate-400 text-xs font-mono"><i data-lucide="code" class="w-4 h-4 mr-1.5"></i> javascript</div>
+              </div>
+              <pre class="p-4 sm:p-6 overflow-auto text-xs sm:text-sm font-mono leading-relaxed max-h-72"><code id="code-container" class="text-slate-200"></code></pre>
+            </div>
+         </div>
+       </div>
+    </div>
+  </div>
+
+  <script>
+    // === DỮ LIỆU PATTERNS ===
+    const ALGO_DATA = [
+      {
+        id: 'next_greater', name: '1. Next Greater Element', vnName: 'Cơ bản nhất (NGE)',
+        tech: 'Decreasing Stack', time: 'O(n)', themeColor: 'teal',
+        code: `// Bài toán: Tìm phần tử đầu tiên LỚN HƠN nằm bên PHẢI của mỗi phần tử\nfunction nextGreaterElements(arr) {\n  let n = arr.length;\n  let res = new Array(n).fill(-1);\n  let stack = []; // Stack lưu Index\n\n  for (let i = 0; i < n; i++) {\n    // Khi kẻ mới đến arr[i] LỚN HƠN kẻ đang đứng ở đỉnh Stack\n    // Tức là kẻ đỉnh Stack đã bị che khuất -> POP nó ra!\n    // Và arr[i] chính là "Next Greater" của kẻ đỉnh Stack đó.\n    while (stack.length > 0 && arr[stack[stack.length - 1]] < arr[i]) {\n      let poppedIdx = stack.pop();\n      res[poppedIdx] = arr[i]; // Ghi nhận đáp án\n    }\n    \n    // Kẻ mới đến được vào Stack, chờ một kẻ khác cao hơn đến giải cứu\n    stack.push(i);\n  }\n  return res;\n}`,
+        desc: 'Nền tảng của mọi bài toán Monotonic Stack. Khi gặp một phần tử mới lớn hơn đỉnh Stack, nó chứng tỏ nó chính là "Lối thoát" (Next Greater) cho các phần tử nhỏ bé đang bị kẹt trong Stack. Ta lấy chúng ra và ghi nhận kết quả.',
+        characteristics: ['Duyệt từ trái sang phải (hoặc phải sang trái tùy cách cài)', 'Giữ Stack theo trật tự GIẢM DẦN (Decreasing)']
+      },
+      {
+        id: 'daily_temp', name: '2. Daily Temperatures', vnName: 'Lưu Index tính khoảng cách',
+        tech: 'Decreasing Stack (Index)', time: 'O(n)', themeColor: 'cyan',
+        code: `// Bài toán: Mất bao nhiêu NGÀY CHỜ để gặp ngày ấm hơn?\nfunction dailyTemperatures(temps) {\n  let n = temps.length;\n  let res = new Array(n).fill(0);\n  let stack = []; // BẮT BUỘC phải lưu Index\n\n  for (let i = 0; i < n; i++) {\n    // Gặp ngày ấm hơn -> Giải cứu các ngày lạnh trong Stack\n    while (stack.length > 0 && temps[stack[stack.length - 1]] < temps[i]) {\n      let prevDayIdx = stack.pop();\n      \n      // Khoảng cách ngày = Ngày hiện tại (i) - Ngày quá khứ\n      res[prevDayIdx] = i - prevDayIdx;\n    }\n    stack.push(i);\n  }\n  return res;\n}`,
+        desc: 'Biến thể cực hay của Next Greater. Đề không hỏi "Nhiệt độ ngày đó là bao nhiêu?" mà hỏi "Mất bao nhiêu ngày?". Do đó, Stack không được lưu Giá trị nhiệt độ, mà BẮT BUỘC phải lưu Chỉ số (Index) của ngày đó để làm phép trừ tính ra số ngày chờ.',
+        characteristics: ['Công thức vàng: Khoảng cách = Index Hiện tại - Index Pop ra', 'Nếu không có ngày ấm hơn, để mặc định là 0.']
+      },
+      {
+        id: 'next_smaller', name: '3. Next Smaller Element', vnName: 'Đổi hướng trật tự',
+        tech: 'Increasing Stack', time: 'O(n)', themeColor: 'emerald',
+        code: `// Bài toán: Tìm phần tử đầu tiên NHỎ HƠN nằm bên PHẢI (VD: Tìm Discount giảm giá)\nfunction nextSmallerElements(arr) {\n  let n = arr.length;\n  let res = new Array(n).fill(-1);\n  let stack = []; // Stack lưu Index, giữ tính TĂNG DẦN\n\n  for (let i = 0; i < n; i++) {\n    // Khi kẻ mới đến arr[i] NHỎ HƠN kẻ đỉnh Stack\n    // Tức là kẻ đỉnh Stack đã tìm thấy "Next Smaller" của mình\n    while (stack.length > 0 && arr[stack[stack.length - 1]] > arr[i]) {\n      let poppedIdx = stack.pop();\n      res[poppedIdx] = arr[i]; // (Hoặc giảm giá: arr[poppedIdx] - arr[i])\n    }\n    \n    stack.push(i);\n  }\n  return res;\n}`,
+        desc: 'Chỉ cần ĐẢO DẤU ở vòng lặp `while` từ `<` sang `>`, thuật toán sẽ chuyển từ đi tìm Kẻ Cao Hơn sang đi tìm Kẻ Thấp Hơn. Lúc này Stack sẽ duy trì trạng thái TĂNG DẦN. Rất hay ứng dụng trong các bài toán "Tính tiền sau khi áp dụng Voucher giảm giá".',
+        characteristics: ['Dùng Stack Đơn điệu TĂNG (Increasing Stack)', 'Điều kiện Pop: Kẻ mới đến < Kẻ trong Stack']
+      },
+      {
+        id: 'histogram', name: '4. Largest Rectangle', vnName: 'Trùm cuối (Hard)',
+        tech: 'Increasing Stack + Area Calc', time: 'O(n)', themeColor: 'rose',
+        code: `// Bài toán: Tìm Diện tích Hình chữ nhật lớn nhất trong Biểu đồ Histogram\nfunction largestRectangleArea(heights) {\n  let stack = []; // Lưu Index, giữ tính TĂNG DẦN\n  let maxArea = 0;\n  let n = heights.length;\n\n  for (let i = 0; i <= n; i++) {\n    // Thêm cột ảo chiều cao 0 ở cuối để "rút cạn" Stack\n    let h = (i === n) ? 0 : heights[i];\n\n    // Nếu gặp cột thấp hơn -> Cột ở đỉnh Stack bị chặn lối!\n    while (stack.length > 0 && h < heights[stack[stack.length - 1]]) {\n      let height = heights[stack.pop()]; // Rút cột bị chặn ra để tính\n      \n      // Chiều rộng = (Chỉ số hiện tại) - (Chỉ số kẻ chặn bên trái) - 1\n      let width = stack.length === 0 ? i : (i - stack[stack.length - 1] - 1);\n      \n      maxArea = Math.max(maxArea, height * width);\n    }\n    stack.push(i);\n  }\n  return maxArea;\n}`,
+        desc: 'Bài toán Hard ác mộng nhất liên quan đến Stack. Một hình chữ nhật chỉ có thể bành trướng sang phải nếu cột tiếp theo bằng hoặc cao hơn nó. Khi gặp một cột THẤP HƠN, cột ở đỉnh Stack chính thức bị "Chặn" ở cả 2 đầu. Ta rút nó ra, tính chiều rộng và cập nhật Max Area.',
+        characteristics: ['Cần ảo thuật thêm một Cột cao 0 ở cuối mảng để vét cạn Stack', 'Logic tính Width: Cột đang xét (Right Bound) và Đỉnh mới của Stack (Left Bound)']
+      }
+    ];
+
+    let currentTabId = ALGO_DATA[0].id; 
+    let isRunning = false; 
+    let currentProcessId = 0; 
+    let currentSpeed = 800;
+
+    // --- Data State ---
+    let inputArray = [];
+    let outputArray = [];
+    let stackState = []; // stores indices
+    let maxAreaGlobal = 0;
+
+    // Visual State
+    let activeInputIdx = -1;
+    let comparingStackIdx = -1;
+    let poppedStackIdx = -1;
+    let settledOutputIndices = [];
+
+    // Tiện ích UI
+    const highlightJS = (code) => {
+      let esc = code.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const c = [];
+      esc = esc.replace(/(\/\/.*)/g, (m) => { c.push(m); return `___C_${c.length-1}___`; });
+      esc = esc.replace(/\b(\d+)\b/g, '<span class="text-amber-300">$1</span>'); 
+      esc = esc.replace(/\b(function|let|const|var|if|else|for|while|return|break|continue|class|constructor)\b/g, '<span class="text-pink-400 font-semibold">$1</span>')
+               .replace(/\b(true|false|null|isNaN|Number|Infinity)\b/g, '<span class="text-purple-400">$1</span>')
+               .replace(/\b(Math|max|min|fill|length|from|push|shift|pop)\b/g, '<span class="text-yellow-300">$1</span>')
+               .replace(/\b(new|Array)\b/g, '<span class="text-cyan-300">$1</span>');
+      c.forEach((com, i) => esc = esc.replace(`___C_${i}___`, `<span class="text-slate-500 italic">${com}</span>`));
+      return esc;
+    };
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    const isAborted = (id) => id !== currentProcessId;
+
+    function renderTabs() {
+      document.getElementById('tabs-container').innerHTML = ALGO_DATA.map(a => `<button onclick="changeTab('${a.id}')" class="px-5 py-4 font-bold whitespace-nowrap transition-all duration-200 border-b-2 flex-1 text-center ${a.id===currentTabId ? 'text-teal-600 border-teal-600 bg-white' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/50 border-transparent cursor-pointer'} text-sm sm:text-base">${a.name}</button>`).join('');
+    }
+
+    function initUI() {
+      renderTabs();
+      updateInfoAndCode(); generateNewData(); lucide.createIcons();
+    }
+
+    function updateInfoAndCode() {
+      const a = ALGO_DATA.find(x => x.id === currentTabId);
+      if(!a) return;
+      document.getElementById('info-container').innerHTML = `<div><h3 class="text-3xl font-extrabold text-slate-900 mb-1">${a.name}</h3><div class="inline-flex items-center px-3 py-1 bg-teal-100 text-teal-700 rounded-lg text-sm font-medium">${a.vnName}</div></div><p class="text-slate-600 leading-relaxed text-sm">${a.desc}</p><div class="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-4"><span class="text-xs font-semibold block mb-2 text-slate-500">ĐỘ PHỨC TẠP THỜI GIAN</span><span class="px-3 py-1 rounded-full border text-sm font-semibold shadow-sm inline-block bg-${a.themeColor}-100 text-${a.themeColor}-800 border-${a.themeColor}-300">${a.time}</span></div><ul class="space-y-2 text-sm text-slate-700 mt-4">${a.characteristics.map(c => `<li class="flex items-start"><i data-lucide="check-circle-2" class="w-4 h-4 text-teal-500 mr-2 shrink-0 mt-0.5"></i><span>${c}</span></li>`).join('')}</ul>`;
+      document.getElementById('code-container').innerHTML = highlightJS(a.code);
+      lucide.createIcons();
+    }
+
+    function setMathHTML(htmlContent) {
+      document.getElementById('math-computation').innerHTML = htmlContent;
+    }
+
+    // --- RENDER VISUALS ---
+    function renderVisualizerUI() {
+      renderInputArray();
+      renderStack();
+      renderOutputArray();
+    }
+
+    function renderInputArray() {
+      const container = document.getElementById('input-container');
+      let html = '';
+      
+      let isHisto = currentTabId === 'histogram';
+
+      for (let i = 0; i < inputArray.length; i++) {
+        let val = inputArray[i];
+        
+        let cls = "cell-normal";
+        let isVirtual = isHisto && i === inputArray.length - 1 && val === 0;
+
+        if (i < activeInputIdx && !isVirtual) cls = "cell-disabled"; // passed
+        if (i === activeInputIdx) cls = "cell-active";
+        
+        // Cột biểu đồ cho Histogram
+        if (isHisto) {
+            let h = val * 15; // scale
+            if (isVirtual) h = 2; // virtual column dot
+            let barBg = (i === activeInputIdx) ? 'bg-teal-500 shadow-[0_0_10px_rgba(20,184,166,0.8)]' : 'bg-slate-600';
+            if (stackState.includes(i) && i !== activeInputIdx) barBg = 'bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]'; // In stack
+
+            html += `
+              <div class="flex flex-col items-center justify-end h-32 w-8 sm:w-10">
+                 <div class="w-full rounded-t flex items-end justify-center transition-all duration-300 ${barBg} ${i===activeInputIdx ? 'scale-x-110 z-10' : ''}" style="height: ${Math.max(h, 2)}px;">
+                   <span class="text-[10px] text-white font-bold mb-1">${val}</span>
+                 </div>
+                 <span class="text-[9px] text-slate-400 mt-1">i=${i}</span>
+              </div>
+            `;
+        } else {
+            // Mảng số thông thường
+            let pointer = i === activeInputIdx ? `<span class="absolute -top-5 text-teal-400 text-[10px] font-bold">i</span>` : '';
+            html += `
+              <div class="relative w-10 h-10 sm:w-12 sm:h-12 flex flex-col items-center justify-center rounded border-2 font-bold text-sm sm:text-base anim-cell ${cls}">
+                ${pointer}
+                ${val}
+                <span class="absolute bottom-0.5 right-1 text-[8px] opacity-50 font-normal">${i}</span>
+              </div>
+            `;
+        }
+      }
+      container.innerHTML = html;
+    }
+
+    function renderStack() {
+      const container = document.getElementById('stack-container');
+      const emptyText = document.getElementById('stack-empty-text');
+      
+      // Xóa hết children ngoại trừ empty text
+      Array.from(container.children).forEach(c => {
+         if (c.id !== 'stack-empty-text') container.removeChild(c);
+      });
+
+      if (stackState.length === 0 && poppedStackIdx === -1) {
+          emptyText.style.display = 'block';
+      } else {
+          emptyText.style.display = 'none';
+          
+          // Render items từ đáy lên đỉnh. Trong container flex-col justify-end, 
+          // phần tử đầu (bottom) sẽ ở trên cùng của DOM (cần flex-col-reverse hoặc map ngược).
+          // Ta dùng flex-col-reverse trong style (thay đổi inline hoặc css, ở đây css là justify-end nên item cuồi DOM nằm dưới cùng)
+          
+          let itemsToRender = [...stackState];
+          let isPopping = false;
+
+          // Nếu đang có anim pop, thêm item đó vào đỉnh để animate
+          if (poppedStackIdx !== -1) {
+              itemsToRender.push(poppedStackIdx);
+              isPopping = true;
+          }
+
+          // HTML sinh ra từ đỉnh xuống đáy
+          let html = '';
+          for (let k = itemsToRender.length - 1; k >= 0; k--) {
+              let idx = itemsToRender[k];
+              let val = inputArray[idx];
+              
+              let isTop = (k === itemsToRender.length - 1);
+              let cls = "bg-cyan-700 border-cyan-500 text-white"; // default stack item
+              let animCls = "stack-push"; // default anim
+
+              if (idx === comparingStackIdx && !isPopping) {
+                  cls = "cell-comparing";
+              }
+
+              if (isTop && isPopping) {
+                  cls = "stack-pop";
+                  animCls = "stack-pop"; // trigger CSS anim
+              }
+
+              // Text hiển thị
+              let displayTxt = `${val} <span class="text-[10px] text-cyan-200 ml-1">(i=${idx})</span>`;
+
+              html += `<div class="w-full py-1.5 px-2 flex items-center justify-between rounded border-2 font-bold text-sm ${cls} ${animCls}">
+                 ${displayTxt}
+              </div>`;
+          }
+          
+          container.innerHTML += html;
+      }
+    }
+
+    function renderOutputArray() {
+      const container = document.getElementById('output-container');
+      let html = '';
+      
+      let isHisto = currentTabId === 'histogram';
+      let title = document.getElementById('output-title');
+
+      if (isHisto) {
+          // Bỏ qua render output array cho histo, dùng extra info box
+          container.style.display = 'none';
+          title.style.display = 'none';
+          
+          document.getElementById('extra-info-box').style.display = 'block';
+          document.getElementById('max-area-val').innerText = maxAreaGlobal;
+          
+      } else {
+          container.style.display = 'flex';
+          title.style.display = 'block';
+          document.getElementById('extra-info-box').style.display = 'none';
+
+          for (let i = 0; i < outputArray.length; i++) {
+              let val = outputArray[i];
+              let cls = "bg-slate-700 border-slate-600 text-slate-400"; // Chờ
+              let txt = (val === null || val === undefined) ? '?' : val;
+              
+              if (settledOutputIndices.includes(i)) {
+                  cls = "cell-success shadow-[0_0_10px_rgba(16,185,129,0.5)]";
+                  if (txt === -1 || txt === 0) cls = "bg-slate-600 border-slate-500 text-slate-300"; // Giá trị mặc định
+              }
+
+              html += `
+                <div class="relative w-10 h-10 sm:w-12 sm:h-12 flex flex-col items-center justify-center rounded border-2 font-bold text-sm sm:text-base anim-cell ${cls}">
+                  ${txt}
+                  <span class="absolute bottom-0.5 right-1 text-[8px] opacity-50 font-normal">${i}</span>
+                </div>
+              `;
+          }
+          container.innerHTML = html;
+      }
+    }
+
+    function changeTab(id) {
+      if (isRunning) { currentProcessId++; isRunning = false; toggleBtn(false); }
+      currentTabId = id;
+      renderTabs(); updateInfoAndCode(); generateNewData();
+    }
+
+    function generateNewData() { 
+      if(isRunning) return; 
+      let problemHTML = '';
+      
+      // Reset State
+      activeInputIdx = -1; comparingStackIdx = -1; poppedStackIdx = -1;
+      stackState = []; settledOutputIndices = [];
+      maxAreaGlobal = 0;
+
+      if (currentTabId === 'next_greater') {
+        inputArray = [2, 1, 5, 3, 6, 4];
+        outputArray = new Array(inputArray.length).fill(null);
+        problemHTML = `<b class="text-white">Next Greater Element:</b> Duyệt mảng. Giữ Stack Đơn điệu <b class="text-teal-400">GIẢM DẦN</b>. Khi kẻ mới đến lớn hơn kẻ ở đỉnh Stack, nó bật bãi kẻ ở đỉnh, và trở thành Next Greater của kẻ đó.`;
+      } 
+      else if (currentTabId === 'daily_temp') {
+        inputArray = [73, 74, 75, 71, 69, 72, 76];
+        outputArray = new Array(inputArray.length).fill(null);
+        problemHTML = `<b class="text-white">Daily Temperatures:</b> Đi tìm số NGÀY CHỜ. Giống hệt Next Greater, nhưng Output = <b class="text-cyan-400">(Index Hiện tại) - (Index của ngày lạnh trong Stack)</b>.`;
+      }
+      else if (currentTabId === 'next_smaller') {
+        inputArray = [8, 4, 6, 2, 3];
+        outputArray = new Array(inputArray.length).fill(null);
+        problemHTML = `<b class="text-white">Next Smaller Element:</b> Đảo ngược điều kiện! Giữ Stack Đơn điệu <b class="text-emerald-400">TĂNG DẦN</b>. Khi kẻ mới đến NHỎ HƠN kẻ ở đỉnh Stack -> POP.`;
+      }
+      else if (currentTabId === 'histogram') {
+        inputArray = [2, 1, 5, 6, 2, 3];
+        inputArray.push(0); // Cột ảo
+        outputArray = []; // Không dùng
+        problemHTML = `<b class="text-white">Largest Rectangle (Histogram):</b> Giữ cột <b class="text-amber-400">TĂNG DẦN</b> trong Stack. Khi gặp cột thấp hơn, cột đỉnh bị CHẶN. Rút cột bị chặn ra, tính Rộng = (Index Hiện tại) - (Index Đỉnh mới) - 1. Diện tích = Cao × Rộng.`;
+      }
+
+      document.getElementById('problem-text').innerHTML = problemHTML;
+      document.getElementById('problem-statement').classList.remove('hidden');
+      lucide.createIcons();
+
+      renderVisualizerUI();
+      setMathHTML('Nhấn "Chạy Mô Phỏng" để bắt đầu.');
+    }
+
+    function toggleBtn(s) { 
+      isRunning = s; 
+      document.getElementById('btn-play').disabled = s; 
+      document.getElementById('btn-play-text').innerText = s ? 'Đang chạy...' : 'Chạy Mô Phỏng'; 
+    }
+
+    document.getElementById('btn-reset').addEventListener('click', generateNewData);
+    document.getElementById('speed-slider').addEventListener('input', e => currentSpeed = 1550 - Number(e.target.value));
+    document.getElementById('btn-play').addEventListener('click', () => { 
+      if(!isRunning) handleSimulation(); 
+    });
+
+    async function handleSimulation() {
+      toggleBtn(true); currentProcessId++; let sid = currentProcessId; 
+      try {
+        if (currentTabId === 'next_greater') await startNextGreater(sid);
+        else if (currentTabId === 'daily_temp') await startDailyTemp(sid);
+        else if (currentTabId === 'next_smaller') await startNextSmaller(sid);
+        else if (currentTabId === 'histogram') await startHistogram(sid);
+      } catch(e){ console.error(e); }
+      if(sid === currentProcessId) toggleBtn(false);
+    }
+
+    // === 1. NEXT GREATER ELEMENT ===
+    async function startNextGreater(id) {
+       let n = inputArray.length;
+       for (let i = 0; i < n; i++) {
+           if(isAborted(id)) return;
+           
+           activeInputIdx = i;
+           comparingStackIdx = -1; poppedStackIdx = -1;
+           let currVal = inputArray[i];
+           
+           setMathHTML(`Đang xét <b class="text-teal-400">arr[${i}] = ${currVal}</b>. Chuẩn bị so sánh với Đỉnh Stack...`);
+           renderVisualizerUI();
+           await sleep(currentSpeed * 1.5);
+
+           while (stackState.length > 0) {
+               if(isAborted(id)) return;
+               
+               let topIdx = stackState[stackState.length - 1];
+               let topVal = inputArray[topIdx];
+               
+               comparingStackIdx = topIdx;
+               renderVisualizerUI();
+               setMathHTML(`So sánh: Kẻ mới <b class="text-teal-400">${currVal}</b> với Đỉnh Stack <b class="text-amber-400">${topVal}</b>.`);
+               await sleep(currentSpeed);
+
+               if (currVal > topVal) {
+                   // POP
+                   poppedStackIdx = stackState.pop();
+                   comparingStackIdx = -1;
+                   
+                   outputArray[poppedStackIdx] = currVal; // Giải cứu
+                   settledOutputIndices.push(poppedStackIdx);
+                   
+                   setMathHTML(`<span class="text-rose-400 font-bold uppercase">Bị Che Khuất!</span> ${currVal} > ${topVal}. Rút (POP) ${topVal} ra khỏi Stack! Ghi nhận Next Greater của nó là <b class="text-emerald-400">${currVal}</b>.`);
+                   renderVisualizerUI();
+                   await sleep(currentSpeed * 1.5);
+                   poppedStackIdx = -1; // Clear anim
+               } else {
+                   setMathHTML(`${currVal} ≤ ${topVal}. Hợp lệ! Trật tự giảm dần được giữ nguyên. Dừng so sánh.`);
+                   comparingStackIdx = -1;
+                   renderVisualizerUI();
+                   await sleep(currentSpeed);
+                   break;
+               }
+           }
+
+           if(isAborted(id)) return;
+           // PUSH
+           stackState.push(i);
+           setMathHTML(`Đẩy (PUSH) <b class="text-cyan-400">arr[${i}] = ${currVal}</b> vào Stack.`);
+           renderVisualizerUI();
+           await sleep(currentSpeed * 1.2);
+       }
+       
+       if(isAborted(id)) return;
+       
+       // Sọn dẹp các phần tử còn kẹt trong Stack
+       activeInputIdx = -1;
+       setMathHTML(`Đã duyệt hết mảng. Các phần tử còn kẹt trong Stack không có số nào lớn hơn nó bên phải. Ghi <b class="text-slate-400">-1</b>.`);
+       while(stackState.length > 0) {
+           if(isAborted(id)) return;
+           let poppedIdx = stackState.pop();
+           outputArray[poppedIdx] = -1;
+           settledOutputIndices.push(poppedIdx);
+           poppedStackIdx = poppedIdx;
+           renderVisualizerUI();
+           await sleep(currentSpeed);
+           poppedStackIdx = -1;
+       }
+       renderVisualizerUI();
+       setMathHTML(`<span class="text-emerald-400 font-bold text-xl">🎉 Thuật toán hoàn tất! O(n) Time.</span>`);
+    }
+
+    // === 2. DAILY TEMPERATURES ===
+    async function startDailyTemp(id) {
+       let n = inputArray.length;
+       // Khởi tạo = 0
+       for(let i=0; i<n; i++) outputArray[i] = 0;
+       settledOutputIndices = []; // Initially nothing settled visually as green
+
+       for (let i = 0; i < n; i++) {
+           if(isAborted(id)) return;
+           
+           activeInputIdx = i;
+           comparingStackIdx = -1; poppedStackIdx = -1;
+           let currTemp = inputArray[i];
+           
+           setMathHTML(`Ngày ${i}: Nhiệt độ <b class="text-teal-400">${currTemp}°</b>.`);
+           renderVisualizerUI();
+           await sleep(currentSpeed * 1.5);
+
+           while (stackState.length > 0) {
+               if(isAborted(id)) return;
+               
+               let topIdx = stackState[stackState.length - 1];
+               let topTemp = inputArray[topIdx];
+               
+               comparingStackIdx = topIdx;
+               renderVisualizerUI();
+               setMathHTML(`Kiểm tra xem <b class="text-teal-400">${currTemp}°</b> có giải cứu được ngày lạnh <b class="text-amber-400">${topTemp}°</b> (ở vị trí ${topIdx}) không?`);
+               await sleep(currentSpeed);
+
+               if (currTemp > topTemp) {
+                   // POP
+                   poppedStackIdx = stackState.pop();
+                   comparingStackIdx = -1;
+                   
+                   let waitDays = i - poppedStackIdx;
+                   outputArray[poppedStackIdx] = waitDays; 
+                   settledOutputIndices.push(poppedStackIdx);
+                   
+                   setMathHTML(`<span class="text-emerald-400 font-bold uppercase">Ngày ấm hơn!</span> Rút ngày ${poppedStackIdx} ra. Khoảng cách = ${i} - ${poppedStackIdx} = <b class="text-white bg-emerald-600 px-2 rounded">${waitDays} ngày</b>.`);
+                   renderVisualizerUI();
+                   await sleep(currentSpeed * 1.5);
+                   poppedStackIdx = -1; 
+               } else {
+                   setMathHTML(`${currTemp}° ≤ ${topTemp}°. Chưa đủ ấm. Dừng!`);
+                   comparingStackIdx = -1;
+                   renderVisualizerUI();
+                   await sleep(currentSpeed);
+                   break;
+               }
+           }
+
+           if(isAborted(id)) return;
+           stackState.push(i);
+           setMathHTML(`Đẩy Index <b class="text-cyan-400">${i}</b> (Nhiệt độ ${currTemp}°) vào Stack chờ ngày ấm.`);
+           renderVisualizerUI();
+           await sleep(currentSpeed * 1.2);
+       }
+       
+       if(isAborted(id)) return;
+       activeInputIdx = -1;
+       setMathHTML(`Đã duyệt hết. Các ngày kẹt lại trong Stack ghi mặc định là 0 (Không bao giờ ấm hơn).`);
+       while(stackState.length > 0) {
+           if(isAborted(id)) return;
+           let poppedIdx = stackState.pop();
+           settledOutputIndices.push(poppedIdx);
+           poppedStackIdx = poppedIdx;
+           renderVisualizerUI();
+           await sleep(currentSpeed * 0.5);
+           poppedStackIdx = -1;
+       }
+       renderVisualizerUI();
+       setMathHTML(`<span class="text-emerald-400 font-bold text-xl">🎉 Hoàn tất! Stack đã rỗng.</span>`);
+    }
+
+    // === 3. NEXT SMALLER ELEMENT ===
+    async function startNextSmaller(id) {
+       let n = inputArray.length;
+       for (let i = 0; i < n; i++) {
+           if(isAborted(id)) return;
+           
+           activeInputIdx = i;
+           comparingStackIdx = -1; poppedStackIdx = -1;
+           let currVal = inputArray[i];
+           
+           setMathHTML(`Đang xét <b class="text-emerald-400">arr[${i}] = ${currVal}</b>.`);
+           renderVisualizerUI();
+           await sleep(currentSpeed * 1.5);
+
+           while (stackState.length > 0) {
+               if(isAborted(id)) return;
+               
+               let topIdx = stackState[stackState.length - 1];
+               let topVal = inputArray[topIdx];
+               
+               comparingStackIdx = topIdx;
+               renderVisualizerUI();
+               setMathHTML(`So sánh: Kẻ mới <b class="text-emerald-400">${currVal}</b> với Đỉnh Stack <b class="text-amber-400">${topVal}</b>.`);
+               await sleep(currentSpeed);
+
+               if (currVal < topVal) { // THE ONLY DIFFERENCE IS `<` INSTEAD OF `>`
+                   // POP
+                   poppedStackIdx = stackState.pop();
+                   comparingStackIdx = -1;
+                   
+                   outputArray[poppedStackIdx] = currVal; 
+                   settledOutputIndices.push(poppedStackIdx);
+                   
+                   setMathHTML(`<span class="text-rose-400 font-bold uppercase">Nhỏ hơn!</span> Đỉnh Stack đã tìm được Kẻ Thấp Hơn nó. Rút (POP) ${topVal} ra! Ghi nhận kết quả là <b class="text-emerald-400">${currVal}</b>.`);
+                   renderVisualizerUI();
+                   await sleep(currentSpeed * 1.5);
+                   poppedStackIdx = -1; 
+               } else {
+                   setMathHTML(`${currVal} ≥ ${topVal}. Hợp lệ! Trật tự TĂNG DẦN được giữ nguyên.`);
+                   comparingStackIdx = -1;
+                   renderVisualizerUI();
+                   await sleep(currentSpeed);
+                   break;
+               }
+           }
+
+           if(isAborted(id)) return;
+           // PUSH
+           stackState.push(i);
+           setMathHTML(`Đẩy (PUSH) <b class="text-cyan-400">arr[${i}] = ${currVal}</b> vào Stack.`);
+           renderVisualizerUI();
+           await sleep(currentSpeed * 1.2);
+       }
+       
+       if(isAborted(id)) return;
+       activeInputIdx = -1;
+       setMathHTML(`Đã duyệt xong. Các phần tử còn lại không có số nào nhỏ hơn ở bên phải. Ghi <b class="text-slate-400">-1</b>.`);
+       while(stackState.length > 0) {
+           if(isAborted(id)) return;
+           let poppedIdx = stackState.pop();
+           outputArray[poppedIdx] = -1;
+           settledOutputIndices.push(poppedIdx);
+           poppedStackIdx = poppedIdx;
+           renderVisualizerUI();
+           await sleep(currentSpeed);
+           poppedStackIdx = -1;
+       }
+       renderVisualizerUI();
+       setMathHTML(`<span class="text-emerald-400 font-bold text-xl">🎉 Thuật toán hoàn tất!</span>`);
+    }
+
+    // === 4. HISTOGRAM (LARGEST RECTANGLE) ===
+    async function startHistogram(id) {
+       let n = inputArray.length; // Bao gồm cả phần tử ảo 0 ở cuối
+       maxAreaGlobal = 0;
+
+       for (let i = 0; i < n; i++) {
+           if(isAborted(id)) return;
+           
+           activeInputIdx = i;
+           comparingStackIdx = -1; poppedStackIdx = -1;
+           let h = inputArray[i];
+           
+           if (i === n - 1) {
+               setMathHTML(`Chạm cột Ảo (Chiều cao = 0) ở cuối mảng để <b class="text-rose-400">ÉP RÚT TOÀN BỘ CỘT TRONG STACK RA!</b>`);
+           } else {
+               setMathHTML(`Đang xét Cột <b class="text-teal-400">i=${i}</b> có chiều cao <b class="text-yellow-400">${h}</b>.`);
+           }
+           renderVisualizerUI();
+           await sleep(currentSpeed * 1.5);
+
+           while (stackState.length > 0) {
+               if(isAborted(id)) return;
+               
+               let topIdx = stackState[stackState.length - 1];
+               let topHeight = inputArray[topIdx];
+               
+               comparingStackIdx = topIdx;
+               renderVisualizerUI();
+               
+               if (h < topHeight) {
+                   setMathHTML(`Cột mới cao <b class="text-teal-400">${h}</b> thấp hơn đỉnh Stack (<b class="text-amber-400">${topHeight}</b>).<br/><span class="text-rose-400 font-bold">BỊ CHẶN PHẢI!</span> Rút cột đỉnh ra để tính diện tích.`);
+                   await sleep(currentSpeed * 1.5);
+
+                   // POP & CALCULATE
+                   poppedStackIdx = stackState.pop();
+                   comparingStackIdx = -1;
+                   
+                   let calHeight = inputArray[poppedStackIdx];
+                   let calWidth = stackState.length === 0 ? i : (i - stackState[stackState.length - 1] - 1);
+                   let area = calHeight * calWidth;
+                   
+                   let leftBoundInfo = stackState.length === 0 ? '0' : `(Index Đỉnh Mới ${stackState[stackState.length - 1]} + 1)`;
+
+                   setMathHTML(`
+                      <div class="flex flex-col items-center">
+                         <div class="bg-slate-900 px-4 py-2 border border-amber-500/50 rounded-lg text-center">
+                            Chiều Cao = <b class="text-amber-400">${calHeight}</b><br/>
+                            Rộng = Cột hiện tại ${i} - Cản Trái ${leftBoundInfo} = <b class="text-cyan-400">${calWidth}</b><br/>
+                            Diện tích = ${calHeight} × ${calWidth} = <b class="text-rose-400 text-xl">${area}</b>
+                         </div>
+                      </div>
+                   `);
+                   
+                   if (area > maxAreaGlobal) {
+                       maxAreaGlobal = area;
+                       // Trigger small highlight update
+                   }
+                   
+                   renderVisualizerUI();
+                   await sleep(currentSpeed * 2.5);
+                   poppedStackIdx = -1; 
+               } else {
+                   setMathHTML(`${h} ≥ ${topHeight}. Hợp lệ! Đang duy trì tính TĂNG DẦN.`);
+                   comparingStackIdx = -1;
+                   renderVisualizerUI();
+                   await sleep(currentSpeed);
+                   break;
+               }
+           }
+
+           if(isAborted(id)) return;
+           if (i < n - 1) { // Đừng đẩy cột ảo vào
+               stackState.push(i);
+               setMathHTML(`Đẩy (PUSH) Index <b class="text-cyan-400">${i}</b> vào Stack.`);
+               renderVisualizerUI();
+               await sleep(currentSpeed * 1.2);
+           }
+       }
+       
+       if(isAborted(id)) return;
+       activeInputIdx = -1;
+       renderVisualizerUI();
+       setMathHTML(`<span class="text-emerald-400 font-bold text-xl">🎉 Tuyệt vời! Diện tích hình chữ nhật lớn nhất là ${maxAreaGlobal}. Thuật toán O(n).</span>`);
+    }
+
+    window.onload = initUI;
+  </script>
+</body>
+</html>

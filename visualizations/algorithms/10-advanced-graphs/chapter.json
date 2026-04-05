@@ -1,0 +1,11 @@
+{
+  "name": "🔗 Advanced Graphs",
+  "problems": [
+    {
+      "name": "Union-Find & Topological Sort",
+      "file": "/visualizations/algorithms/10-advanced-graphs/advanced-graphs.html",
+      "type": "viz",
+      "difficulty": "Hard"
+    }
+  ]
+}

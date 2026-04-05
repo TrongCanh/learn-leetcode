@@ -1,0 +1,11 @@
+{
+  "name": "📊 Monotonic Stack",
+  "problems": [
+    {
+      "name": "Monotonic Stack",
+      "file": "/visualizations/algorithms/12-monotonic-stack/monotonic-stack.html",
+      "type": "viz",
+      "difficulty": "Medium"
+    }
+  ]
+}

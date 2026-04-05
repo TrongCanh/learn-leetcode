@@ -1,0 +1,1063 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trực Quan Hóa Thuật Toán Backtracking (Quay lui)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .hide-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      .anim-cell {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      @keyframes pulse-fuchsia {
+        0% {
+          box-shadow: 0 0 0 0 rgba(217, 70, 239, 0.7);
+        }
+        70% {
+          box-shadow: 0 0 0 10px rgba(217, 70, 239, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(217, 70, 239, 0);
+        }
+      }
+
+      .cell-explore {
+        animation: pulse-fuchsia 1s infinite;
+        border-color: #d946ef !important;
+        background-color: #701a75 !important;
+        color: white;
+        transform: scale(1.1);
+        z-index: 20;
+      }
+      .cell-backtrack {
+        border-color: #f43f5e !important;
+        background-color: #881337 !important;
+        color: #fb7185 !important;
+        transform: scale(0.9);
+        z-index: 10;
+        opacity: 0.8;
+      }
+      .cell-conflict {
+        border-color: #ef4444 !important;
+        background-color: #450a0a !important;
+        color: #ef4444 !important;
+        transform: scale(1.05);
+        z-index: 15;
+        box-shadow: 0 0 15px rgba(239, 68, 68, 0.8);
+      }
+      .cell-placed {
+        background-color: #1e293b;
+        border-color: #8b5cf6;
+        color: #e2e8f0;
+      }
+      .cell-success {
+        background-color: #064e3b;
+        border-color: #10b981;
+        color: white;
+        box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+      }
+
+      /* Chessboard */
+      .chess-white {
+        background-color: #334155;
+      }
+      .chess-black {
+        background-color: #0f172a;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-slate-50 text-slate-900 font-sans min-h-screen p-4 sm:p-6 lg:p-8"
+  >
+    <div class="max-w-7xl mx-auto space-y-8">
+      <!-- HEADER -->
+      <header class="text-center space-y-4 mb-10">
+        <div
+          class="inline-flex items-center justify-center p-3 bg-fuchsia-100 text-fuchsia-600 rounded-full mb-2 shadow-sm"
+        >
+          <i data-lucide="git-branch" class="w-8 h-8"></i>
+        </div>
+        <h1
+          class="text-3xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-fuchsia-700 to-purple-600"
+        >
+          Backtracking (Quay Lui)
+        </h1>
+        <p class="text-lg text-slate-600 max-w-3xl mx-auto">
+          Kỹ thuật duyệt nghiệm cạn kiệt. Thử mọi ngã rẽ, đụng ngõ cụt thì
+          <b>quay lại (undo)</b> và thử đường khác.<br />
+          <span
+            class="inline-block mt-2 px-3 py-1 bg-amber-100 text-amber-800 rounded-lg text-sm font-semibold border border-amber-200"
+          >
+            🔥 Insight: Backtracking = Chọn (Choose) ➔ Khám phá (Explore) ➔ Hoàn
+            tác (Un-choose)
+          </span>
+        </p>
+      </header>
+
+      <!-- LÝ THUYẾT TRỌNG TÂM CHO NGƯỜI MỚI -->
+      <div
+        class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 overflow-hidden"
+      >
+        <div class="flex items-center mb-6">
+          <i data-lucide="book-open" class="w-6 h-6 text-fuchsia-500 mr-2"></i>
+          <h2 class="text-xl font-bold text-slate-800">
+            Giải ngố Backtracking cho người mới
+          </h2>
+        </div>
+
+        <div class="space-y-6 text-sm text-slate-700">
+          <!-- Ví dụ đời thường -->
+          <div
+            class="bg-fuchsia-50 p-4 sm:p-5 rounded-xl border border-fuchsia-100"
+          >
+            <h3 class="font-bold text-fuchsia-800 mb-2 flex items-center">
+              <i
+                data-lucide="footprints"
+                class="w-5 h-5 mr-2 text-fuchsia-600"
+              ></i>
+              Ví dụ: Lạc vào Mê Cung
+            </h3>
+            <p class="mb-2">
+              Hãy tưởng tượng bạn đang ở trong một mê cung có rất nhiều ngã ba.
+              Bạn làm sao để thoát ra?
+            </p>
+            <ul class="list-disc pl-5 space-y-1 mb-3 text-fuchsia-900">
+              <li>
+                Bạn chọn đi vào <b>Ngã rẽ Trái</b>. Bạn đánh dấu đường này là
+                "đang đi".
+              </li>
+              <li>
+                Đi được một đoạn, bạn đụng bức tường (Ngõ cụt / Vi phạm điều
+                kiện).
+              </li>
+              <li>
+                Bạn không thể đi tiếp. Bạn <b>bước lùi lại (Backtrack)</b> về
+                cái ngã ba ban đầu, <b>xóa bỏ vết chân</b> ở ngã rẽ Trái (để dọn
+                đường cho việc khác).
+              </li>
+              <li>Sau đó bạn thử rẽ sang <b>Ngã rẽ Phải</b>.</li>
+            </ul>
+            <p
+              class="font-medium text-fuchsia-900 border-l-4 border-fuchsia-400 pl-3"
+            >
+              Backtracking trong code chính xác là như vậy: Nó dùng đệ quy để đi
+              sâu vào 1 nhánh. Nếu sai, nó <b>HỦY BỎ (Undo)</b> trạng thái vừa
+              thêm vào để khôi phục lại mảng/biến như cũ, rồi chạy tiếp vòng lặp
+              sang nhánh khác.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            <!-- Khuôn mẫu Code (Template) -->
+            <div
+              class="bg-slate-900 p-5 rounded-xl border border-slate-700 text-slate-300 h-full"
+            >
+              <h3 class="font-bold text-white mb-4 flex items-center text-base">
+                <i
+                  data-lucide="file-code-2"
+                  class="w-5 h-5 mr-2 text-amber-400"
+                ></i>
+                Template Code Thần Thánh
+              </h3>
+              <p class="mb-3 text-xs text-slate-400">
+                Hầu như 99% các bài Backtracking đều viết theo cấu trúc này:
+              </p>
+              <pre
+                class="text-xs font-mono bg-slate-950 p-3 rounded-lg border border-slate-800 overflow-x-auto text-emerald-300"
+              ><code>function backtrack(state) {
+  <span class="text-slate-500">// 1. Điều kiện dừng (Lưu kết quả)</span>
+  if (isSolution(state)) {
+    results.push([...state]);
+    return;
+  }
+
+  <span class="text-slate-500">// 2. Duyệt các ngã rẽ có thể đi</span>
+  for (let choice of choices) {
+    if (isValid(choice)) {
+      <span class="text-cyan-400">state.push(choice);</span>     <span class="text-slate-500">// CHOOSE (Chọn)</span>
+      
+      <span class="text-fuchsia-400">backtrack(state);</span>       <span class="text-slate-500">// EXPLORE (Đệ quy đi sâu)</span>
+      
+      <span class="text-rose-400">state.pop();</span>            <span class="text-slate-500">// UN-CHOOSE (Quay lui!!!)</span>
+    }
+  }
+}</code></pre>
+            </div>
+
+            <!-- Dấu hiệu và Nâng cao -->
+            <div class="space-y-6 h-full flex flex-col">
+              <div
+                class="bg-slate-50 p-5 rounded-xl border border-slate-100 flex-1"
+              >
+                <h3 class="font-bold text-slate-800 mb-3 flex items-center">
+                  <i
+                    data-lucide="scissors"
+                    class="w-5 h-5 mr-2 text-blue-500"
+                  ></i>
+                  Nâng cao: Cắt Tỉa (Pruning)
+                </h3>
+                <p class="mb-3 text-sm">
+                  Điểm khác biệt giữa Backtracking và Brute Force (Vét cạn ngốc
+                  nghếch) là <b>Pruning</b>.
+                </p>
+                <p class="text-sm">
+                  Bằng hàm <code>isValid()</code>, ta có thể dự đoán sớm một con
+                  đường là sai lầm và <b>cắt bỏ nguyên cả nhánh đó</b> mà không
+                  thèm đệ quy xuống nữa (Ví dụ: Trong Sudoku, nếu điền số 5 bị
+                  trùng hàng, ta cắt ngay lập tức nhánh đó).
+                </p>
+              </div>
+
+              <div class="bg-amber-50 p-4 rounded-xl border border-amber-100">
+                <h3 class="font-bold text-amber-800 mb-2 flex items-center">
+                  <i data-lucide="search" class="w-4 h-4 mr-2"></i> Dấu hiệu
+                  nhận biết
+                </h3>
+                <p>
+                  Đề bài bắt tìm: <b>"Tất cả các tổ hợp..."</b>,
+                  <b>"Tất cả các hoán vị..."</b>,
+                  <b>"Liệt kê mọi đường đi..."</b>. Kích thước input thường rất
+                  nhỏ (N &lt; 20) do độ phức tạp O(2ⁿ) hoặc O(N!).
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BẢNG ĐÁNH GIÁ -->
+      <div
+        class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 overflow-hidden flex flex-col"
+      >
+        <div class="flex items-center mb-6">
+          <i data-lucide="award" class="w-6 h-6 text-fuchsia-500 mr-2"></i>
+          <h2 class="text-xl font-bold text-slate-800">
+            Các Pattern Tiêu Biểu
+          </h2>
+        </div>
+        <div class="overflow-x-auto">
+          <table
+            class="w-full text-left border-collapse whitespace-nowrap min-w-[600px]"
+          >
+            <thead>
+              <tr class="bg-slate-50">
+                <th class="p-4 font-semibold text-slate-700 rounded-tl-xl">
+                  Dạng bài / Mảng
+                </th>
+                <th class="p-4 font-semibold text-slate-700">
+                  Ví dụ tiêu biểu
+                </th>
+                <th class="p-4 font-semibold text-slate-700">
+                  Kỹ thuật Cốt lõi
+                </th>
+                <th class="p-4 font-semibold text-slate-700 rounded-tr-xl">
+                  Độ Phức Tạp (Time)
+                </th>
+              </tr>
+            </thead>
+            <tbody id="comparison-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- MAIN UI -->
+      <div
+        class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden"
+      >
+        <div
+          id="tabs-container"
+          class="flex overflow-x-auto border-b border-slate-200 hide-scrollbar bg-slate-50"
+        ></div>
+
+        <div
+          class="p-4 sm:p-6 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start"
+        >
+          <div class="lg:col-span-4 space-y-6" id="info-container"></div>
+
+          <div class="lg:col-span-8 w-full flex flex-col space-y-6">
+            <div
+              class="bg-slate-900 rounded-2xl p-4 sm:p-6 shadow-inner border border-slate-800"
+            >
+              <div
+                class="flex flex-wrap gap-4 items-center justify-between mb-4 pb-4 border-b border-slate-700"
+              >
+                <div class="flex gap-2">
+                  <button
+                    id="btn-play"
+                    class="flex items-center px-4 py-2 bg-fuchsia-600 hover:bg-fuchsia-500 text-white rounded-lg font-semibold transition disabled:opacity-50 text-sm"
+                  >
+                    <i data-lucide="play" class="w-4 h-4 mr-2"></i>
+                    <span id="btn-play-text">Chạy Mô Phỏng</span>
+                  </button>
+                  <button
+                    id="btn-reset"
+                    class="flex items-center px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition text-sm"
+                  >
+                    <i data-lucide="rotate-ccw" class="w-4 h-4 mr-2"></i> Làm
+                    mới
+                  </button>
+                </div>
+                <div class="flex items-center gap-3 text-slate-300 text-sm">
+                  <i data-lucide="settings-2" class="w-4 h-4"></i>
+                  <label class="font-medium hidden sm:block">Tốc độ:</label>
+                  <input
+                    type="range"
+                    id="speed-slider"
+                    min="50"
+                    max="1500"
+                    value="600"
+                    class="w-24 accent-fuchsia-500"
+                  />
+                </div>
+              </div>
+
+              <div
+                id="problem-statement"
+                class="bg-fuchsia-900/40 border border-fuchsia-500/30 rounded-xl p-4 mb-4 text-sm sm:text-base text-fuchsia-100 flex items-start gap-3 hidden"
+              >
+                <i
+                  data-lucide="target"
+                  class="w-5 h-5 text-fuchsia-400 shrink-0 mt-0.5"
+                ></i>
+                <div id="problem-text" class="leading-relaxed"></div>
+              </div>
+
+              <div
+                id="math-computation"
+                class="bg-slate-800 rounded-xl p-3 mb-6 text-center font-mono text-sm sm:text-base border border-slate-600 text-slate-300 min-h-[48px] flex items-center justify-center"
+              >
+                Sẵn sàng mô phỏng.
+              </div>
+
+              <!-- Vùng Hiển Thị Visualizer -->
+              <div
+                id="visualizer-container"
+                class="flex flex-col items-center justify-center w-full relative mb-4"
+              >
+                <!-- JavaScript sẽ nhúng giao diện tương ứng vào đây (Mảng / Chessboard / Maze) -->
+              </div>
+            </div>
+
+            <!-- Code Block -->
+            <div
+              class="relative rounded-2xl overflow-hidden shadow-lg border border-slate-700 bg-[#0f172a]"
+            >
+              <div
+                class="w-full px-4 py-3 bg-[#1e293b] border-b border-slate-700 flex items-center justify-between"
+              >
+                <div class="flex space-x-2">
+                  <div class="w-3 h-3 rounded-full bg-rose-500"></div>
+                  <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+                  <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                </div>
+                <div class="flex items-center text-slate-400 text-xs font-mono">
+                  <i data-lucide="code" class="w-4 h-4 mr-1.5"></i> javascript
+                </div>
+              </div>
+              <pre
+                class="p-4 sm:p-6 overflow-auto text-xs sm:text-sm font-mono leading-relaxed max-h-72"
+              ><code id="code-container" class="text-slate-200"></code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // === DỮ LIỆU PATTERNS BACKTRACKING ===
+      const ALGO_DATA = [
+        {
+          id: "subsets",
+          name: "1. Tập Con (Subsets)",
+          vnName: "Tổ Hợp Cơ Bản",
+          tech: "Explore Pick & Non-Pick",
+          time: "O(N × 2ⁿ)",
+          code: `// Bài toán: Cho mảng nums, tìm TẤT CẢ các tập con có thể có.\nfunction subsets(nums) {\n  const result = [];\n  \n  function backtrack(index, currentPath) {\n    // Bất cứ trạng thái nào cũng là 1 tập con hợp lệ\n    result.push([...currentPath]);\n    \n    // Thử duyệt các phần tử tiếp theo\n    for (let i = index; i < nums.length; i++) {\n      // CHOOSE: Chọn nums[i] đưa vào giỏ\n      currentPath.push(nums[i]);\n      \n      // EXPLORE: Đi sâu tiếp vào các phần tử phía sau i\n      backtrack(i + 1, currentPath);\n      \n      // UN-CHOOSE: Rút nums[i] ra khỏi giỏ để dọn đường xét số khác\n      currentPath.pop(); \n    }\n  }\n  \n  backtrack(0, []);\n  return result;\n}`,
+          desc: "Bài toán vỡ lòng của Backtracking. Tại mỗi phần tử, ta có 2 ngã rẽ: Hoặc là LẤY nó vào mảng hiện tại (currentPath), hoặc là KHÔNG LẤY. Thao tác <code>currentPath.pop()</code> chính là bước Quay Lui kinh điển để bỏ phần tử vừa nạp ra, chuẩn bị nhét phần tử khác vào.",
+          characteristics: [
+            "Cần dùng <code>[...currentPath]</code> để copy giá trị thay vì tham chiếu",
+            "Cây đệ quy nở ra theo cấp số nhân 2ⁿ",
+          ],
+        },
+        {
+          id: "permutations",
+          name: "2. Hoán Vị (Permutations)",
+          vnName: "Tráo đổi thứ tự",
+          tech: "Đánh dấu phần tử đã dùng",
+          time: "O(N × N!)",
+          code: `// Bài toán: Tìm TẤT CẢ các hoán vị của một mảng các số duy nhất.\nfunction permute(nums) {\n  const result = [];\n  \n  function backtrack(currentPath, used) {\n    // Base case: Nếu đường đi đã dài bằng mảng gốc -> Đủ 1 hoán vị\n    if (currentPath.length === nums.length) {\n      result.push([...currentPath]);\n      return;\n    }\n    \n    // Duyệt TẤT CẢ các số từ đầu đến cuối\n    for (let i = 0; i < nums.length; i++) {\n      // Pruning (Cắt tỉa): Bỏ qua nếu số này đã có trong hoán vị\n      if (used.has(nums[i])) continue;\n      \n      // CHOOSE\n      currentPath.push(nums[i]);\n      used.add(nums[i]);\n      \n      // EXPLORE\n      backtrack(currentPath, used);\n      \n      // UN-CHOOSE (Undo 100% các biến trạng thái)\n      currentPath.pop();\n      used.delete(nums[i]);\n    }\n  }\n  \n  backtrack([], new Set());\n  return result;\n}`,
+          desc: "Khác với Tập con, Hoán vị cần phải dùng một biến <code>used</code> (thường là Hash Set hoặc mảng boolean) để nhớ xem mình đã xài số nào rồi. Vòng lặp luôn chạy từ vị trí 0, nhưng ta skip các số đã bị đánh dấu.",
+          characteristics: [
+            "Độ phức tạp khổng lồ O(N!) (Giai thừa)",
+            "Cần hoàn tác (Undo) ở CẢ mảng currentPath và tập hợp used",
+          ],
+        },
+        {
+          id: "n_queens",
+          name: "3. N-Queens (N-Hậu)",
+          vnName: "Ràng Buộc Khắc Nghiệt",
+          tech: "Ma Trận 2D & Xử lý đường chéo",
+          time: "O(N!)",
+          code: `// Bài toán: Xếp N quân hậu lên bàn cờ N×N sao cho chúng không ăn nhau.\nfunction solveNQueens(n) {\n  const results = [];\n  const board = Array.from({length: n}, () => Array(n).fill('.'));\n  \n  function backtrack(row) {\n    // Xếp xong N hàng -> Thành công!\n    if (row === n) {\n      results.push(board.map(r => r.join('')));\n      return;\n    }\n    \n    for (let col = 0; col < n; col++) {\n      // Pruning: Nếu ô này bị hậu khác chiếu -> Bỏ qua ngay lập tức!\n      if (!isValid(board, row, col, n)) continue;\n      \n      // CHOOSE: Đặt hậu\n      board[row][col] = 'Q';\n      \n      // EXPLORE: Nhảy xuống hàng tiếp theo\n      backtrack(row + 1);\n      \n      // UN-CHOOSE: Nhấc hậu lên (Quay lui)\n      board[row][col] = '.';\n    }\n  }\n  \n  backtrack(0);\n  return results;\n}\n// (Hàm isValid kiểm tra cột dọc và 2 đường chéo)`,
+          desc: "Bài toán N-Hậu minh họa cực đỉnh cho khái niệm <b>Cắt tỉa nhánh (Pruning)</b>. Trước khi đặt quân Hậu vào 1 ô, ta phải chạy hàm kiểm tra xem nó có bị ăn không. Nếu bị ăn, ta bỏ qua ô đó luôn chứ không dại gì đặt xuống rồi đệ quy tiếp làm tốn RAM.",
+          characteristics: [
+            "Duyệt theo từng Hàng (Row), thử từng Cột (Column)",
+            "Backtrack bằng cách xóa chữ Q về lại dấu . (Dọn bàn cờ)",
+          ],
+        },
+        {
+          id: "maze",
+          name: "4. Rat in a Maze",
+          vnName: "Duyệt Đồ Thị / Lưới",
+          tech: "4 Hướng + Backtrack đường đi",
+          time: "O(4^(N×M))",
+          code: `// Bài toán: Tìm đường đi từ Góc trên-trái đến Góc dưới-phải, tránh tường (1).\nfunction findPath(maze) {\n  let n = maze.length;\n  let path = [];\n  \n  function backtrack(r, c) {\n    // Vi phạm biên hoặc chạm tường hoặc đã đi qua\n    if (r < 0 || c < 0 || r >= n || c >= n || maze[r][c] !== 0) {\n      return false;\n    }\n    // Đến đích!\n    if (r === n - 1 && c === n - 1) {\n      path.push([r, c]);\n      return true;\n    }\n\n    // Đánh dấu đã đi qua để không đi lặp vòng tròn\n    maze[r][c] = 2; \n    path.push([r, c]);\n\n    // Thử đi 4 hướng (Xuống, Lên, Phải, Trái)\n    if (backtrack(r + 1, c) || backtrack(r - 1, c) || \n        backtrack(r, c + 1) || backtrack(r, c - 1)) {\n      return true; // Nếu có đường thoát, báo thành công ngược lên\n    }\n\n    // UN-CHOOSE: Ngõ cụt! Trả lại trạng thái ô rỗng, xóa khỏi đường đi\n    maze[r][c] = 0; \n    path.pop();\n    return false;\n  }\n  \n  backtrack(0, 0);\n  return path;\n}`,
+          desc: 'Một ứng dụng thực tế của Backtracking kết hợp với duyệt lưới (Grid). Chuột đi vào một ngã rẽ, đánh dấu là "đã đi" để không đi vòng tròn. Nếu đi đụng ngõ cụt, chuột lùi lại, <b>XÓA BỎ đánh dấu</b> để con đường đó sau này có thể được truy cập từ một hướng rẽ khác.',
+          characteristics: [
+            "Phải đánh dấu `visited` trên lưới để chống đệ quy vô tận",
+            "Bắt buộc Undo `visited` nếu tìm mọi đường (Find all paths)",
+          ],
+        },
+      ];
+
+      let currentTabId = ALGO_DATA[0].id;
+      let isRunning = false;
+      let currentProcessId = 0;
+      let currentSpeed = 600;
+
+      // --- State Variables ---
+      let currentPathState = [];
+      let resultsState = [];
+
+      // N-Queens State
+      let nQueensSize = 4;
+      let chessBoard = []; // 2D array
+      let conflictCells = []; // Cells causing conflict
+
+      // Maze State
+      let mazeSize = 4;
+      let mazeGrid = []; // 0: path, 1: wall, 2: visited path
+
+      // Tiện ích UI
+      const highlightJS = (code) => {
+        let esc = code.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const c = [];
+        esc = esc.replace(/(\/\/.*)/g, (m) => {
+          c.push(m);
+          return `___C_${c.length - 1}___`;
+        });
+        esc = esc.replace(/\b(\d+)\b/g, "___NUM_$1___");
+        esc = esc
+          .replace(
+            /\b(function|let|const|var|if|else|for|while|return|break|continue|class|constructor)\b/g,
+            '<span class="text-pink-400 font-semibold">$1</span>',
+          )
+          .replace(
+            /\b(true|false|null|isNaN|Number|Infinity)\b/g,
+            '<span class="text-purple-400">$1</span>',
+          )
+          .replace(
+            /\b(Math|max|min|fill|length|from|slice|push|pop|has|add|delete|map|join)\b/g,
+            '<span class="text-yellow-300">$1</span>',
+          )
+          .replace(
+            /\b(new|Array|Set|Map)\b/g,
+            '<span class="text-cyan-300">$1</span>',
+          );
+        esc = esc.replace(
+          /___NUM_(\d+)___/g,
+          '<span class="text-cyan-300">$1</span>',
+        );
+        c.forEach(
+          (com, i) =>
+            (esc = esc.replace(
+              `___C_${i}___`,
+              `<span class="text-slate-500 italic">${com}</span>`,
+            )),
+        );
+        return esc;
+      };
+
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+      const isAborted = (id) => id !== currentProcessId;
+
+      function renderTabs() {
+        document.getElementById("tabs-container").innerHTML = ALGO_DATA.map(
+          (a) =>
+            `<button onclick="changeTab('${a.id}')" class="px-5 py-4 font-bold whitespace-nowrap transition-all duration-200 border-b-2 flex-1 text-center ${a.id === currentTabId ? "text-fuchsia-600 border-fuchsia-600 bg-white" : "text-slate-500 hover:text-slate-800 hover:bg-slate-100/50 border-transparent cursor-pointer"} text-sm sm:text-base">${a.name}</button>`,
+        ).join("");
+      }
+
+      function initUI() {
+        document.getElementById("comparison-table-body").innerHTML =
+          ALGO_DATA.map(
+            (a) =>
+              `<tr class="border-b border-slate-100 hover:bg-slate-50/50"><td class="p-4 font-bold text-slate-800">${a.name}</td><td class="p-4 text-slate-700 text-sm font-semibold text-fuchsia-600">${a.vnName}</td><td class="p-4 text-slate-700 text-sm italic">${a.tech}</td><td class="p-4"><span class="px-3 py-1 rounded-full border text-sm font-semibold shadow-sm inline-block bg-rose-100 text-rose-800 border-rose-300">${a.time}</span></td></tr>`,
+          ).join("");
+        renderTabs();
+        updateInfoAndCode();
+        generateNewData();
+        lucide.createIcons();
+      }
+
+      function updateInfoAndCode() {
+        const a = ALGO_DATA.find((x) => x.id === currentTabId);
+        if (!a) return;
+        document.getElementById("info-container").innerHTML =
+          `<div><h3 class="text-3xl font-extrabold text-slate-900 mb-1">${a.name}</h3><div class="inline-flex items-center px-3 py-1 bg-fuchsia-100 text-fuchsia-700 rounded-lg text-sm font-medium">${a.vnName}</div></div><p class="text-slate-600 leading-relaxed text-sm">${a.desc}</p><ul class="space-y-2 text-sm text-slate-700 mt-4">${a.characteristics.map((c) => `<li class="flex items-start"><i data-lucide="check-circle-2" class="w-4 h-4 text-fuchsia-500 mr-2 shrink-0 mt-0.5"></i><span>${c}</span></li>`).join("")}</ul>`;
+        document.getElementById("code-container").innerHTML = highlightJS(
+          a.code,
+        );
+        lucide.createIcons();
+      }
+
+      function setMathHTML(htmlContent) {
+        document.getElementById("math-computation").innerHTML = htmlContent;
+      }
+
+      // --- RENDER VISUALIZER UI CHÍNH ---
+      function renderVisualizerUI() {
+        const container = document.getElementById("visualizer-container");
+        let html = "";
+
+        if (currentTabId === "subsets" || currentTabId === "permutations") {
+          // Render Array Path & Results
+          html += `
+            <div class="flex flex-col w-full gap-8">
+               <div class="flex flex-col items-center">
+                  <div class="text-fuchsia-400 font-mono text-sm font-bold mb-2 uppercase tracking-wider">MẢNG ĐANG THỬ (currentPath)</div>
+                  <div class="flex items-center justify-center gap-2 min-h-[50px] p-3 border-2 border-fuchsia-500/50 bg-fuchsia-900/20 rounded-xl min-w-[150px]">
+                     ${currentPathState.length === 0 ? '<span class="text-slate-500 italic text-xs">Rỗng</span>' : ""}
+                     ${currentPathState.map((v) => `<div class="w-10 h-10 flex items-center justify-center rounded border-2 border-fuchsia-400 bg-fuchsia-600 text-white font-bold shadow-lg anim-cell">${v}</div>`).join("")}
+                  </div>
+               </div>
+               
+               <div class="w-full h-px bg-slate-700"></div>
+
+               <div class="flex flex-col items-center">
+                  <div class="text-emerald-400 font-mono text-sm font-bold mb-2 uppercase tracking-wider">KẾT QUẢ HỢP LỆ ĐÃ LƯU (results)</div>
+                  <div class="flex flex-wrap items-center justify-center gap-2 min-h-[50px] w-full p-3 border border-slate-700 bg-slate-800/30 rounded-xl">
+                     ${resultsState.length === 0 ? '<span class="text-slate-500 italic text-xs">Chưa có kết quả</span>' : ""}
+                     ${resultsState.map((arr) => `<div class="px-3 py-1.5 bg-slate-800 border border-emerald-500/50 text-emerald-300 font-mono text-sm rounded shadow-sm">[${arr.join(", ")}]</div>`).join("")}
+                  </div>
+               </div>
+            </div>
+          `;
+        } else if (currentTabId === "n_queens") {
+          // Render Chessboard
+          let boardHtml = `<div class="grid gap-1 p-2 bg-slate-800 border border-slate-600 rounded-lg shadow-inner" style="grid-template-columns: repeat(${nQueensSize}, minmax(0, 1fr))">`;
+          for (let r = 0; r < nQueensSize; r++) {
+            for (let c = 0; c < nQueensSize; c++) {
+              let isBlack = (r + c) % 2 !== 0;
+              let bg = isBlack ? "chess-black" : "chess-white";
+              let val = chessBoard[r][c];
+
+              let cellContent = "";
+              if (val === "Q") {
+                cellContent = `<i data-lucide="crown" class="w-6 h-6 text-fuchsia-400 fill-fuchsia-500/30 anim-cell"></i>`;
+                // Kiểm tra xem cell này có đang bị đánh dấu conflict (đỏ) không
+                if (
+                  conflictCells.some((cell) => cell.r === r && cell.c === c)
+                ) {
+                  bg = "cell-conflict";
+                  cellContent = `<i data-lucide="crown" class="w-6 h-6 text-white anim-cell"></i>`;
+                } else if (
+                  currentPathState.some((cell) => cell.r === r && cell.c === c)
+                ) {
+                  // Ô đang được "explore" ở bước hiện tại
+                  bg = "cell-explore";
+                  cellContent = `<i data-lucide="crown" class="w-6 h-6 text-white anim-cell"></i>`;
+                } else {
+                  // Ô hợp lệ đã đặt
+                  bg = "cell-placed";
+                }
+              } else if (
+                conflictCells.some((cell) => cell.r === r && cell.c === c)
+              ) {
+                // Tia chiếu của Hậu (Conflict ray)
+                bg = "bg-rose-900/50 border border-rose-500/50";
+                cellContent = `<i data-lucide="x" class="w-4 h-4 text-rose-500 opacity-50"></i>`;
+              }
+
+              boardHtml += `<div class="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded border border-transparent transition-colors duration-300 ${bg}">${cellContent}</div>`;
+            }
+          }
+          boardHtml += `</div>`;
+          html += boardHtml;
+
+          // Results
+          html += `<div class="mt-6 flex flex-col items-center">
+             <div class="text-emerald-400 font-mono text-sm font-bold mb-2 uppercase tracking-wider">ĐÁP ÁN ĐÚNG (${resultsState.length})</div>
+             <div class="flex gap-2">
+               ${resultsState.map((_, i) => `<div class="w-4 h-4 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]"></div>`).join("")}
+             </div>
+          </div>`;
+        } else if (currentTabId === "maze") {
+          // Render Maze Grid
+          let gridHtml = `<div class="grid gap-1 p-2 bg-slate-900 border border-slate-700 rounded-lg shadow-inner" style="grid-template-columns: repeat(${mazeSize}, minmax(0, 1fr))">`;
+          for (let r = 0; r < mazeSize; r++) {
+            for (let c = 0; c < mazeSize; c++) {
+              let val = mazeGrid[r][c];
+              let bg = "bg-slate-800 border-slate-700"; // rỗng
+              let content = "";
+
+              if (r === 0 && c === 0) content = "S";
+              else if (r === mazeSize - 1 && c === mazeSize - 1) content = "E";
+
+              if (val === 1) {
+                bg = "bg-slate-400 border-slate-500 text-slate-700"; // Tường
+                content = `<i data-lucide="brick-wall" class="w-5 h-5 opacity-50"></i>`;
+              } else if (val === 2) {
+                // Đường đang đi
+                bg = "bg-fuchsia-600/30 border-fuchsia-500 text-fuchsia-300";
+                if (
+                  currentPathState.length > 0 &&
+                  currentPathState[currentPathState.length - 1].r === r &&
+                  currentPathState[currentPathState.length - 1].c === c
+                ) {
+                  bg = "cell-explore"; // Đầu của chuột (Active)
+                }
+              } else if (val === 3) {
+                // Đường thành công
+                bg = "cell-success";
+              } else if (val === 4) {
+                // Vừa lùi lại (Backtrack effect)
+                bg = "cell-backtrack";
+              } else if (val === 5) {
+                // Đụng tường / Lỗi
+                bg = "cell-conflict";
+              }
+
+              gridHtml += `<div class="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded border-2 font-bold text-sm transition-all duration-300 ${bg}">${content}</div>`;
+            }
+          }
+          gridHtml += `</div>`;
+          html += gridHtml;
+        }
+
+        container.innerHTML = html;
+        lucide.createIcons();
+      }
+
+      function changeTab(id) {
+        if (isRunning) {
+          currentProcessId++;
+          isRunning = false;
+          toggleBtn(false);
+        }
+        currentTabId = id;
+        renderTabs();
+        updateInfoAndCode();
+        generateNewData();
+      }
+
+      function generateNewData() {
+        if (isRunning) return;
+        let problemHTML = "";
+        currentPathState = [];
+        resultsState = [];
+        conflictCells = [];
+
+        if (currentTabId === "subsets") {
+          let nums = [1, 2, 3];
+          problemHTML = `<b class="text-white">Tìm Tập Con (Subsets):</b> Cho mảng <b class="text-fuchsia-400">[1, 2, 3]</b>. Sinh ra mọi tổ hợp bằng cách liên tục Đẩy vào (Push) và Rút ra (Pop).`;
+        } else if (currentTabId === "permutations") {
+          let nums = ["A", "B", "C"];
+          problemHTML = `<b class="text-white">Hoán vị (Permutations):</b> Cho các chữ cái <b class="text-fuchsia-400">[A, B, C]</b>. Bỏ qua các chữ cái đã dùng trong lượt trước (Pruning) để đảo vị trí.`;
+        } else if (currentTabId === "n_queens") {
+          nQueensSize = 4;
+          chessBoard = Array.from({ length: nQueensSize }, () =>
+            Array(nQueensSize).fill("."),
+          );
+          problemHTML = `<b class="text-white">N-Queens (4x4):</b> Xếp 4 quân Hậu lên bàn cờ. Nếu 1 ô bị chiếu (Cùng cột, cùng đường chéo) ➔ <b class="text-rose-400">Bỏ qua ô đó</b>. Nếu bí đường ➔ <b class="text-rose-400">Nhấc quân Hậu hàng trên lên (Undo)</b>.`;
+        } else if (currentTabId === "maze") {
+          mazeSize = 4;
+          // 0: rỗng, 1: tường
+          mazeGrid = [
+            [0, 0, 1, 0],
+            [1, 0, 0, 0],
+            [1, 1, 0, 1],
+            [0, 0, 0, 0],
+          ];
+          problemHTML = `<b class="text-white">Rat in a Maze:</b> Đi từ S(0,0) đến E(3,3). Gặp Tường (<i data-lucide="brick-wall" class="w-4 h-4 inline text-slate-400"></i>) hoặc Điểm đã qua thì lùi lại (Backtrack) để xóa đường cũ, rẽ hướng khác.`;
+        }
+
+        document.getElementById("problem-text").innerHTML = problemHTML;
+        document.getElementById("problem-statement").classList.remove("hidden");
+        lucide.createIcons();
+
+        renderVisualizerUI();
+        setMathHTML('Nhấn "Chạy Mô Phỏng" để bắt đầu đệ quy.');
+      }
+
+      function toggleBtn(s) {
+        isRunning = s;
+        document.getElementById("btn-play").disabled = s;
+        document.getElementById("btn-play-text").innerText = s
+          ? "Đang chạy..."
+          : "Chạy Mô Phỏng";
+      }
+
+      document
+        .getElementById("btn-reset")
+        .addEventListener("click", generateNewData);
+      document
+        .getElementById("speed-slider")
+        .addEventListener(
+          "input",
+          (e) => (currentSpeed = 1550 - Number(e.target.value)),
+        );
+      document.getElementById("btn-play").addEventListener("click", () => {
+        if (!isRunning) handleSimulation();
+      });
+
+      // === HÀM CHẠY CHÍNH ===
+      async function handleSimulation() {
+        toggleBtn(true);
+        currentProcessId++;
+        let sid = currentProcessId;
+        try {
+          if (currentTabId === "subsets") await startSubsets(sid);
+          else if (currentTabId === "permutations")
+            await startPermutations(sid);
+          else if (currentTabId === "n_queens") await startNQueens(sid);
+          else if (currentTabId === "maze") await startMaze(sid);
+        } catch (e) {
+          console.error(e);
+        }
+        if (sid === currentProcessId) toggleBtn(false);
+      }
+
+      // === 1. SUBSETS ===
+      async function startSubsets(id) {
+        let nums = [1, 2, 3];
+
+        async function backtrack(index, path) {
+          if (isAborted(id)) return;
+
+          // Base case: Lưu kết quả
+          resultsState.push([...path]);
+          currentPathState = [...path];
+          renderVisualizerUI();
+          setMathHTML(
+            `Lưu kết quả hợp lệ: <b class="text-emerald-400">[${path.join(", ")}]</b>`,
+          );
+          await sleep(currentSpeed * 1.5);
+
+          for (let i = index; i < nums.length; i++) {
+            if (isAborted(id)) return;
+
+            // CHOOSE
+            path.push(nums[i]);
+            currentPathState = [...path];
+            renderVisualizerUI();
+            setMathHTML(
+              `CHOOSE (Chọn): Nhét <b class="text-fuchsia-400">${nums[i]}</b> vào Mảng đang thử. Gọi Đệ quy đi sâu tiếp...`,
+            );
+            await sleep(currentSpeed * 1.5);
+
+            // EXPLORE
+            await backtrack(i + 1, path);
+            if (isAborted(id)) return;
+
+            // UN-CHOOSE
+            let removed = path.pop();
+            currentPathState = [...path];
+            // Tạo hiệu ứng flash đỏ cho việc pop
+            renderVisualizerUI();
+            setMathHTML(
+              `<span class="text-rose-400 font-bold">UN-CHOOSE (Quay lui):</span> Rút <b class="text-white">${removed}</b> ra khỏi mảng để dọn chỗ thử số khác!`,
+            );
+            await sleep(currentSpeed * 1.5);
+          }
+        }
+
+        await backtrack(0, []);
+        if (isAborted(id)) return;
+        setMathHTML(
+          `<span class="text-emerald-400 font-bold text-xl">🎉 Đã tìm được TẤT CẢ ${resultsState.length} tập con (2^N).</span>`,
+        );
+      }
+
+      // === 2. PERMUTATIONS ===
+      async function startPermutations(id) {
+        let nums = ["A", "B", "C"];
+        let used = new Set();
+
+        async function backtrack(path) {
+          if (isAborted(id)) return;
+
+          if (path.length === nums.length) {
+            resultsState.push([...path]);
+            currentPathState = [...path];
+            renderVisualizerUI();
+            setMathHTML(
+              `Đạt độ dài N=3. Lưu hoán vị: <b class="text-emerald-400">[${path.join(", ")}]</b>`,
+            );
+            await sleep(currentSpeed * 2);
+            return;
+          }
+
+          for (let i = 0; i < nums.length; i++) {
+            if (isAborted(id)) return;
+
+            let val = nums[i];
+            if (used.has(val)) {
+              setMathHTML(
+                `Pruning (Cắt tỉa): <b class="text-slate-400">'${val}'</b> đã có trong mảng. Bỏ qua!`,
+              );
+              await sleep(currentSpeed * 0.5);
+              continue;
+            }
+
+            // CHOOSE
+            path.push(val);
+            used.add(val);
+            currentPathState = [...path];
+            renderVisualizerUI();
+            setMathHTML(
+              `CHOOSE: Nhét <b class="text-fuchsia-400">'${val}'</b> vào mảng. Đánh dấu đã xài.`,
+            );
+            await sleep(currentSpeed * 1.5);
+
+            // EXPLORE
+            await backtrack(path);
+            if (isAborted(id)) return;
+
+            // UN-CHOOSE
+            path.pop();
+            used.delete(val);
+            currentPathState = [...path];
+            renderVisualizerUI();
+            setMathHTML(
+              `<span class="text-rose-400 font-bold">UN-CHOOSE:</span> Rút <b class="text-white">'${val}'</b> ra, hoàn tác đánh dấu để xài lại sau này.`,
+            );
+            await sleep(currentSpeed * 1.5);
+          }
+        }
+
+        await backtrack([]);
+        if (isAborted(id)) return;
+        setMathHTML(
+          `<span class="text-emerald-400 font-bold text-xl">🎉 Đã duyệt hết ${resultsState.length} hoán vị (N!).</span>`,
+        );
+      }
+
+      // === 3. N-QUEENS ===
+      async function startNQueens(id) {
+        let n = nQueensSize;
+
+        function getConflicts(row, col) {
+          let conf = [];
+          for (let r = 0; r < row; r++) {
+            for (let c = 0; c < n; c++) {
+              if (chessBoard[r][c] === "Q") {
+                if (c === col || Math.abs(row - r) === Math.abs(col - c)) {
+                  conf.push({ r, c });
+                  // Trực quan hóa tia chiếu (thêm các ô dọc đường)
+                  let dr = Math.sign(row - r);
+                  let dc = Math.sign(col - c);
+                  let cr = r + dr,
+                    cc = c + dc;
+                  while (cr !== row || cc !== col) {
+                    conf.push({ r: cr, c: cc });
+                    cr += dr;
+                    cc += dc;
+                  }
+                }
+              }
+            }
+          }
+          return conf;
+        }
+
+        async function backtrack(row) {
+          if (isAborted(id)) return;
+
+          if (row === n) {
+            resultsState.push(1); // Couter
+            setMathHTML(
+              `<span class="text-emerald-400 font-bold text-xl">🎉 Thành công! Đã xếp xong 1 bàn cờ hợp lệ. Lưu lại!</span>`,
+            );
+            renderVisualizerUI();
+            await sleep(currentSpeed * 3);
+            return;
+          }
+
+          for (let col = 0; col < n; col++) {
+            if (isAborted(id)) return;
+
+            // Show thinking
+            currentPathState = [{ r: row, c: col }];
+            conflictCells = [];
+            chessBoard[row][col] = "Q";
+            renderVisualizerUI();
+            setMathHTML(
+              `Đang xét Hàng ${row}. Thử đặt Hậu tại <b class="text-fuchsia-400">(${row}, ${col})</b>.`,
+            );
+            await sleep(currentSpeed * 1.5);
+
+            let conf = getConflicts(row, col);
+            if (conf.length > 0) {
+              conflictCells = conf;
+              conflictCells.push({ r: row, c: col }); // Flash red self
+              renderVisualizerUI();
+              setMathHTML(
+                `<span class="text-rose-500 font-bold">LỖI!</span> Bị chiếu bởi Hậu khác. <b class="text-rose-400">Rút quân lên (Pruning)!</b>`,
+              );
+              await sleep(currentSpeed * 2);
+
+              chessBoard[row][col] = "."; // Remove
+              conflictCells = [];
+              renderVisualizerUI();
+              continue;
+            }
+
+            // Valid!
+            currentPathState = []; // Remove active glow to placed state
+            renderVisualizerUI();
+            setMathHTML(
+              `Vị trí (${row}, ${col}) <b class="text-emerald-400">AN TOÀN</b>. Chốt hạ! Đệ quy đi xuống Hàng ${row + 1}...`,
+            );
+            await sleep(currentSpeed * 1.5);
+
+            await backtrack(row + 1);
+            if (isAborted(id)) return;
+
+            // BACKTRACK
+            chessBoard[row][col] = "."; // Remove
+            conflictCells = [{ r: row, c: col }]; // Red flash to show removal
+            renderVisualizerUI();
+            setMathHTML(
+              `<span class="text-rose-400 font-bold">QUAY LUI (Backtrack):</span> Nhấc Hậu khỏi (${row}, ${col}) để thử vị trí cột tiếp theo...`,
+            );
+            await sleep(currentSpeed * 1.5);
+            conflictCells = [];
+          }
+
+          // Finished column loop
+          setMathHTML(
+            `Hàng ${row} hết chỗ đặt. Hàm kết thúc, lùi lại đệ quy hàng ${row - 1}...`,
+          );
+          await sleep(currentSpeed);
+        }
+
+        await backtrack(0);
+        if (isAborted(id)) return;
+        setMathHTML(
+          `<span class="text-emerald-400 font-bold text-xl">🎉 Đã duyệt xong toàn bộ bàn cờ. Có ${resultsState.length} đáp án đúng!</span>`,
+        );
+      }
+
+      // === 4. RAT IN A MAZE ===
+      async function startMaze(id) {
+        let n = mazeSize;
+        let dirs = [
+          [1, 0, "Xuống"],
+          [0, 1, "Phải"],
+          [-1, 0, "Lên"],
+          [0, -1, "Trái"],
+        ]; // Ưu tiên Xuống, Phải
+
+        async function backtrack(r, c) {
+          if (isAborted(id)) return false;
+
+          // Check out of bounds / walls / visited
+          if (r < 0 || c < 0 || r >= n || c >= n) {
+            return false;
+          }
+
+          if (mazeGrid[r][c] === 1) {
+            let temp = mazeGrid[r][c];
+            mazeGrid[r][c] = 5; // Lỗi đụng tường
+            renderVisualizerUI();
+            setMathHTML(
+              `Đụng tường tại <b class="text-rose-400">(${r}, ${c})</b>. Quay đầu!`,
+            );
+            await sleep(currentSpeed * 1.2);
+            mazeGrid[r][c] = temp;
+            return false;
+          }
+
+          if (mazeGrid[r][c] === 2) {
+            setMathHTML(
+              `Ô (${r}, ${c}) đã đi qua rồi (có vết chân). Tránh lặp vòng tròn!`,
+            );
+            await sleep(currentSpeed);
+            return false;
+          }
+
+          // Đến đích
+          if (r === n - 1 && c === n - 1) {
+            mazeGrid[r][c] = 3; // Success
+            currentPathState.push({ r, c });
+
+            // Color entire path green
+            for (let p of currentPathState) mazeGrid[p.r][p.c] = 3;
+            renderVisualizerUI();
+            setMathHTML(
+              `<span class="text-emerald-400 font-bold text-xl">🎉 CHUỘT TÌM THẤY LỐI RA!</span>`,
+            );
+            await sleep(currentSpeed * 2);
+            return true;
+          }
+
+          // CHOOSE: Mark as visited & walk
+          mazeGrid[r][c] = 2; // Visited
+          currentPathState.push({ r, c });
+          renderVisualizerUI();
+          setMathHTML(
+            `Chuột bước tới <b class="text-fuchsia-400">(${r}, ${c})</b>. Đánh dấu Vết Chân.`,
+          );
+          await sleep(currentSpeed * 1.5);
+
+          // EXPLORE 4 dirs
+          for (let [dr, dc, dirName] of dirs) {
+            setMathHTML(
+              `Tại (${r}, ${c}), thử rẽ hướng <b class="text-yellow-400">${dirName}</b>...`,
+            );
+            await sleep(currentSpeed);
+
+            if (await backtrack(r + dr, c + dc)) {
+              return true; // Dừng lại nếu chỉ cần tìm 1 đường
+            }
+            if (isAborted(id)) return false;
+          }
+
+          // UN-CHOOSE: Dead end, backtrack
+          mazeGrid[r][c] = 4; // Backtrack color
+          currentPathState.pop();
+          renderVisualizerUI();
+          setMathHTML(
+            `<span class="text-rose-400 font-bold">NGÕ CỤT!</span> Lùi lại khỏi (${r}, ${c}). Xóa vết chân để dọn đường.`,
+          );
+          await sleep(currentSpeed * 2);
+          mazeGrid[r][c] = 0; // Restore empty
+
+          return false;
+        }
+
+        let success = await backtrack(0, 0);
+        if (isAborted(id)) return;
+
+        if (!success) {
+          setMathHTML(
+            `<span class="text-rose-400 font-bold text-xl">❌ Lưới bị bịt kín. Không tìm thấy đường đi!</span>`,
+          );
+        }
+      }
+
+      window.onload = initUI;
+    </script>
+  </body>
+</html>

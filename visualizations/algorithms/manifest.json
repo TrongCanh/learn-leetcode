@@ -7,6 +7,11 @@
     "05-tree",
     "06-graph",
     "07-heap",
-    "08-dynamic-programming"
+    "08-dynamic-programming",
+    "09-backtracking",
+    "10-advanced-graphs",
+    "11-dijkstra",
+    "12-monotonic-stack",
+    "13-greedy"
   ]
 }

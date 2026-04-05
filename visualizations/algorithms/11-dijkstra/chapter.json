@@ -1,0 +1,11 @@
+{
+  "name": "📍 Dijkstra",
+  "problems": [
+    {
+      "name": "Dijkstra",
+      "file": "/visualizations/algorithms/11-dijkstra/dijkstra.html",
+      "type": "viz",
+      "difficulty": "Hard"
+    }
+  ]
+}

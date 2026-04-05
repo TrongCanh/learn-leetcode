@@ -1,0 +1,11 @@
+{
+  "name": "💡 Greedy",
+  "problems": [
+    {
+      "name": "Greedy",
+      "file": "/visualizations/algorithms/13-greedy/greedy.html",
+      "type": "viz",
+      "difficulty": "Medium"
+    }
+  ]
+}

@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trực Quan Hóa Thuật Toán Tham Lam (Greedy)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .hide-scrollbar::-webkit-scrollbar { display: none; } 
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    
+    .anim-element { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+    
+    @keyframes pulse-lime {
+      0% { box-shadow: 0 0 0 0 rgba(132, 204, 22, 0.7); }
+      70% { box-shadow: 0 0 0 15px rgba(132, 204, 22, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(132, 204, 22, 0); }
+    }
+
+    .item-normal { background-color: #1e293b; border-color: #334155; color: #cbd5e1; }
+    .item-active { animation: pulse-lime 1.5s infinite; background-color: #4d7c0f !important; border-color: #84cc16 !important; color: white; transform: scale(1.1); z-index: 10; }
+    .item-success { background-color: #047857 !important; border-color: #10b981 !important; color: white; box-shadow: 0 0 10px rgba(16,185,129,0.5); }
+    .item-reject { background-color: #450a0a !important; border-color: #ef4444 !important; color: #f87171 !important; opacity: 0.6; }
+    .item-disabled { opacity: 0.3; filter: grayscale(100%); }
+
+    /* Timeline bars for Activity Selection */
+    .timeline-bar { transition: all 0.5s ease; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans min-h-screen p-4 sm:p-6 lg:p-8">
+
+  <div class="max-w-7xl mx-auto space-y-8">
+    
+    <!-- HEADER -->
+    <header class="text-center space-y-4 mb-6">
+      <div class="inline-flex items-center justify-center p-3 bg-lime-100 text-lime-600 rounded-full mb-2 shadow-sm">
+        <div id="header-icon-wrapper"><i data-lucide="gem" class="w-8 h-8"></i></div>
+      </div>
+      <h1 class="text-3xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-lime-600 to-emerald-600">
+        Thuật toán Tham Lam (Greedy)
+      </h1>
+      <p class="text-lg text-slate-600 max-w-3xl mx-auto">
+        Kỹ thuật đưa ra lựa chọn có lợi nhất <b>ngay tại thời điểm hiện tại</b> với hy vọng đạt được kết quả tối ưu toàn cục.
+      </p>
+    </header>
+
+    <!-- LÝ THUYẾT TRỌNG TÂM -->
+    <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 overflow-hidden mb-8">
+      <div class="flex items-center mb-6">
+        <div id="theory-icon-wrapper" class="text-lime-500 mr-2"><i data-lucide="book-open" class="w-6 h-6"></i></div>
+        <h2 class="text-xl font-bold text-slate-800">Giải ngố Thuật toán Tham Lam</h2>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+        <!-- Đời thường -->
+        <div class="bg-slate-900 p-5 rounded-xl border border-slate-700 text-slate-300 flex flex-col h-full">
+           <h3 class="font-bold text-lime-400 mb-3 flex items-center text-lg"><i data-lucide="piggy-bank" class="w-5 h-5 mr-2"></i> 1. Trực giác: Bốc tiền thối</h3>
+           <p class="mb-3 text-sm">Hãy tưởng tượng bạn bán hàng và cần thối lại <b>16.000 VNĐ</b> cho khách. Bạn có các tờ tiền: 10k, 5k, 2k, 1k. Bạn sẽ làm thế nào để thối ít tờ tiền nhất?</p>
+           <ul class="space-y-3 text-sm">
+              <li><b class="text-emerald-400">Tư duy Tham lam:</b> Bạn sẽ chộp ngay tờ tiền mệnh giá <b>LỚN NHẤT CÓ THỂ</b>. Đầu tiên lấy tờ <b>10k</b> (còn 6k). Sau đó chộp tờ lớn nhất tiếp theo là <b>5k</b> (còn 1k). Cuối cùng lấy tờ <b>1k</b>. Tổng cộng 3 tờ!</li>
+              <li><b class="text-white">Tại sao gọi là Tham lam?</b> Vì ở mỗi bước, bạn luôn chọn giải pháp tốt nhất <i>ngay lập tức (cấu rỉa được nhiều tiền nhất)</i> mà không cần suy nghĩ sâu xa về các bước sau.</li>
+           </ul>
+        </div>
+
+        <!-- Kỹ thuật và Yếu điểm -->
+        <div class="bg-lime-50 p-5 rounded-xl border border-lime-200 flex flex-col h-full text-lime-900">
+           <h3 class="font-bold text-lime-800 mb-3 flex items-center text-lg"><i data-lucide="alert-triangle" class="w-5 h-5 mr-2"></i> 2. Cạm bẫy của Lòng Tham</h3>
+           <div class="space-y-3 text-sm">
+             <p>Greedy chạy cực kỳ nhanh (thường chỉ mất thời gian Sắp xếp $O(N \log N)$ rồi duyệt mảng $O(N)$). Tuy nhiên, <b>Nó không phải lúc nào cũng đúng!</b></p>
+             <div class="p-3 bg-white border border-rose-300 rounded-lg text-rose-700">
+                <b class="flex items-center"><i data-lucide="x-circle" class="w-4 h-4 mr-1"></i> Khi nào Tham lam thất bại?</b>
+                Giả sử hệ thống tiền tệ có các tờ: <b>1k, 3k, 4k</b>. Bạn cần thối <b>6k</b>.<br/>
+                - <b>Greedy:</b> Lấy 4k (còn 2k) ➔ Lấy 1k ➔ Lấy 1k. Tổng: <b>3 tờ</b>.<br/>
+                - <b>Sự thật:</b> Bạn chỉ cần 2 tờ <b>3k + 3k = 6k (2 tờ)</b>. Nhìn thấy lợi ích lớn trước mắt (tờ 4k) khiến Greedy đi vào ngõ cụt tốn kém hơn! (Lúc này phải dùng <i>Quy Hoạch Động - DP</i>).
+             </div>
+             <p>Greedy chỉ đúng khi bài toán thỏa mãn "Cấu trúc tối ưu con" và "Thuộc tính lựa chọn tham lam" (nghĩa là lựa chọn cục bộ tốt nhất chắc chắn dẫn đến lựa chọn toàn cục tốt nhất).</p>
+           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BẢNG ĐÁNH GIÁ -->
+    <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+      <div class="flex items-center mb-6">
+        <div id="table-icon-wrapper" class="text-lime-500 mr-2"><i data-lucide="award" class="w-6 h-6"></i></div>
+        <h2 class="text-xl font-bold text-slate-800">Các Pattern Tiêu Biểu</h2>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse whitespace-nowrap min-w-[600px]">
+          <thead>
+            <tr class="bg-slate-50">
+              <th class="p-4 font-semibold text-slate-700 rounded-tl-xl">Dạng bài</th>
+              <th class="p-4 font-semibold text-slate-700">Chiến thuật Tham Lam</th>
+              <th class="p-4 font-semibold text-slate-700">Độ phức tạp</th>
+              <th class="p-4 font-semibold text-slate-700 rounded-tr-xl">Ứng dụng</th>
+            </tr>
+          </thead>
+          <tbody id="comparison-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- MAIN UI -->
+    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+       
+       <div id="tabs-container" class="flex overflow-x-auto border-b border-slate-200 hide-scrollbar bg-slate-50"></div>
+       
+       <div class="p-4 sm:p-6 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+         
+         <div class="lg:col-span-4 space-y-6" id="info-container"></div>
+
+         <div class="lg:col-span-8 w-full flex flex-col space-y-6">
+            <div class="bg-slate-900 rounded-2xl p-4 sm:p-6 shadow-inner border border-slate-800">
+               
+               <!-- Controls -->
+               <div class="flex flex-wrap gap-4 items-center justify-between mb-4 pb-4 border-b border-slate-700">
+                  <div class="flex gap-2">
+                    <button id="btn-play" class="flex items-center px-4 py-2 bg-lime-600 hover:bg-lime-500 text-white rounded-lg font-semibold transition disabled:opacity-50 text-sm">
+                      <i data-lucide="play" class="w-4 h-4 mr-2"></i> <span id="btn-play-text">Chạy Mô Phỏng</span>
+                    </button>
+                    <button id="btn-reset" class="flex items-center px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition text-sm">
+                      <i data-lucide="rotate-ccw" class="w-4 h-4 mr-2"></i> Làm mới
+                    </button>
+                  </div>
+                  <div class="flex items-center gap-3 text-slate-300 text-sm">
+                 <i data-lucide="settings-2" class="w-4 h-4"></i>
+                 <label class="font-medium hidden sm:block">Tốc độ:</label>
+                 <input type="range" id="speed-slider" min="50" max="1500" value="800" class="w-24 accent-lime-500">
+               </div>
+            </div>
+
+            <!-- Problem Statement -->
+            <div id="problem-statement" class="bg-lime-900/40 border border-lime-500/30 rounded-xl p-4 mb-4 text-sm sm:text-base text-lime-100 flex items-start gap-3 hidden">
+               <div id="target-icon-wrapper" class="text-lime-400 shrink-0 mt-0.5"><i data-lucide="target" class="w-5 h-5"></i></div>
+               <div id="problem-text" class="leading-relaxed"></div>
+            </div>
+
+            <!-- Log/Math Box -->
+            <div id="math-computation" class="bg-slate-800 rounded-xl p-3 mb-6 text-center font-mono text-sm sm:text-base border border-slate-600 text-slate-300 min-h-[48px] flex items-center justify-center">
+               Sẵn sàng mô phỏng.
+            </div>
+
+            <!-- VISUALIZER CONTAINER -->
+            <div id="visualizer-container" class="flex flex-col items-center justify-center w-full relative mb-4 gap-8 min-h-[150px]">
+                 <!-- JS will inject dynamic UI here based on the selected pattern -->
+            </div>
+
+            <!-- Code Block -->
+            <div class="relative rounded-2xl overflow-hidden shadow-lg border border-slate-700 bg-[#0f172a] mt-6">
+              <div class="w-full px-4 py-3 bg-[#1e293b] border-b border-slate-700 flex items-center justify-between">
+                <div class="flex space-x-2"><div class="w-3 h-3 rounded-full bg-rose-500"></div><div class="w-3 h-3 rounded-full bg-amber-500"></div><div class="w-3 h-3 rounded-full bg-emerald-500"></div></div>
+                <div class="flex items-center text-slate-400 text-xs font-mono"><i data-lucide="code" class="w-4 h-4 mr-1.5"></i> javascript</div>
+              </div>
+              <pre class="p-4 sm:p-6 overflow-auto text-xs sm:text-sm font-mono leading-relaxed max-h-72"><code id="code-container" class="text-slate-200"></code></pre>
+            </div>
+         </div>
+       </div>
+    </div>
+  </div>
+
+  <script>
+    // === DỮ LIỆU PATTERNS ===
+    const ALGO_DATA = [
+      {
+        id: 'coin_change', name: '1. Đổi Tiền (Coin Change)', vnName: 'Thu gom mệnh giá lớn nhất',
+        tech: 'Sắp xếp giảm dần + Chia lấy phần nguyên', time: 'O(N log N)',
+        code: `// Bài toán: Cần ít đồng xu nhất để tạo ra số tiền amount.\n// (Giả sử hệ thống tiền tệ chuẩn như 1, 5, 10, 20, 50)\nfunction greedyCoinChange(coins, amount) {\n  // 1. Sắp xếp mệnh giá tiền từ LỚN xuống BÉ\n  coins.sort((a, b) => b - a);\n  \n  let count = 0;\n  let result = [];\n\n  // 2. Tham lam: Bốc đồng tiền lớn nhất có thể trước!\n  for (let coin of coins) {\n    if (amount === 0) break;\n    \n    if (coin <= amount) {\n      // Số lượng đồng xu hiện tại có thể bốc\n      let numCoins = Math.floor(amount / coin);\n      count += numCoins;\n      amount -= numCoins * coin; // Trừ đi số tiền đã lấy\n      \n      result.push({coin: coin, count: numCoins});\n    }\n  }\n  \n  return amount === 0 ? count : -1;\n}`,
+        desc: 'Một ví dụ nhập môn kinh điển. Tham lam ở đây có nghĩa là: Để tốn ít đồng xu nhất, ta phải xài đồng xu có mệnh giá to nhất có thể. Cứ cấu rỉa dần dần từ lớn xuống bé cho đến khi số tiền cần thối bằng 0.',
+        characteristics: ['Phải sắp xếp mảng giảm dần', 'Dùng phép chia lấy phần nguyên (Math.floor) để bốc nhiều xu cùng lúc']
+      },
+      {
+        id: 'assign_cookies', name: '2. Phát Bánh Quy', vnName: 'Hai Mảng / Hai Con Trỏ',
+        tech: 'Sắp xếp + Two Pointers', time: 'O(N log N)',
+        code: `// Bài toán: Phát bánh quy cho trẻ em. Mỗi đứa trẻ có độ tham ăn (greed) g[i]. \n// Mỗi cái bánh có kích thước s[j]. Bánh thỏa mãn trẻ nếu s[j] >= g[i].\nfunction findContentChildren(g, s) {\n  // 1. Sắp xếp cả 2 mảng tăng dần\n  g.sort((a, b) => a - b); // Trẻ ít tham ăn xếp trước\n  s.sort((a, b) => a - b); // Bánh nhỏ xếp trước\n\n  let childIdx = 0;\n  let cookieIdx = 0;\n\n  // 2. Tham lam: Cho bánh nhỏ nhất có thể thỏa mãn đứa trẻ dễ tính nhất\n  while (childIdx < g.length && cookieIdx < s.length) {\n    if (s[cookieIdx] >= g[childIdx]) {\n      // Bánh đủ to! Em bé này đã hài lòng.\n      childIdx++; \n    }\n    // Bất kể bánh có đủ hay không, bánh này đã được xem xét và bỏ qua\n    cookieIdx++;\n  }\n  \n  return childIdx; // Số lượng em bé được ăn bánh\n}`,
+        desc: 'Tham lam trong việc kết nối (Matching). Đứa trẻ dễ tính nhất (greed nhỏ nhất) nên được phát cái bánh nhỏ nhất vừa đủ để nó hài lòng. Nhờ vậy, ta dành dụm được những chiếc bánh to cho những đứa trẻ tham ăn hơn ở phía sau.',
+        characteristics: ['Sắp xếp cả 2 mảng tăng dần', 'Dùng 2 con trỏ duyệt song song', 'Nếu bánh không đủ to, vứt bánh đó đi và thử bánh tiếp theo']
+      },
+      {
+        id: 'activity_selection', name: '3. Lịch Trình Hoạt Động', vnName: 'Interval Scheduling',
+        tech: 'Sắp xếp theo End Time', time: 'O(N log N)',
+        code: `// Bài toán: Cho danh sách các cuộc họp [start, end].\n// Chọn ra nhiều cuộc họp nhất sao cho không bị trùng giờ nhau.\nfunction maxActivities(intervals) {\n  if (intervals.length === 0) return 0;\n\n  // 1. Tham lam: Sắp xếp các cuộc họp theo THỜI GIAN KẾT THÚC tăng dần!\n  intervals.sort((a, b) => a[1] - b[1]);\n\n  let count = 1;\n  let currentEnd = intervals[0][1]; // Chọn cuộc họp kết thúc sớm nhất\n\n  for (let i = 1; i < intervals.length; i++) {\n    // Nếu cuộc họp tiếp theo bắt đầu sau khi cuộc họp hiện tại kết thúc\n    if (intervals[i][0] >= currentEnd) {\n      count++; // Chọn cuộc họp này\n      currentEnd = intervals[i][1]; // Cập nhật mốc kết thúc mới\n    }\n  }\n  return count;\n}`,
+        desc: 'Trọng tâm của các bài toán rải rác thời gian (Intervals). Tư duy tham lam cực kỳ sắc bén: "Tôi luôn ưu tiên tham gia cuộc họp nào KẾT THÚC SỚM NHẤT, để tôi có dư dả thời gian tham gia các cuộc họp khác trong ngày". Do đó, phải luôn Sort theo End Time!',
+        characteristics: ['LUÔN LUÔN sắp xếp theo phần tử thứ 2 (Thời gian kết thúc)', 'Chỉ so sánh Start mới với End cũ (Bỏ qua nếu bị đè lên nhau)']
+      },
+      {
+        id: 'jump_game', name: '4. Nhảy Lò Cò (Jump Game)', vnName: 'Max Reach (Tham lam vươn xa)',
+        tech: 'Duyệt cập nhật Max Tầm Với', time: 'O(N)',
+        code: `// Bài toán: Đứng ở ô đầu tiên. arr[i] là độ dài tối đa có thể nhảy từ i.\n// Hỏi có thể nhảy đến ô cuối cùng được không?\nfunction canJump(nums) {\n  let maxReach = 0; // Tầm với xa nhất hiện tại\n\n  for (let i = 0; i < nums.length; i++) {\n    // Nếu vị trí hiện tại nằm NGÀY CẢ BÊN NGOÀI tầm với xa nhất -> Kẹt cứng!\n    if (i > maxReach) {\n      return false; \n    }\n    \n    // Tham lam: Cập nhật tầm với xa nhất có thể đạt được\n    maxReach = Math.max(maxReach, i + nums[i]);\n    \n    // Nếu tầm với đã bao trùm ô cuối cùng -> Chiến thắng sớm!\n    if (maxReach >= nums.length - 1) {\n      return true;\n    }\n  }\n  return true;\n}`,
+        desc: 'Một bài toán mảng nâng cao. Thay vì dùng Đệ quy để thử mọi cách nhảy (O(2^N)), Tham lam chỉ cần 1 vòng lặp O(N). Tại mỗi ô, ta liên tục vươn đôi tay xem "Xa nhất mình có thể chạm tới là ô số mấy?". Nếu đang đứng ở ô hiện tại mà bị đứt đoạn (i > maxReach), thì ta đã thua.',
+        characteristics: ['Không cần tạo mảng phụ (O(1) Space)', 'Biến `maxReach` liên tục phình to ra', 'Dừng sớm (Early exit) nếu maxReach đã chạm đích']
+      }
+    ];
+
+    let currentTabId = ALGO_DATA[0].id; 
+    let isRunning = false; 
+    let currentProcessId = 0; 
+    let currentSpeed = 800;
+
+    // Data Models for Different Tabs
+    let coinData = { amount: 0, coins: [], result: [] };
+    let cookieData = { g: [], s: [], i: 0, j: 0, satisfied: 0 };
+    let intervalData = { intervals: [], currentEnd: 0, count: 0, evaluatingIdx: -1, selected: [] };
+    let jumpData = { nums: [], maxReach: 0, currIdx: 0, success: null };
+
+    // Tiện ích UI
+    const highlightJS = (code) => {
+      let esc = code.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const c = [];
+      esc = esc.replace(/(\/\/.*)/g, (m) => { c.push(m); return `___C_${c.length-1}___`; });
+      esc = esc.replace(/\b(\d+)\b/g, '<span class="text-amber-300">$1</span>'); 
+      esc = esc.replace(/\b(function|let|const|var|if|else|for|while|return|break|continue|class|constructor)\b/g, '<span class="text-pink-400 font-semibold">$1</span>')
+               .replace(/\b(true|false|null|isNaN|Number|Infinity)\b/g, '<span class="text-purple-400">$1</span>')
+               .replace(/\b(Math|max|min|floor|length|sort|push|shift|pop)\b/g, '<span class="text-yellow-300">$1</span>')
+               .replace(/\b(new|Array)\b/g, '<span class="text-cyan-300">$1</span>');
+      c.forEach((com, i) => esc = esc.replace(`___C_${i}___`, `<span class="text-slate-500 italic">${com}</span>`));
+      return esc;
+    };
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    const isAborted = (id) => id !== currentProcessId;
+
+    function renderTabs() {
+      document.getElementById('tabs-container').innerHTML = ALGO_DATA.map(a => `<button onclick="changeTab('${a.id}')" class="px-5 py-4 font-bold whitespace-nowrap transition-all duration-200 border-b-2 flex-1 text-center ${a.id===currentTabId ? 'text-lime-600 border-lime-600 bg-white' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/50 border-transparent cursor-pointer'} text-sm sm:text-base">${a.name}</button>`).join('');
+    }
+
+    function initUI() {
+      document.getElementById('comparison-table-body').innerHTML = ALGO_DATA.map(a => `<tr class="border-b border-slate-100 hover:bg-slate-50/50"><td class="p-4 font-bold text-slate-800">${a.name}</td><td class="p-4 text-slate-700 text-sm font-semibold text-lime-600">${a.tech}</td><td class="p-4"><span class="px-3 py-1 rounded-full border text-sm font-semibold shadow-sm inline-block bg-lime-100 text-lime-800 border-lime-300">${a.time}</span></td><td class="p-4 text-slate-600 text-sm">${a.vnName}</td></tr>`).join('');
+      renderTabs(); updateInfoAndCode(); generateNewData(); lucide.createIcons();
+    }
+
+    function updateInfoAndCode() {
+      const a = ALGO_DATA.find(x => x.id === currentTabId);
+      if(!a) return;
+      document.getElementById('info-container').innerHTML = `<div><h3 class="text-3xl font-extrabold text-slate-900 mb-1">${a.name}</h3><div class="inline-flex items-center px-3 py-1 bg-lime-100 text-lime-700 rounded-lg text-sm font-medium">${a.vnName}</div></div><p class="text-slate-600 leading-relaxed text-sm">${a.desc}</p><ul class="space-y-2 text-sm text-slate-700 mt-4">${a.characteristics.map(c => `<li class="flex items-start"><i data-lucide="check-circle-2" class="w-4 h-4 text-lime-500 mr-2 shrink-0 mt-0.5"></i><span>${c}</span></li>`).join('')}</ul>`;
+      document.getElementById('code-container').innerHTML = highlightJS(a.code);
+      lucide.createIcons();
+    }
+
+    function setMathHTML(htmlContent) {
+      document.getElementById('math-computation').innerHTML = htmlContent;
+    }
+
+    // --- RENDER DYNAMIC VISUALIZER ---
+    function renderVisualizerUI() {
+      const container = document.getElementById('visualizer-container');
+      let html = '';
+
+      if (currentTabId === 'coin_change') {
+         html = `
+           <div class="flex flex-col w-full items-center gap-6">
+              <div class="flex items-center gap-4 bg-slate-800 p-4 rounded-xl border border-slate-600 shadow-inner w-full justify-center">
+                 <span class="text-slate-300 font-bold uppercase tracking-wider text-sm">Cần Đổi:</span>
+                 <span class="text-4xl font-extrabold text-lime-400 font-mono tracking-tight">${coinData.amount}đ</span>
+              </div>
+              <div class="w-full flex flex-col">
+                 <span class="text-xs text-cyan-400 font-bold mb-2 uppercase tracking-widest">Các mệnh giá (Đã sắp xếp giảm dần)</span>
+                 <div class="flex flex-wrap gap-3">
+                    ${coinData.coins.map((c, i) => `
+                       <div class="w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center rounded-full border-4 font-bold text-lg anim-element ${coinData.activeIndex === i ? 'item-active' : 'item-normal border-slate-600' }">${c}</div>
+                    `).join('')}
+                 </div>
+              </div>
+              <div class="w-full flex flex-col mt-4">
+                 <span class="text-xs text-emerald-400 font-bold mb-2 uppercase tracking-widest">Ví Tiền (Kết quả bốc được)</span>
+                 <div class="flex flex-wrap gap-2 p-4 min-h-[80px] bg-slate-800/50 border border-dashed border-slate-600 rounded-xl">
+                    ${coinData.result.length === 0 ? '<span class="text-slate-500 text-sm italic w-full text-center mt-2">Chưa bốc đồng nào...</span>' : ''}
+                    ${coinData.result.map(res => `
+                       <div class="flex flex-col items-center justify-center p-2 bg-emerald-900/60 border border-emerald-500 rounded-lg">
+                          <span class="text-emerald-400 font-bold text-xl">${res.coin}đ</span>
+                          <span class="text-xs text-slate-300 bg-slate-900 px-2 py-0.5 rounded mt-1">x ${res.count} tờ</span>
+                       </div>
+                    `).join('')}
+                 </div>
+              </div>
+           </div>
+         `;
+      } 
+      else if (currentTabId === 'assign_cookies') {
+         html = `
+           <div class="flex flex-col w-full items-center gap-8">
+              <div class="w-full flex flex-col">
+                 <div class="flex justify-between items-center mb-2">
+                   <span class="text-xs text-cyan-400 font-bold uppercase tracking-widest">Độ tham ăn (Children Greed)</span>
+                   <span class="text-xs text-slate-400 font-mono">Pointer i = ${cookieData.i}</span>
+                 </div>
+                 <div class="flex gap-2 p-3 bg-slate-800/50 rounded-xl border border-slate-700 overflow-x-auto hide-scrollbar">
+                    ${cookieData.g.map((gVal, idx) => `
+                       <div class="w-12 h-12 flex flex-col items-center justify-center rounded border-2 font-bold anim-element shrink-0 ${idx < cookieData.i ? 'item-success' : (idx === cookieData.i ? 'item-active' : 'item-normal')}">
+                          <i data-lucide="smile" class="w-4 h-4 mb-0.5 opacity-70"></i>
+                          ${gVal}
+                       </div>
+                    `).join('')}
+                 </div>
+              </div>
+              <div class="w-full flex flex-col">
+                 <div class="flex justify-between items-center mb-2">
+                   <span class="text-xs text-amber-400 font-bold uppercase tracking-widest">Kích thước bánh (Cookie Sizes)</span>
+                   <span class="text-xs text-slate-400 font-mono">Pointer j = ${cookieData.j}</span>
+                 </div>
+                 <div class="flex gap-2 p-3 bg-slate-800/50 rounded-xl border border-slate-700 overflow-x-auto hide-scrollbar">
+                    ${cookieData.s.map((sVal, idx) => `
+                       <div class="w-12 h-12 flex flex-col items-center justify-center rounded-full border-2 font-bold anim-element shrink-0 ${idx < cookieData.j ? (idx < cookieData.i ? 'item-success' : 'item-disabled') : (idx === cookieData.j ? 'item-active border-amber-500 bg-amber-900/50 text-amber-300' : 'item-normal')}">
+                          <i data-lucide="cookie" class="w-4 h-4 mb-0.5 opacity-70"></i>
+                          ${sVal}
+                       </div>
+                    `).join('')}
+                 </div>
+              </div>
+              <div class="bg-emerald-900/40 border border-emerald-500 px-6 py-2 rounded-full text-emerald-400 font-bold text-lg shadow-[0_0_10px_rgba(16,185,129,0.3)]">
+                 Số bé đã no: ${cookieData.satisfied}
+              </div>
+           </div>
+         `;
+      }
+      else if (currentTabId === 'activity_selection') {
+         // Create visual timeline. Total scale = 10.
+         const maxTime = 10;
+         html = `
+           <div class="flex flex-col w-full gap-4">
+              <div class="flex items-center gap-4 bg-slate-800 p-3 rounded-xl border border-slate-600 justify-between">
+                 <span class="text-slate-300 font-bold uppercase tracking-wider text-xs">Timeline Rảnh Từ:</span>
+                 <span class="text-2xl font-bold text-amber-400 font-mono">${intervalData.currentEnd}h</span>
+              </div>
+              <div class="relative w-full h-[250px] bg-slate-900 border-l-2 border-b-2 border-slate-600 p-2 overflow-y-auto hide-scrollbar">
+                 <div class="absolute bottom-0 w-full h-full pointer-events-none flex opacity-20">
+                    ${Array.from({length: maxTime}).map((_, i) => `<div class="flex-1 border-l border-slate-500 h-full flex justify-end items-end pb-1 pr-1 text-[8px]">${i+1}</div>`).join('')}
+                 </div>
+                 <div class="relative z-10 flex flex-col gap-2 mt-2 w-[98%]">
+                    ${intervalData.intervals.map((inv, idx) => {
+                       let leftPct = (inv[0] / maxTime) * 100;
+                       let widthPct = ((inv[1] - inv[0]) / maxTime) * 100;
+                       let bgClass = "bg-slate-600 border border-slate-400";
+                       let shadow = "";
+                       
+                       if (intervalData.selected.includes(idx)) {
+                           bgClass = "bg-emerald-500 border-emerald-300";
+                           shadow = "shadow-[0_0_10px_rgba(16,185,129,0.5)]";
+                       } else if (idx === intervalData.evaluatingIdx) {
+                           bgClass = "bg-lime-500 border-lime-300 animate-pulse";
+                           shadow = "shadow-[0_0_15px_rgba(132,204,22,0.8)]";
+                       } else if (idx < intervalData.evaluatingIdx) {
+                           bgClass = "bg-rose-900 border-rose-700 text-rose-300 opacity-50"; // rejected
+                       }
+
+                       return `<div class="h-8 timeline-bar ${bgClass} ${shadow}" style="margin-left: ${leftPct}%; width: ${widthPct}%;">${inv[0]} - ${inv[1]}</div>`;
+                    }).join('')}
+                 </div>
+              </div>
+           </div>
+         `;
+      }
+      else if (currentTabId === 'jump_game') {
+         html = `
+           <div class="flex flex-col w-full items-center gap-8">
+              <div class="flex items-center gap-4 bg-slate-800 p-4 rounded-xl border border-slate-600 shadow-inner w-full justify-between">
+                 <div class="flex flex-col">
+                    <span class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Index Đang Đứng (i)</span>
+                    <span class="text-2xl font-bold text-cyan-400 font-mono">${jumpData.currIdx}</span>
+                 </div>
+                 <div class="flex flex-col text-right">
+                    <span class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Tầm Vươn Xa Nhất (maxReach)</span>
+                    <span class="text-3xl font-extrabold text-lime-400 font-mono">${jumpData.maxReach}</span>
+                 </div>
+              </div>
+              
+              <div class="relative w-full flex items-center justify-start gap-1 sm:gap-2 px-2 mt-4 overflow-x-auto hide-scrollbar py-6">
+                 <!-- Line representing max Reach -->
+                 <div class="absolute top-0 left-4 h-2 bg-lime-500/30 rounded-full transition-all duration-500" style="width: calc(${Math.min(jumpData.maxReach, jumpData.nums.length - 1)} * 3.5rem + ${Math.min(jumpData.maxReach, jumpData.nums.length - 1)} * 0.5rem)"></div>
+                 
+                 ${jumpData.nums.map((num, i) => {
+                     let cls = "item-normal";
+                     let icon = "";
+                     
+                     if (i <= jumpData.maxReach) cls = "bg-lime-900/40 border-lime-600 text-lime-100"; // Can be reached
+                     if (i === jumpData.currIdx) {
+                         cls = "item-active"; 
+                         icon = `<span class="absolute -bottom-6 text-xs text-cyan-400 font-bold">🧍</span>`;
+                     }
+                     if (jumpData.success === false && i === jumpData.currIdx) cls = "item-reject";
+                     if (jumpData.success === true && i === jumpData.nums.length - 1) cls = "item-success shadow-[0_0_20px_rgba(16,185,129,0.8)]";
+
+                     return `
+                       <div class="relative w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-lg border-2 font-bold text-lg shrink-0 anim-element ${cls}">
+                          ${num}
+                          ${icon}
+                          <span class="absolute -top-5 text-[10px] opacity-50 font-mono text-slate-300">i=${i}</span>
+                       </div>
+                     `;
+                 }).join('')}
+              </div>
+           </div>
+         `;
+      }
+
+      container.innerHTML = html;
+      lucide.createIcons();
+    }
+
+    function changeTab(id) {
+      if (isRunning) { currentProcessId++; isRunning = false; toggleBtn(false); }
+      currentTabId = id;
+      renderTabs(); updateInfoAndCode(); generateNewData();
+    }
+
+    function generateNewData() { 
+      if(isRunning) return; 
+      let problemHTML = '';
+
+      if (currentTabId === 'coin_change') {
+        coinData = { amount: Math.floor(Math.random() * 80) + 40, coins: [50, 20, 10, 5, 2, 1], result: [], activeIndex: -1 };
+        problemHTML = `<b class="text-white">Đổi tiền:</b> Tham lam lấy tờ mệnh giá LỚN NHẤT còn nhét vừa. Cứ thế lặp lại. Giống hệt cách bốc tiền thối ngoài đời!`;
+      } 
+      else if (currentTabId === 'assign_cookies') {
+        let g = Array.from({length: 4}, () => Math.floor(Math.random() * 5) + 1).sort((a,b) => a-b);
+        let s = Array.from({length: 5}, () => Math.floor(Math.random() * 6) + 1).sort((a,b) => a-b);
+        cookieData = { g, s, i: 0, j: 0, satisfied: 0 };
+        problemHTML = `<b class="text-white">Chia Bánh Quy:</b> Trẻ em (Trên) và Bánh (Dưới) ĐÃ ĐƯỢC SẮP XẾP TĂNG DẦN. Phát bánh <b class="text-amber-400">vừa đủ to</b> cho đứa trẻ <b class="text-cyan-400">ít tham ăn nhất</b> trước, để dành bánh to cho đứa phía sau!`;
+      }
+      else if (currentTabId === 'activity_selection') {
+        // Generate intervals that fit within 0-10
+        intervalData = { 
+            intervals: [[1,3], [2,5], [4,6], [5,8], [6,7], [8,10]], 
+            currentEnd: 0, count: 0, evaluatingIdx: -1, selected: [] 
+        };
+        // Sort by end time explicitly for visual setup
+        intervalData.intervals.sort((a,b) => a[1] - b[1]);
+        problemHTML = `<b class="text-white">Lịch Trình:</b> Cố gắng dự nhiều cuộc họp nhất. Bí quyết Tham Lam: Luôn tham gia cuộc họp <b>KẾT THÚC SỚM NHẤT</b> để tiết kiệm thời gian cho cuộc họp sau! Đã sắp xếp theo thời gian kết thúc.`;
+      }
+      else if (currentTabId === 'jump_game') {
+        // 50% chance of success array, 50% chance of fail array
+        let isWin = Math.random() > 0.5;
+        let nums = isWin ? [2, 3, 1, 1, 4] : [3, 2, 1, 0, 4];
+        jumpData = { nums, maxReach: 0, currIdx: 0, success: null };
+        problemHTML = `<b class="text-white">Nhảy Lò Cò:</b> Bạn đang đứng ở ô 0. Giá trị mỗi ô là sức bật tối đa. <b class="text-lime-400">Tham Lam:</b> Liên tục cập nhật Tầm Vươn Xa Nhất. Nếu kẹt vào ô có tầm vươn < Index hiện tại -> Chết!`;
+      }
+
+      document.getElementById('problem-text').innerHTML = problemHTML;
+      document.getElementById('problem-statement').classList.remove('hidden');
+      lucide.createIcons();
+
+      renderVisualizerUI();
+      setMathHTML('Nhấn "Chạy Mô Phỏng" để bắt đầu.');
+    }
+
+    function toggleBtn(s) { 
+      isRunning = s; 
+      document.getElementById('btn-play').disabled = s; 
+      document.getElementById('btn-play-text').innerText = s ? 'Đang chạy...' : 'Chạy Mô Phỏng'; 
+    }
+
+    document.getElementById('btn-reset').addEventListener('click', generateNewData);
+    document.getElementById('speed-slider').addEventListener('input', e => currentSpeed = 1550 - Number(e.target.value));
+    document.getElementById('btn-play').addEventListener('click', () => { 
+      if(!isRunning) handleSimulation(); 
+    });
+
+    async function handleSimulation() {
+      toggleBtn(true); currentProcessId++; let sid = currentProcessId; 
+      try {
+        if (currentTabId === 'coin_change') await startCoinChange(sid);
+        else if (currentTabId === 'assign_cookies') await startAssignCookies(sid);
+        else if (currentTabId === 'activity_selection') await startActivitySelection(sid);
+        else if (currentTabId === 'jump_game') await startJumpGame(sid);
+      } catch(e){ console.error(e); }
+      if(sid === currentProcessId) toggleBtn(false);
+    }
+
+    // === 1. COIN CHANGE ===
+    async function startCoinChange(id) {
+       for (let i = 0; i < coinData.coins.length; i++) {
+           if(isAborted(id)) return;
+           
+           coinData.activeIndex = i;
+           let coin = coinData.coins[i];
+           renderVisualizerUI();
+           setMathHTML(`Đang xét đồng mệnh giá LỚN NHẤT tiếp theo: <b class="text-lime-400 text-lg">${coin}đ</b>.`);
+           await sleep(currentSpeed * 1.5);
+
+           if (coinData.amount === 0) break;
+
+           if (coin <= coinData.amount) {
+               let numCoins = Math.floor(coinData.amount / coin);
+               let takenAmount = numCoins * coin;
+               
+               setMathHTML(`Tham lam bốc hết cỡ! Lấy <b class="text-cyan-400">${numCoins} tờ</b> mệnh giá ${coin}đ. Mất đi: ${takenAmount}đ.`);
+               await sleep(currentSpeed * 1.5);
+
+               coinData.amount -= takenAmount;
+               coinData.result.push({coin: coin, count: numCoins});
+               renderVisualizerUI();
+               
+               setMathHTML(`Số tiền còn lại cần thối: <b class="text-rose-400 text-lg">${coinData.amount}đ</b>.`);
+               await sleep(currentSpeed * 1.5);
+           } else {
+               setMathHTML(`Tờ <b class="text-lime-400">${coin}đ</b> quá lớn so với số tiền cần thối (${coinData.amount}đ). Bỏ qua!`);
+               await sleep(currentSpeed);
+           }
+       }
+       
+       if(isAborted(id)) return;
+       coinData.activeIndex = -1;
+       renderVisualizerUI();
+       setMathHTML(`<span class="text-emerald-400 font-bold text-xl">🎉 Đã thối xong tiền với số lượng xu ÍT NHẤT! O(N log N) Time.</span>`);
+    }
+
+    // === 2. ASSIGN COOKIES ===
+    async function startAssignCookies(id) {
+       let g = cookieData.g; let s = cookieData.s;
+       
+       setMathHTML(`Bắt đầu với trẻ dễ tính nhất (g[0]) và bánh nhỏ nhất (s[0]).`);
+       await sleep(currentSpeed);
+
+       while (cookieData.i < g.length && cookieData.j < s.length) {
+           if(isAborted(id)) return;
+           
+           let childGreed = g[cookieData.i];
+           let cookieSize = s[cookieData.j];
+           
+           renderVisualizerUI();
+           setMathHTML(`So sánh: Bánh cỡ <b class="text-amber-400">${cookieSize}</b> có đủ cho em bé đòi <b class="text-cyan-400">${childGreed}</b> không?`);
+           await sleep(currentSpeed * 1.5);
+
+           if (cookieSize >= childGreed) {
+               setMathHTML(`<span class="text-emerald-400 font-bold uppercase">Vừa Đủ!</span> Em bé vui vẻ nhận bánh. Kéo Pointer cả Trẻ và Bánh sang phải.`);
+               cookieData.satisfied++;
+               cookieData.i++;
+               cookieData.j++;
+               renderVisualizerUI();
+               await sleep(currentSpeed * 1.5);
+           } else {
+               setMathHTML(`<span class="text-rose-400 font-bold uppercase">Quá Nhỏ!</span> Bánh này không đủ thỏa mãn. Vứt đi, thử kéo bánh to hơn (Pointer Bánh sang phải).`);
+               cookieData.j++;
+               renderVisualizerUI();
+               await sleep(currentSpeed * 1.5);
+           }
+       }
+       
+       if(isAborted(id)) return;
+       cookieData.i = -1; cookieData.j = -1; // Reset active visuals
+       renderVisualizerUI();
+       setMathHTML(`<span class="text-emerald-400 font-bold text-xl">🎉 Đã duyệt xong. Phát được tối đa bánh cho ${cookieData.satisfied} em bé.</span>`);
+    }
+
+    // === 3. ACTIVITY SELECTION ===
+    async function startActivitySelection(id) {
+       // Auto select first
+       intervalData.selected.push(0);
+       intervalData.currentEnd = intervalData.intervals[0][1];
+       intervalData.count = 1;
+       
+       renderVisualizerUI();
+       setMathHTML(`Khởi tạo: <b class="text-emerald-400">LUÔN CHỌN</b> cuộc họp kết thúc sớm nhất ở đầu mảng. Rảnh rỗi từ: <b class="text-amber-400">${intervalData.currentEnd}h</b>.`);
+       await sleep(currentSpeed * 2);
+
+       for (let i = 1; i < intervalData.intervals.length; i++) {
+           if(isAborted(id)) return;
+           
+           intervalData.evaluatingIdx = i;
+           let inv = intervalData.intervals[i];
+           
+           renderVisualizerUI();
+           setMathHTML(`Kiểm tra cuộc họp <b class="text-lime-400">[${inv[0]} - ${inv[1]}]</b>. Bắt đầu lúc ${inv[0]}h. Cấm kỵ cắt ngang thời gian rảnh (${intervalData.currentEnd}h)!`);
+           await sleep(currentSpeed * 2);
+
+           if (inv[0] >= intervalData.currentEnd) {
+               intervalData.selected.push(i);
+               intervalData.currentEnd = inv[1];
+               intervalData.count++;
+               
+               setMathHTML(`<span class="text-emerald-400 font-bold uppercase">Hợp Lệ!</span> Tham gia được. Cập nhật thời gian rảnh mới: <b class="text-amber-400">${intervalData.currentEnd}h</b>.`);
+               renderVisualizerUI();
+               await sleep(currentSpeed * 1.5);
+           } else {
+               setMathHTML(`<span class="text-rose-400 font-bold uppercase">Trùng Giờ!</span> Cuộc họp bắt đầu lúc ${inv[0]}h nhưng đến ${intervalData.currentEnd}h mới rảnh. Bỏ qua!`);
+               await sleep(currentSpeed * 1.2);
+           }
+       }
+       
+       if(isAborted(id)) return;
+       intervalData.evaluatingIdx = -1;
+       renderVisualizerUI();
+       setMathHTML(`<span class="text-emerald-400 font-bold text-xl">🎉 Thành công! Tham gia được tối đa ${intervalData.count} cuộc họp không trùng nhau.</span>`);
+    }
+
+    // === 4. JUMP GAME ===
+    async function startJumpGame(id) {
+       for (let i = 0; i < jumpData.nums.length; i++) {
+           if(isAborted(id)) return;
+           
+           jumpData.currIdx = i;
+           renderVisualizerUI();
+           
+           if (i > jumpData.maxReach) {
+               jumpData.success = false;
+               renderVisualizerUI();
+               setMathHTML(`
+                 <div class="flex flex-col items-center">
+                    <span class="text-rose-500 font-bold text-xl uppercase tracking-wider">KẸT CỨNG! (Game Over)</span>
+                    <span class="bg-slate-900 px-3 py-1 rounded mt-2 border border-rose-500/50">Tầm vươn xa nhất chỉ tới được ô ${jumpData.maxReach}. Ô hiện tại là ${i}. Không thể bước tiếp!</span>
+                 </div>
+               `);
+               return; 
+           }
+
+           let reachFromHere = i + jumpData.nums[i];
+           setMathHTML(`Đứng tại ô ${i}. Sức bật là <b class="text-cyan-400">${jumpData.nums[i]}</b>. Tầm vươn xa nhất từ đây = ${i} + ${jumpData.nums[i]} = <b class="text-lime-400 text-lg">${reachFromHere}</b>.`);
+           await sleep(currentSpeed * 1.5);
+
+           if (reachFromHere > jumpData.maxReach) {
+               jumpData.maxReach = reachFromHere;
+               renderVisualizerUI();
+               setMathHTML(`<span class="text-emerald-400 font-bold">Kỷ Lục Mới!</span> Cập nhật maxReach = <b class="text-white">${jumpData.maxReach}</b>.`);
+               await sleep(currentSpeed * 1.5);
+           } else {
+               setMathHTML(`Tầm vươn (${reachFromHere}) thua xa kỷ lục cũ (${jumpData.maxReach}). Bỏ qua.`);
+               await sleep(currentSpeed * 1.2);
+           }
+
+           if (jumpData.maxReach >= jumpData.nums.length - 1) {
+               jumpData.success = true;
+               jumpData.currIdx = jumpData.nums.length - 1; // Move player to end
+               renderVisualizerUI();
+               setMathHTML(`<span class="text-emerald-400 font-bold text-2xl uppercase tracking-wider">🎉 WIN! CHIẾN THẮNG SỚM!</span><br/><span class="text-slate-300 text-sm">Tầm vươn đã phủ qua ô cuối cùng. Không cần tính tiếp! Thuật toán O(n).</span>`);
+               return;
+           }
+       }
+    }
+
+    window.onload = initUI;
+  </script>
+</body>
+</html>
