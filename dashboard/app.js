@@ -520,9 +520,25 @@ function toggleDone(trackId, chapterIdx, problemIdx) {
 // ─────────────────────────────────────────────────
 // Visualization helpers
 // ─────────────────────────────────────────────────
+
+// Detect repo path from current URL (works on both localhost and github.io)
+function getRepoPath() {
+  const parts = window.location.pathname.split('/').filter(Boolean);
+  // If path is like /learn-leetcode/dashboard/index.html → repo = /learn-leetcode
+  // If path is like /dashboard/index.html → repo = ''
+  if (parts.length >= 2 && parts[1] === 'dashboard') {
+    return '/' + parts[0];
+  }
+  return '';
+}
+
 function openViz(vizPath) {
   const modal = document.getElementById('modal');
   const body = modal.querySelector('.modal-body');
+
+  // Prepend repo path so it works on github.io subpath
+  const repoPath = getRepoPath();
+  const fullSrc = repoPath + vizPath;
 
   // Hide prev/next when viewing viz (no prev/next for HTML pages)
   document.getElementById('modalPrev').style.display = 'none';
@@ -532,7 +548,7 @@ function openViz(vizPath) {
   document.querySelector('.modal-box').classList.add('viz-modal');
 
   // Load viz in iframe
-  body.innerHTML = `<iframe src="${vizPath}" class="viz-iframe" sandbox="allow-scripts"></iframe>`;
+  body.innerHTML = `<iframe src="${fullSrc}" class="viz-iframe" sandbox="allow-scripts"></iframe>`;
 
   modal.classList.add('show');
   document.body.style.overflow = 'hidden';
